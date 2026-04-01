@@ -20,15 +20,13 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
-  // للتحكم في الحالة النشطة حتى لو كانت الشاشة الحالية ليست في القائمة السفلية (مثل الدراسة والمصاريف)
   const isTabActive = (tabId: string) => {
-    if (activeTab === tabId) return true;
-    return false;
+    return activeTab === tabId;
   };
 
   return (
-    <div className="fixed bottom-6 left-0 right-0 z-50 px-6">
-      <nav className="glass-panel rounded-[12px] h-20 px-2 flex items-center justify-around premium-shadow border border-white/60">
+    <div className="fixed bottom-0 left-0 right-0 z-50">
+      <nav className="glass-panel rounded-t-[24px] h-20 px-4 flex items-center justify-around premium-shadow border-t border-white/60">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = isTabActive(tab.id);
@@ -37,13 +35,13 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id as TabId)}
-              className="flex flex-col items-center justify-center gap-1.5 min-w-[60px] relative transition-all active:scale-90"
+              className="flex flex-col items-center justify-center gap-1 min-w-[64px] relative transition-all active:scale-90"
             >
               <div className={cn(
-                "h-10 w-10 rounded-[10px] flex items-center justify-center transition-all duration-300",
+                "h-10 w-10 rounded-[12px] flex items-center justify-center transition-all duration-300",
                 isActive 
                   ? "primary-gradient text-white shadow-lg shadow-primary/30" 
-                  : "text-muted-foreground/50 hover:text-primary/60"
+                  : "text-muted-foreground/40 hover:text-primary/60"
               )}>
                 <Icon className={cn("h-5 w-5", isActive ? "scale-110" : "")} />
               </div>
@@ -54,12 +52,14 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                 {tab.label}
               </span>
               {isActive && (
-                <div className="absolute -bottom-1 h-0.5 w-3 bg-primary rounded-full" />
+                <div className="absolute -bottom-1 h-1 w-4 bg-primary rounded-full" />
               )}
             </button>
           );
         })}
       </nav>
+      {/* Safe area for mobile home indicator */}
+      <div className="h-6 bg-white/80 backdrop-blur-md" />
     </div>
   );
 }
