@@ -28,7 +28,7 @@ export function DashboardHeader() {
       
       {/* قسم الترحيب القابل للتمرير */}
       <div className="px-6 py-6">
-        <h2 className="text-2xl font-extrabold text-foreground font-cairo">أهلاً بك، خالد 👋</h2>
+        <h2 className="text-2xl font-extrabold text-foreground font-cairo">أهلاً بك يا بطل 👋</h2>
         <p className="text-sm text-muted-foreground font-semibold mt-1">إليك ملخص إنجازاتك اليوم</p>
       </div>
     </>
