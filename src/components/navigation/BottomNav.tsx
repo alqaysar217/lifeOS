@@ -26,7 +26,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50">
-      <nav className="glass-panel rounded-t-[24px] h-20 px-4 flex items-center justify-around premium-shadow border-t border-white/60">
+      <nav className="glass-panel rounded-t-[24px] h-20 px-4 flex items-center justify-around premium-shadow border-t border-white/40">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = isTabActive(tab.id);
@@ -58,8 +58,8 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
           );
         })}
       </nav>
-      {/* Safe area for mobile home indicator */}
-      <div className="h-6 bg-white/80 backdrop-blur-md" />
+      {/* تغطية كاملة للقاع لضمان عدم وجود فجوات */}
+      <div className="h-6 bg-white/95 backdrop-blur-lg" />
     </div>
   );
 }

@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 
 export function DashboardHeader() {
   return (
-    <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border/5">
-      <div className="px-6 pt-10 pb-4 space-y-6">
-        <div className="flex items-center justify-between">
+    <div className="z-40">
+      {/* الشريط العلوي الثابت */}
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/5">
+        <div className="px-6 pt-10 pb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-11 w-11 rounded-[10px] primary-gradient flex items-center justify-center shadow-lg shadow-primary/20">
               <LayoutGrid className="h-5 w-5 text-white" />
@@ -23,10 +24,12 @@ export function DashboardHeader() {
             </Button>
           </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-extrabold text-foreground font-cairo">أهلاً بك، خالد 👋</h2>
-          <p className="text-sm text-muted-foreground font-semibold mt-1">إليك ملخص إنجازاتك اليوم</p>
-        </div>
+      </div>
+      
+      {/* قسم الترحيب القابل للتمرير */}
+      <div className="px-6 py-6">
+        <h2 className="text-2xl font-extrabold text-foreground font-cairo">أهلاً بك، خالد 👋</h2>
+        <p className="text-sm text-muted-foreground font-semibold mt-1">إليك ملخص إنجازاتك اليوم</p>
       </div>
     </div>
   );
