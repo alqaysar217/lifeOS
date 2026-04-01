@@ -15,25 +15,28 @@ interface CategoryCardProps {
 
 export function CategoryCard({ title, description, icon: Icon, colorClass, iconColor, stat }: CategoryCardProps) {
   return (
-    <Card className="premium-shadow border-none rounded-[2rem] group transition-all duration-300 active:scale-[0.97] hover:bg-white/80">
-      <div className="p-5 flex items-center gap-4">
-        <div className={cn("flex-shrink-0 inline-flex items-center justify-center rounded-2xl p-4 transition-transform duration-300 group-hover:scale-110", colorClass)}>
-          <Icon className={cn("h-6 w-6", iconColor)} />
+    <Card className="soft-neumorphic border-none rounded-[2.5rem] group transition-all duration-500 active:scale-[0.96] hover:translate-y-[-4px] overflow-hidden">
+      <div className="p-6 flex items-center gap-5">
+        <div className={cn(
+          "flex-shrink-0 inline-flex items-center justify-center rounded-[1.5rem] h-16 w-16 transition-all duration-500 group-hover:scale-110 shadow-sm",
+          colorClass
+        )}>
+          <Icon className={cn("h-7 w-7", iconColor)} />
         </div>
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-0.5">
-            <h3 className="text-lg font-bold text-foreground truncate">{title}</h3>
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="text-xl font-black text-foreground/90 truncate">{title}</h3>
             {stat && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+              <span className="text-[11px] font-black px-3 py-1 rounded-xl bg-secondary text-primary border border-primary/5 shadow-sm">
                 {stat}
               </span>
             )}
           </div>
-          <p className="text-sm text-muted-foreground truncate leading-relaxed">{description}</p>
+          <p className="text-[15px] text-muted-foreground/70 font-medium truncate leading-relaxed">{description}</p>
         </div>
 
-        <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full bg-muted/30 group-hover:bg-primary/10 transition-colors">
+        <div className="flex-shrink-0 h-11 w-11 flex items-center justify-center rounded-2xl bg-secondary/50 group-hover:bg-primary/10 transition-all duration-300">
           <ChevronLeft className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
         </div>
       </div>
