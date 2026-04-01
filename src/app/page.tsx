@@ -4,54 +4,54 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { ChallengeHighlight } from "@/components/dashboard/ChallengeHighlight";
 import { CategoryCard } from "@/components/dashboard/CategoryCard";
 import { BottomNav } from "@/components/navigation/BottomNav";
-import { Dumbbell, CheckSquare, BookOpen, Wallet, Repeat, Trophy, ShieldCheck } from "lucide-react";
+import { Activity, CheckCircle2, GraduationCap, Wallet2, Zap, Trophy, Lock } from "lucide-react";
 
 const categories = [
   {
     title: "اللياقة البدنية",
-    description: "تتبع تمارينك وأهدافك الصحية بدقة",
-    icon: Dumbbell,
-    colorClass: "bg-blue-100/50",
+    description: "تتبع نشاطك البدني وصحتك اليومية",
+    icon: Activity,
+    colorClass: "bg-blue-50",
     iconColor: "text-blue-500",
     stat: "3 تمارين"
   },
   {
     title: "المهام اليومية",
-    description: "نظم يومك وأنجز أهدافك بكفاءة عالية",
-    icon: CheckSquare,
-    colorClass: "bg-purple-100/50",
+    description: "قائمة المهام والأهداف المراد إنجازها",
+    icon: CheckCircle2,
+    colorClass: "bg-purple-50",
     iconColor: "text-purple-500",
     stat: "5 مهام"
   },
   {
     title: "الخطة الدراسية",
-    description: "جدولك الدراسي ومسار النجاح الأكاديمي",
-    icon: BookOpen,
-    colorClass: "bg-orange-100/50",
+    description: "جدولة المواد الدراسية وساعات المراجعة",
+    icon: GraduationCap,
+    colorClass: "bg-orange-50",
     iconColor: "text-orange-500",
     stat: "ساعتان"
   },
   {
     title: "الإدارة المالية",
-    description: "تحكم ذكي في ميزانيتك ومصاريفك المالية",
-    icon: Wallet,
-    colorClass: "bg-emerald-100/50",
+    description: "مراقبة المصاريف والمدخرات المالية",
+    icon: Wallet2,
+    colorClass: "bg-emerald-50",
     iconColor: "text-emerald-500",
     stat: "مستقر"
   },
   {
     title: "بناء العادات",
-    description: "اصنع عادات تدوم وتغير مسار حياتك",
-    icon: Repeat,
-    colorClass: "bg-rose-100/50",
+    description: "الالتزام بالعادات الصحية واليومية",
+    icon: Zap,
+    colorClass: "bg-rose-50",
     iconColor: "text-rose-500",
     stat: "80% التزام"
   },
   {
     title: "مركز التحديات",
-    description: "تحديات حماسية لرفع كفاءة أدائك اليومي",
+    description: "تحديات اجتماعية وفردية محفزة",
     icon: Trophy,
-    colorClass: "bg-amber-100/50",
+    colorClass: "bg-amber-50",
     iconColor: "text-amber-600",
     stat: "2 نشط"
   }
@@ -59,54 +59,40 @@ const categories = [
 
 export default function DashboardPage() {
   return (
-    <main className="min-h-screen bg-background pb-40">
-      {/* Header Section */}
+    <main className="min-h-screen bg-background pb-32">
       <DashboardHeader />
-
-      {/* Main Challenge Progress */}
       <ChallengeHighlight />
 
-      {/* Section Divider */}
-      <div className="mt-12 px-8 flex items-end justify-between">
-        <div>
-          <h2 className="text-2xl font-black text-foreground">الأقسام الرئيسية</h2>
-          <div className="h-1 w-10 bg-primary/20 rounded-full mt-1" />
-        </div>
-        <button className="text-sm font-black text-primary hover:opacity-70 transition-opacity">تخصيص</button>
+      <div className="px-5 mt-8 flex items-center justify-between">
+        <h2 className="text-lg font-bold text-foreground">الأقسام الرئيسية</h2>
+        <button className="text-xs font-semibold text-primary">تعديل الترتيب</button>
       </div>
 
-      {/* Categories List */}
-      <div className="mt-8 space-y-6 px-6">
+      <div className="mt-4 px-5 space-y-3">
         {categories.map((category, index) => (
           <CategoryCard
             key={index}
-            title={category.title}
-            description={category.description}
-            icon={category.icon}
-            colorClass={category.colorClass}
-            iconColor={category.iconColor}
-            stat={category.stat}
+            {...category}
           />
         ))}
       </div>
 
-      {/* App Lock Section */}
-      <div className="mx-6 mt-12 p-8 rounded-[3rem] soft-neumorphic flex items-center justify-between border-t border-white/50">
-        <div className="flex items-center gap-5">
-          <div className="h-14 w-14 rounded-[1.5rem] soft-neumorphic-inset flex items-center justify-center">
-            <ShieldCheck className="h-7 w-7 text-primary/80" />
+      {/* Security Section */}
+      <div className="mx-5 mt-8 p-5 rounded-[10px] bg-white premium-shadow border border-border/40 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-[8px] bg-slate-50 flex items-center justify-center">
+            <Lock className="h-5 w-5 text-slate-400" />
           </div>
           <div>
-            <h4 className="text-lg font-black text-foreground/90">قفل التطبيق</h4>
-            <p className="text-xs text-muted-foreground font-bold">خصوصيتك تحت حماية ذكية</p>
+            <h4 className="text-sm font-bold text-foreground">قفل التطبيق</h4>
+            <p className="text-[10px] text-muted-foreground font-medium">حماية بياناتك بكلمة سر</p>
           </div>
         </div>
-        <div className="h-10 px-5 flex items-center justify-center rounded-2xl bg-secondary/50 border border-primary/5">
-          <p className="text-[11px] font-black text-primary/60">قريباً</p>
+        <div className="px-2 py-1 rounded-[6px] bg-slate-100 border border-slate-200">
+          <p className="text-[9px] font-bold text-slate-400">قريباً</p>
         </div>
       </div>
 
-      {/* Bottom Navigation */}
       <BottomNav />
     </main>
   );

@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, Repeat, Trophy, BarChart3, Settings } from "lucide-react";
+import { Home, Repeat, Trophy, PieChart, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import React from "react";
 
@@ -8,16 +8,16 @@ const tabs = [
   { id: 'home', label: 'الرئيسية', icon: Home },
   { id: 'habits', label: 'العادات', icon: Repeat },
   { id: 'challenges', label: 'التحديات', icon: Trophy },
-  { id: 'stats', label: 'النمو', icon: BarChart3 },
-  { id: 'settings', label: 'الإعدادات', icon: Settings },
+  { id: 'stats', label: 'النمو', icon: PieChart },
+  { id: 'profile', label: 'حسابي', icon: User },
 ];
 
 export function BottomNav() {
   const [activeTab, setActiveTab] = React.useState('home');
 
   return (
-    <div className="fixed bottom-8 left-0 right-0 z-50 px-6">
-      <nav className="glass-effect flex items-center justify-around h-24 px-4 rounded-[2.5rem] shadow-2xl shadow-primary/10 border border-white/40">
+    <div className="fixed bottom-6 left-0 right-0 z-50 px-5">
+      <nav className="glass-panel rounded-[10px] h-20 px-2 flex items-center justify-around premium-shadow border border-white/40">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -26,24 +26,24 @@ export function BottomNav() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className="group flex flex-col items-center gap-1.5 relative px-2"
+              className="flex flex-col items-center justify-center gap-1 min-w-[64px] relative"
             >
               <div className={cn(
-                "flex h-14 w-14 items-center justify-center rounded-[1.5rem] transition-all duration-500",
+                "h-10 w-10 rounded-[10px] flex items-center justify-center transition-all duration-300",
                 isActive 
-                  ? "premium-gradient text-white scale-110 shadow-lg shadow-primary/30 glow-effect" 
-                  : "text-muted-foreground/60 hover:bg-secondary/80 hover:text-primary"
+                  ? "primary-gradient text-white shadow-lg shadow-primary/30" 
+                  : "text-muted-foreground/60"
               )}>
-                <Icon className={cn("h-6 w-6 transition-transform duration-500", isActive ? "scale-110" : "group-hover:scale-110")} />
+                <Icon className={cn("h-5 w-5", isActive ? "scale-110" : "")} />
               </div>
               <span className={cn(
-                "text-[10px] font-black transition-all duration-300",
-                isActive ? "text-primary opacity-100" : "text-muted-foreground opacity-0 group-hover:opacity-60"
+                "text-[9px] font-bold transition-all duration-300",
+                isActive ? "text-primary opacity-100" : "opacity-0"
               )}>
                 {tab.label}
               </span>
               {isActive && (
-                <div className="absolute -bottom-1 h-1 w-4 bg-primary rounded-full animate-in fade-in zoom-in duration-500" />
+                <div className="absolute -bottom-1 h-0.5 w-4 bg-primary rounded-full" />
               )}
             </button>
           );
