@@ -4,50 +4,56 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { ChallengeHighlight } from "@/components/dashboard/ChallengeHighlight";
 import { CategoryCard } from "@/components/dashboard/CategoryCard";
 import { BottomNav } from "@/components/navigation/BottomNav";
-import { Dumbbell, CheckSquare, BookOpen, Wallet, Repeat, Trophy } from "lucide-react";
+import { Dumbbell, CheckSquare, BookOpen, Wallet, Repeat, Trophy, ShieldCheck } from "lucide-react";
 
 const categories = [
   {
-    title: "اللياقة",
-    description: "تتبع تمارينك الرياضية وأهدافك البدنية",
+    title: "اللياقة البدنية",
+    description: "تتبع تمارينك وأهدافك الصحية",
     icon: Dumbbell,
-    colorClass: "bg-blue-500/10",
-    iconColor: "text-blue-400"
+    colorClass: "bg-blue-50",
+    iconColor: "text-blue-500",
+    stat: "3 تمارين"
   },
   {
-    title: "المهام",
-    description: "نظم يومك وأنجز مهامك بكفاءة",
+    title: "المهام اليومية",
+    description: "نظم يومك وأنجز أهدافك بكفاءة",
     icon: CheckSquare,
-    colorClass: "bg-purple-500/10",
-    iconColor: "text-purple-400"
+    colorClass: "bg-purple-50",
+    iconColor: "text-purple-500",
+    stat: "5 مهام"
   },
   {
-    title: "الدراسة",
-    description: "جدول دراسي وخطط للنجاح المستمر",
+    title: "الخطة الدراسية",
+    description: "جدولك الدراسي ومسار النجاح",
     icon: BookOpen,
-    colorClass: "bg-orange-500/10",
-    iconColor: "text-orange-400"
+    colorClass: "bg-orange-50",
+    iconColor: "text-orange-500",
+    stat: "ساعتان"
   },
   {
-    title: "المصاريف",
-    description: "إدارة ذكية لميزانيتك ومصاريفك",
+    title: "الإدارة المالية",
+    description: "تحكم ذكي في ميزانيتك ومصاريفك",
     icon: Wallet,
-    colorClass: "bg-green-500/10",
-    iconColor: "text-green-400"
+    colorClass: "bg-green-50",
+    iconColor: "text-green-500",
+    stat: "مستقر"
   },
   {
-    title: "العادات",
-    description: "ابنِ عادات جديدة وغير حياتك",
+    title: "بناء العادات",
+    description: "اصنع عادات تدوم وتغير حياتك",
     icon: Repeat,
-    colorClass: "bg-pink-500/10",
-    iconColor: "text-pink-400"
+    colorClass: "bg-pink-50",
+    iconColor: "text-pink-500",
+    stat: "80% التزام"
   },
   {
-    title: "التحديات",
-    description: "تحديات حماسية لرفع مستوى أدائك",
+    title: "مركز التحديات",
+    description: "تحديات حماسية لرفع كفاءة أدائك",
     icon: Trophy,
-    colorClass: "bg-yellow-500/10",
-    iconColor: "text-yellow-400"
+    colorClass: "bg-yellow-50",
+    iconColor: "text-yellow-600",
+    stat: "2 نشط"
   }
 ];
 
@@ -61,13 +67,13 @@ export default function DashboardPage() {
       <ChallengeHighlight />
 
       {/* Section Divider */}
-      <div className="mt-8 px-6 flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white">الأقسام الرئيسية</h2>
-        <button className="text-sm font-semibold text-primary hover:underline">عرض الكل</button>
+      <div className="mt-10 px-6 flex items-center justify-between">
+        <h2 className="text-xl font-bold text-foreground">الأقسام الرئيسية</h2>
+        <button className="text-sm font-bold text-primary hover:underline">المزيد</button>
       </div>
 
-      {/* Categories Grid */}
-      <div className="mt-4 grid grid-cols-2 gap-4 px-4">
+      {/* Categories List (Full Width Cards) */}
+      <div className="mt-5 space-y-4 px-6">
         {categories.map((category, index) => (
           <CategoryCard
             key={index}
@@ -76,24 +82,23 @@ export default function DashboardPage() {
             icon={category.icon}
             colorClass={category.colorClass}
             iconColor={category.iconColor}
+            stat={category.stat}
           />
         ))}
       </div>
 
-      {/* Passcode Lock Placeholder Hint (as requested for setting later) */}
-      <div className="mx-4 mt-8 glass-card rounded-2xl p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
+      {/* App Lock Section */}
+      <div className="mx-6 mt-10 p-6 rounded-[2.5rem] bg-white premium-shadow border-none flex items-center justify-between border border-primary/5">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-2xl bg-secondary flex items-center justify-center">
+            <ShieldCheck className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-white">قفل التطبيق</h4>
-            <p className="text-xs text-muted-foreground">قم بتأمين بياناتك برمز سري</p>
+            <h4 className="text-base font-bold text-foreground">قفل التطبيق</h4>
+            <p className="text-xs text-muted-foreground font-medium">بياناتك محمية بخصوصية عالية</p>
           </div>
         </div>
-        <button className="text-xs font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-lg">قريباً</button>
+        <button className="text-xs font-bold text-primary bg-primary/10 px-4 py-2 rounded-xl">قريباً</button>
       </div>
 
       {/* Bottom Navigation */}

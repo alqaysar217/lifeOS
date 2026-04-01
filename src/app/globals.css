@@ -4,31 +4,31 @@
 
 @layer base {
   :root {
-    --background: 270 15% 15%;
-    --foreground: 0 0% 100%;
-    --card: 270 18% 18%;
-    --card-foreground: 0 0% 100%;
-    --popover: 270 15% 15%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 270 60% 60%;
+    --background: 210 20% 98%;
+    --foreground: 220 20% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 20%;
+    --primary: 262 70% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 270 10% 25%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 270 10% 25%;
-    --muted-foreground: 270 10% 70%;
-    --accent: 240 75% 70%;
-    --accent-foreground: 0 0% 100%;
+    --secondary: 262 30% 96%;
+    --secondary-foreground: 262 70% 40%;
+    --muted: 210 20% 90%;
+    --muted-foreground: 215 15% 50%;
+    --accent: 262 60% 92%;
+    --accent-foreground: 262 70% 40%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 270 15% 25%;
-    --input: 270 15% 25%;
-    --ring: 270 60% 60%;
-    --chart-1: 270 60% 60%;
-    --chart-2: 240 75% 70%;
-    --chart-3: 142 70% 50%;
+    --border: 210 20% 92%;
+    --input: 210 20% 92%;
+    --ring: 262 70% 60%;
+    --chart-1: 262 70% 60%;
+    --chart-2: 200 70% 50%;
+    --chart-3: 142 70% 45%;
     --chart-4: 47 95% 55%;
     --chart-5: 0 84% 60%;
-    --radius: 1.25rem;
+    --radius: 1.5rem;
   }
 }
 
@@ -37,19 +37,17 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground selection:bg-primary/30;
+    @apply bg-background text-foreground selection:bg-primary/20;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+.premium-shadow {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04);
 }
 
-.gamified-gradient {
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+.soft-gradient {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, #a78bfa 100%);
 }
 
 ::-webkit-scrollbar {

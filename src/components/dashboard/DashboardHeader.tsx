@@ -1,20 +1,30 @@
 "use client"
 
-import { Settings } from "lucide-react";
+import { Settings, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function DashboardHeader() {
   return (
-    <div className="space-y-6 px-4 pt-6">
+    <div className="space-y-6 px-6 pt-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight text-white">حياتي</h1>
-        <Button variant="ghost" size="icon" className="rounded-full bg-white/5 hover:bg-white/10 text-white">
-          <Settings className="h-6 w-6" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="h-10 w-10 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+            <span className="text-white font-bold text-xl">ح</span>
+          </div>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">حياتي</h1>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="icon" className="rounded-2xl bg-white premium-shadow text-muted-foreground hover:text-primary">
+            <Bell className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="rounded-2xl bg-white premium-shadow text-muted-foreground hover:text-primary">
+            <Settings className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
       <div className="space-y-1">
-        <h2 className="text-3xl font-bold text-white">مرحباً بك 👋</h2>
-        <p className="text-lg text-muted-foreground font-medium">جاهز لتحسين يومك؟</p>
+        <h2 className="text-3xl font-bold text-foreground">أهلاً بك 👋</h2>
+        <p className="text-muted-foreground font-medium">لنصنع يوماً رائعاً اليوم.</p>
       </div>
     </div>
   );
