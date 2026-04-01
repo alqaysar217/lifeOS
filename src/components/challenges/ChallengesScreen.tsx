@@ -12,7 +12,7 @@ const otherChallenges = [
 export function ChallengesScreen() {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border/5 px-6 pt-10 pb-4">
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-extrabold text-foreground font-cairo">التحديات</h2>
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-[10px] premium-shadow border border-border/40">
