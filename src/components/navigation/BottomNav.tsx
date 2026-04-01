@@ -1,11 +1,10 @@
-
 "use client"
 
 import { Home, Dumbbell, Trophy, CheckSquare, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import React from "react";
 
-export type TabId = 'home' | 'fitness' | 'challenges' | 'tasks' | 'profile';
+export type TabId = 'home' | 'fitness' | 'challenges' | 'tasks' | 'profile' | 'finance' | 'study' | 'habits';
 
 const tabs = [
   { id: 'home', label: 'الرئيسية', icon: Home },
@@ -21,12 +20,18 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
+  // للتحكم في الحالة النشطة حتى لو كانت الشاشة الحالية ليست في القائمة السفلية (مثل الدراسة والمصاريف)
+  const isTabActive = (tabId: string) => {
+    if (activeTab === tabId) return true;
+    return false;
+  };
+
   return (
     <div className="fixed bottom-6 left-0 right-0 z-50 px-6">
       <nav className="glass-panel rounded-[12px] h-20 px-2 flex items-center justify-around premium-shadow border border-white/60">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+          const isActive = isTabActive(tab.id);
           
           return (
             <button

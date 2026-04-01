@@ -1,4 +1,3 @@
-
 "use client"
 
 import React from "react";
@@ -9,40 +8,49 @@ import { BottomNav, type TabId } from "@/components/navigation/BottomNav";
 import { FitnessScreen } from "@/components/fitness/FitnessScreen";
 import { ChallengesScreen } from "@/components/challenges/ChallengesScreen";
 import { TasksScreen } from "@/components/tasks/TasksScreen";
+import { FinanceScreen } from "@/components/finance/FinanceScreen";
+import { StudyScreen } from "@/components/study/StudyScreen";
+import { HabitsScreen } from "@/components/habits/HabitsScreen";
 import { Activity, CheckCircle2, GraduationCap, Wallet2, Zap, Trophy, Lock } from "lucide-react";
 
 const categories = [
   {
+    id: 'fitness',
     title: "اللياقة البدنية",
     description: "تتبع نشاطك البدني وصحتك اليومية",
     icon: Activity,
     stat: "3 تمارين"
   },
   {
+    id: 'tasks',
     title: "المهام اليومية",
     description: "قائمة المهام والأهداف المراد إنجازها",
     icon: CheckCircle2,
     stat: "5 مهام"
   },
   {
+    id: 'study',
     title: "الخطة الدراسية",
     description: "جدولة المواد الدراسية وساعات المراجعة",
     icon: GraduationCap,
     stat: "ساعتان"
   },
   {
+    id: 'finance',
     title: "الإدارة المالية",
     description: "مراقبة المصاريف والمدخرات المالية",
     icon: Wallet2,
     stat: "مستقر"
   },
   {
+    id: 'habits',
     title: "بناء العادات",
     description: "الالتزام بالعادات الصحية واليومية",
     icon: Zap,
     stat: "80% التزام"
   },
   {
+    id: 'challenges',
     title: "مركز التحديات",
     description: "تحديات اجتماعية وفردية محفزة",
     icon: Trophy,
@@ -68,10 +76,14 @@ export default function DashboardPage() {
 
             <div className="mt-4 px-6 space-y-4">
               {categories.map((category, index) => (
-                <CategoryCard
-                  key={index}
-                  {...category}
-                />
+                <div key={index} onClick={() => setActiveTab(category.id as TabId)}>
+                  <CategoryCard
+                    title={category.title}
+                    description={category.description}
+                    icon={category.icon}
+                    stat={category.stat}
+                  />
+                </div>
               ))}
             </div>
 
@@ -98,6 +110,12 @@ export default function DashboardPage() {
         return <ChallengesScreen />;
       case 'tasks':
         return <TasksScreen />;
+      case 'finance':
+        return <FinanceScreen />;
+      case 'study':
+        return <StudyScreen />;
+      case 'habits':
+        return <HabitsScreen />;
       case 'profile':
         return (
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-muted-foreground animate-in fade-in duration-500">
