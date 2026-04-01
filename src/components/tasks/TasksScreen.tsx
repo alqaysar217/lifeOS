@@ -12,7 +12,7 @@ const todayTasks = [
 ];
 
 const projects = [
-  { title: "تطبيق LifeOS", progress: 75, tasks: 12, color: "bg-primary" },
+  { title: "تطبيق حياتي", progress: 75, tasks: 12, color: "bg-primary" },
   { title: "خطة التدريب", progress: 40, tasks: 5, color: "bg-blue-500" },
 ];
 
@@ -26,7 +26,7 @@ export function TasksScreen() {
         </div>
       </div>
 
-      {/* Projects Section */}
+      {/* قسم المشاريع */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold text-foreground/90">المشاريع</h3>
@@ -59,7 +59,7 @@ export function TasksScreen() {
         </div>
       </div>
 
-      {/* Tasks Tabs */}
+      {/* تبويبات المهام */}
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-foreground/90">قائمة المهام</h3>
         <Tabs defaultValue="ongoing" className="w-full">
@@ -107,7 +107,7 @@ export function TasksScreen() {
         </Tabs>
       </div>
 
-      {/* FAB */}
+      {/* زر إضافة عائم */}
       <button className="fixed bottom-32 left-8 h-14 w-14 rounded-full primary-gradient text-white flex items-center justify-center shadow-2xl shadow-primary/40 active:scale-90 transition-transform z-40">
         <Plus className="h-6 w-6" />
       </button>
