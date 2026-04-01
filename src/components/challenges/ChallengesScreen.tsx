@@ -1,6 +1,6 @@
 "use client"
 
-import { Trophy, Star, Target, Flame, ChevronLeft, Crown } from "lucide-react";
+import { Zap, Star, Target, Flame, ChevronLeft, Crown } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 const otherChallenges = [
@@ -43,7 +43,7 @@ export function ChallengesScreen() {
           <div className="relative z-10 space-y-6">
             <div className="flex items-center gap-3">
               <div className="h-12 w-12 rounded-[10px] bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
-                <Trophy className="h-6 w-6 text-white" />
+                <Zap className="h-6 w-6 text-white" />
               </div>
               <div>
                 <p className="text-[10px] font-semibold text-white/70 uppercase">التحدي النشط</p>
