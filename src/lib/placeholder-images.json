@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "running-map",
+      "description": "خريطة مسار الجري",
+      "imageUrl": "https://picsum.photos/seed/fitness-map/600/400",
+      "imageHint": "fitness map path"
+    }
+  ]
 }
