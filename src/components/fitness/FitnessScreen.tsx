@@ -45,21 +45,25 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   const { data: records } = useCollection(fitnessQuery);
 
-  // طلب منع خمول الشاشة
   const requestWakeLock = async () => {
     if ('wakeLock' in navigator) {
       try {
         wakeLock.current = await (navigator as any).wakeLock.request('screen');
       } catch (err) {
-        console.error(`${err.name}, ${err.message}`);
+        // Quietly fail if permissions policy doesn't allow it. 
+        // This prevents the app from showing an error overlay for a non-critical feature.
       }
     }
   };
 
   const releaseWakeLock = async () => {
-    if (wakeLock.current) {
-      await wakeLock.current.release();
-      wakeLock.current = null;
+    try {
+      if (wakeLock.current) {
+        await wakeLock.current.release();
+        wakeLock.current = null;
+      }
+    } catch (err) {
+      // Ignore errors on release
     }
   };
 
@@ -166,7 +170,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           lastCoord.current = coords;
         },
         (error) => {
-          console.error("GPS Error:", error);
+          // Quietly handle GPS errors to avoid blocking UI
         },
         { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
       );
