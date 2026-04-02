@@ -197,14 +197,11 @@ export default function DashboardPage() {
     if (onboardingName.trim() && onboardingPhone.trim() && user && db) {
       setIsLinking(true);
       try {
-        // البحث عن مستخدم بنفس رقم الهاتف
         const usersRef = collection(db, 'users');
         const q = query(usersRef, where('phoneNumber', '==', onboardingPhone.trim()));
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
-          // وجدنا مستخدماً سابقاً - في نموذج مجهول لا يمكننا تغيير الـ UID بسهولة
-          // ولكن يمكننا تحديث الملف الحالي بنفس الاسم لتسهيل العودة
           const existingData = querySnapshot.docs[0].data();
           const userRef = doc(db, 'users', user.uid);
           await setDoc(userRef, { 
@@ -213,7 +210,6 @@ export default function DashboardPage() {
           }, { merge: true });
           toast({ title: "مرحباً بعودتك!", description: `سعيد برؤيتك مجدداً يا ${existingData.name}` });
         } else {
-          // مستخدم جديد تماماً
           const userRef = doc(db, 'users', user.uid);
           await setDoc(userRef, { 
             name: onboardingName, 
@@ -246,7 +242,6 @@ export default function DashboardPage() {
       );
     }
 
-    // Onboarding Overlay - Mandatory if name or phone is missing
     if (user && !isProfileLoading && (!profile?.name || !profile?.phoneNumber)) {
       return (
         <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-8 animate-in fade-in duration-700">
@@ -285,7 +280,7 @@ export default function DashboardPage() {
                 </div>
                 <Input 
                   type="tel"
-                  placeholder="رقم الهاتف (للاستعادة)..."
+                  placeholder="رقم الهاتف"
                   value={onboardingPhone}
                   onChange={(e) => setOnboardingPhone(e.target.value)}
                   className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow bg-white/50 focus:bg-white transition-all"
