@@ -24,7 +24,6 @@ export function DashboardHeader({ onSearch }: DashboardHeaderProps) {
   const [isSearchVisible, setIsSearchVisible] = useState(false);
 
   useEffect(() => {
-    // اختيار حكمة عشوائية عند التحميل
     const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
     setQuote(randomQuote);
   }, []);
@@ -37,19 +36,18 @@ export function DashboardHeader({ onSearch }: DashboardHeaderProps) {
 
   return (
     <>
-      {/* الشريط العلوي الثابت */}
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 shadow-sm">
         <div className="px-6 pt-10 pb-4 flex items-center justify-between gap-4">
           {!isSearchVisible ? (
             <>
               <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="h-11 w-11 rounded-[10px] primary-gradient flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden bg-white/10">
+                <div className="h-12 w-12 rounded-[12px] primary-gradient flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden relative">
                   <Image 
                     src="/logo.png" 
                     alt="لوجو حياتي" 
-                    width={44} 
-                    height={44} 
+                    fill
                     className="object-cover"
+                    priority
                   />
                 </div>
                 <span className="text-xl font-extrabold tracking-tight text-foreground/90 font-cairo">حياتي</span>
@@ -97,7 +95,6 @@ export function DashboardHeader({ onSearch }: DashboardHeaderProps) {
         </div>
       </div>
       
-      {/* قسم الترحيب القابل للتمرير */}
       <div className="px-6 py-6 space-y-1">
         <h2 className="text-2xl font-extrabold text-foreground font-cairo">أهلاً بك يا بطل 👋</h2>
         <p className="text-xs text-primary/70 font-bold bg-primary/5 inline-block px-3 py-1 rounded-full animate-in fade-in slide-in-from-bottom-2 duration-700">
