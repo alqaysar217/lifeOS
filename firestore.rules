@@ -64,17 +64,16 @@ service cloud.firestore {
      * @principle Self-Creation and Ownership.
      */
     match /users/{userId} {
-      allow get, list: if isOwner(userId);
+      // السماح بالقراءة (get) للمالك فقط، والسماح بالقائمة (list) للبحث عن أرقام الهواتف (استعادة الحساب)
+      allow get: if isOwner(userId);
+      allow list: if isSignedIn(); 
+      
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
 
       /**
        * @description Manages individual habits for a specific user.
-       * @path /users/{userId}/habits/{habitId}
-       * @allow User 'abc' creates a habit at /users/abc/habits/h1 (create)
-       * @deny User 'abc' attempts to list /users/xyz/habits (list)
-       * @principle Hierarchical Path-Based Ownership.
        */
       match /habits/{habitId} {
         allow get, list: if isOwner(userId);
@@ -85,10 +84,6 @@ service cloud.firestore {
 
       /**
        * @description Stores tasks and to-do items for a specific user.
-       * @path /users/{userId}/tasks/{taskId}
-       * @allow User 'abc' updates a task status at /users/abc/tasks/t1 (update)
-       * @deny User 'abc' tries to delete a task at /users/xyz/tasks/t2 (delete)
-       * @principle Immutability of ownership links.
        */
       match /tasks/{taskId} {
         allow get, list: if isOwner(userId);
@@ -99,10 +94,6 @@ service cloud.firestore {
 
       /**
        * @description Tracks progress for multi-day challenges.
-       * @path /users/{userId}/challenges/{challengeId}
-       * @allow User 'abc' views their active challenges (list)
-       * @deny Unauthenticated user access (any)
-       * @principle User-scoped subcollections.
        */
       match /challenges/{challengeId} {
         allow get, list: if isOwner(userId);
@@ -113,10 +104,6 @@ service cloud.firestore {
 
       /**
        * @description Captures fitness activities (steps, distance, etc).
-       * @path /users/{userId}/fitnessRecords/{fitnessRecordId}
-       * @allow User 'abc' logs a new run (create)
-       * @deny Authenticated user 'abc' accessing records of 'xyz' (get)
-       * @principle Resource existence check on write.
        */
       match /fitnessRecords/{fitnessRecordId} {
         allow get, list: if isOwner(userId);
@@ -127,10 +114,6 @@ service cloud.firestore {
 
       /**
        * @description Records financial expenses and transactions.
-       * @path /users/{userId}/financeTransactions/{financeTransactionId}
-       * @allow User 'abc' adds a transaction (create)
-       * @deny User 'abc' trying to change the userId of a transaction (update)
-       * @principle Relational integrity validation.
        */
       match /financeTransactions/{financeTransactionId} {
         allow get, list: if isOwner(userId);
@@ -141,10 +124,6 @@ service cloud.firestore {
 
       /**
        * @description Tracks progress in various study subjects.
-       * @path /users/{userId}/studyProgress/{studyProgressId}
-       * @allow User 'abc' lists their study subjects (list)
-       * @deny Accessing study data without matching the path UID (any)
-       * @principle Path segment authorization.
        */
       match /studyProgress/{studyProgressId} {
         allow get, list: if isOwner(userId);
@@ -155,5 +134,3 @@ service cloud.firestore {
     }
   }
 }
-
-// BACKEND IMPLEMENTED SUCCESSFULLY WITHOUT UI MODIFICATION

@@ -15,9 +15,10 @@ import { HabitsScreen } from "@/components/habits/HabitsScreen";
 import { AIScreen } from "@/components/ai/AIScreen";
 import { AnalyticsScreen } from "@/components/analytics/AnalyticsScreen";
 import { NotificationsScreen } from "@/components/notifications/NotificationsScreen";
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, errorEmitter, FirestorePermissionError } from "@/firebase";
+import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
-import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -126,7 +127,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user && db && !isProfileLoading && !profile) {
       const userRef = doc(db, 'users', user.uid);
-      setDoc(userRef, {
+      setDocumentNonBlocking(userRef, {
         id: user.uid,
         createdAt: serverTimestamp(),
         passcodeEnabled: false
@@ -196,33 +197,38 @@ export default function DashboardPage() {
   const handleStartOnboarding = async () => {
     if (onboardingName.trim() && onboardingPhone.trim() && user && db) {
       setIsLinking(true);
-      try {
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('phoneNumber', '==', onboardingPhone.trim()));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-          const existingData = querySnapshot.docs[0].data();
-          const userRef = doc(db, 'users', user.uid);
-          await setDoc(userRef, { 
-            name: existingData.name, 
-            phoneNumber: onboardingPhone.trim() 
-          }, { merge: true });
-          toast({ title: "مرحباً بعودتك!", description: `سعيد برؤيتك مجدداً يا ${existingData.name}` });
-        } else {
-          const userRef = doc(db, 'users', user.uid);
-          await setDoc(userRef, { 
-            name: onboardingName, 
-            phoneNumber: onboardingPhone.trim() 
-          }, { merge: true });
-          toast({ title: "بداية موفقة", description: "تم حفظ بياناتك بنجاح." });
-        }
-      } catch (error) {
-        console.error(error);
-        toast({ variant: "destructive", title: "خطأ", description: "حدث خطأ أثناء حفظ البيانات." });
-      } finally {
-        setIsLinking(false);
-      }
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('phoneNumber', '==', onboardingPhone.trim()));
+      
+      getDocs(q)
+        .then(async (querySnapshot) => {
+          if (!querySnapshot.empty) {
+            const existingData = querySnapshot.docs[0].data();
+            const userRef = doc(db, 'users', user.uid);
+            setDocumentNonBlocking(userRef, { 
+              name: existingData.name, 
+              phoneNumber: onboardingPhone.trim() 
+            }, { merge: true });
+            toast({ title: "مرحباً بعودتك!", description: `سعيد برؤيتك مجدداً يا ${existingData.name}` });
+          } else {
+            const userRef = doc(db, 'users', user.uid);
+            setDocumentNonBlocking(userRef, { 
+              name: onboardingName, 
+              phoneNumber: onboardingPhone.trim() 
+            }, { merge: true });
+            toast({ title: "بداية موفقة", description: "تم حفظ بياناتك بنجاح." });
+          }
+          setIsLinking(false);
+        })
+        .catch(async (error) => {
+          const permissionError = new FirestorePermissionError({
+            path: usersRef.path,
+            operation: 'list',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          setIsLinking(false);
+          toast({ variant: "destructive", title: "خطأ", description: "حدث خطأ أثناء البحث عن البيانات." });
+        });
     }
   };
 
