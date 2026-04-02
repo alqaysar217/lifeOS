@@ -32,7 +32,8 @@ import {
   ChevronRight,
   User,
   Settings,
-  Wallet
+  Wallet,
+  Bell
 } from "lucide-react";
 
 const baseCategories = [
