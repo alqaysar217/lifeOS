@@ -1,6 +1,8 @@
+
 "use client"
 
-import { Zap, Flame, CheckCircle2, MoreVertical, Sparkles, TrendingUp } from "lucide-react";
+import { Zap, Flame, CheckCircle2, MoreVertical, Sparkles, TrendingUp, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const habits = [
   { id: 1, title: "شرب 2 لتر ماء", streak: 12, completed: true },
@@ -8,12 +10,21 @@ const habits = [
   { id: 3, title: "ممارسة الرياضة", streak: 8, completed: true },
 ];
 
-export function HabitsScreen() {
+interface HabitsScreenProps {
+  onBack: () => void;
+}
+
+export function HabitsScreen({ onBack }: HabitsScreenProps) {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border/5 px-6 pt-10 pb-4">
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold text-foreground font-cairo">العادات</h2>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow">
+              <ChevronRight className="h-5 w-5 text-foreground" />
+            </Button>
+            <h2 className="text-2xl font-extrabold text-foreground font-cairo">العادات</h2>
+          </div>
           <div className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow flex items-center justify-center text-primary">
             <Zap className="h-5 w-5" />
           </div>

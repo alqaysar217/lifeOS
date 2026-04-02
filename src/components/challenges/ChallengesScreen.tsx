@@ -1,20 +1,31 @@
+
 "use client"
 
-import { Zap, Star, Target, Flame, ChevronLeft, Crown } from "lucide-react";
+import { Zap, Star, Target, Flame, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 
 const otherChallenges = [
   { title: "زيادة الوزن الصحي", type: "تغذية", progress: 65, icon: Target },
   { title: "خسارة الوزن", type: "لياقة", progress: 30, icon: Flame },
-  { title: "الالتزام اليومي", type: "عادات", progress: 85, icon: Star },
+  { title: "الالزام اليومي", type: "عادات", progress: 85, icon: Star },
 ];
 
-export function ChallengesScreen() {
+interface ChallengesScreenProps {
+  onBack: () => void;
+}
+
+export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold text-foreground font-cairo">التحديات</h2>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow">
+              <ChevronRight className="h-5 w-5 text-foreground" />
+            </Button>
+            <h2 className="text-2xl font-extrabold text-foreground font-cairo">التحديات</h2>
+          </div>
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-[10px] premium-shadow border border-border/40">
             <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
             <span className="text-xs font-bold">1250 نقطة</span>

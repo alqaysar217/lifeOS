@@ -1,8 +1,10 @@
+
 "use client"
 
-import { Play, MapPin, Clock, Zap, Target, Dumbbell, ChevronLeft } from "lucide-react";
+import { Play, MapPin, Clock, Zap, Target, Dumbbell, ChevronRight, ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { Button } from "@/components/ui/button";
 
 const exercises = [
   { title: "نط الحبل", duration: "10 دقائق", kcal: "120", icon: Dumbbell },
@@ -11,14 +13,23 @@ const exercises = [
   { title: "تمارين البطن", duration: "10 دقائق", kcal: "60", icon: Dumbbell },
 ];
 
-export function FitnessScreen() {
+interface FitnessScreenProps {
+  onBack: () => void;
+}
+
+export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const mapImage = PlaceHolderImages.find(img => img.id === "running-map");
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold text-foreground font-cairo">اللياقة</h2>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow">
+              <ChevronRight className="h-5 w-5 text-foreground" />
+            </Button>
+            <h2 className="text-2xl font-extrabold text-foreground font-cairo">اللياقة</h2>
+          </div>
           <div className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow flex items-center justify-center text-primary">
             <Dumbbell className="h-5 w-5" />
           </div>

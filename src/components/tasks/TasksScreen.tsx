@@ -1,8 +1,10 @@
+
 "use client"
 
-import { Plus, MoreVertical, Calendar, Folder, Clock, CheckCircle2, Circle } from "lucide-react";
+import { Plus, MoreVertical, Calendar, Folder, Clock, CheckCircle2, Circle, ChevronRight } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 
 const todayTasks = [
   { id: 1, title: "مراجعة تقرير المشروع", completed: true, time: "09:00 ص" },
@@ -15,12 +17,21 @@ const projects = [
   { title: "خطة التدريب", progress: 40, tasks: 5, color: "bg-blue-500" },
 ];
 
-export function TasksScreen() {
+interface TasksScreenProps {
+  onBack: () => void;
+}
+
+export function TasksScreen({ onBack }: TasksScreenProps) {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold text-foreground font-cairo">المهام</h2>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow">
+              <ChevronRight className="h-5 w-5 text-foreground" />
+            </Button>
+            <h2 className="text-2xl font-extrabold text-foreground font-cairo">المهام</h2>
+          </div>
           <div className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow flex items-center justify-center text-primary">
             <Calendar className="h-5 w-5" />
           </div>

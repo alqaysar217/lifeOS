@@ -1,19 +1,30 @@
+
 "use client"
 
-import { Wallet, Plus, Coffee, Book, CreditCard, Car, Info } from "lucide-react";
+import { Wallet, Plus, Coffee, Book, CreditCard, Car, Info, ChevronRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 
 const transactions = [
   { title: "وجبة غداء", category: "أكل", amount: "5000", type: "out", icon: Coffee },
   { title: "كتب دراسية", category: "دراسة", amount: "3000", type: "out", icon: Book },
 ];
 
-export function FinanceScreen() {
+interface FinanceScreenProps {
+  onBack: () => void;
+}
+
+export function FinanceScreen({ onBack }: FinanceScreenProps) {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border/5 px-6 pt-10 pb-4">
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold text-foreground font-cairo">المصاريف</h2>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow">
+              <ChevronRight className="h-5 w-5 text-foreground" />
+            </Button>
+            <h2 className="text-2xl font-extrabold text-foreground font-cairo">المصاريف</h2>
+          </div>
           <div className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow flex items-center justify-center text-primary">
             <Wallet className="h-5 w-5" />
           </div>

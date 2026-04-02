@@ -1,19 +1,30 @@
+
 "use client"
 
-import { GraduationCap, BookOpen, Clock, Calendar, AlertCircle, ChevronLeft, PlayCircle } from "lucide-react";
+import { GraduationCap, BookOpen, Clock, Calendar, AlertCircle, ChevronLeft, ChevronRight, PlayCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 
 const subjects = [
   { title: "قواعد البيانات", progress: 85, color: "bg-blue-500", lessons: "12/15" },
   { title: "نظم التشغيل", progress: 45, color: "bg-purple-500", lessons: "5/12" },
 ];
 
-export function StudyScreen() {
+interface StudyScreenProps {
+  onBack: () => void;
+}
+
+export function StudyScreen({ onBack }: StudyScreenProps) {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border/5 px-6 pt-10 pb-4">
+      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold text-foreground font-cairo">الدراسة</h2>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow">
+              <ChevronRight className="h-5 w-5 text-foreground" />
+            </Button>
+            <h2 className="text-2xl font-extrabold text-foreground font-cairo">الدراسة</h2>
+          </div>
           <div className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow flex items-center justify-center text-primary">
             <GraduationCap className="h-5 w-5" />
           </div>

@@ -1,3 +1,4 @@
+
 "use client"
 
 import React from "react";
@@ -61,6 +62,8 @@ const categories = [
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = React.useState<TabId>('home');
 
+  const handleBack = () => setActiveTab('home');
+
   const renderContent = () => {
     switch (activeTab) {
       case 'home':
@@ -105,17 +108,17 @@ export default function DashboardPage() {
           </div>
         );
       case 'fitness':
-        return <FitnessScreen />;
+        return <FitnessScreen onBack={handleBack} />;
       case 'challenges':
-        return <ChallengesScreen />;
+        return <ChallengesScreen onBack={handleBack} />;
       case 'tasks':
-        return <TasksScreen />;
+        return <TasksScreen onBack={handleBack} />;
       case 'finance':
-        return <FinanceScreen />;
+        return <FinanceScreen onBack={handleBack} />;
       case 'study':
-        return <StudyScreen />;
+        return <StudyScreen onBack={handleBack} />;
       case 'habits':
-        return <HabitsScreen />;
+        return <HabitsScreen onBack={handleBack} />;
       case 'profile':
         return (
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-muted-foreground animate-in fade-in duration-500">
@@ -123,6 +126,7 @@ export default function DashboardPage() {
               <Lock className="h-8 w-8 text-white" />
             </div>
             <p className="font-bold">حسابي قيد التطوير</p>
+            <button onClick={handleBack} className="mt-6 text-primary font-bold text-sm">العودة للرئيسية</button>
           </div>
         );
       default:
