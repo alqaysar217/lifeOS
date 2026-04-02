@@ -16,12 +16,6 @@ const MapComponent = dynamic(() => import("./MapComponent"), {
   loading: () => <div className="h-full w-full bg-slate-100 flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
 });
 
-const exercises = [
-  { title: "نط الحبل", duration: "10 دقائق", kcal: "120", icon: Dumbbell },
-  { title: "تمارين الضغط", duration: "3 مجموعات", kcal: "85", icon: Zap },
-  { title: "سكوات", duration: "15 دقيقة", kcal: "100", icon: Target },
-];
-
 interface FitnessScreenProps {
   onBack: () => void;
 }
@@ -92,8 +86,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           const currentPos: [number, number] = [coords.latitude, coords.longitude];
           
           setPath(prev => {
-            // إضافة النقطة الجديدة للمسار إذا تحرك المستخدم مسافة معقولة
             if (prev.length === 0) return [currentPos];
+            // تجنب إضافة نفس النقطة مرتين
+            const last = prev[prev.length - 1];
+            if (last[0] === currentPos[0] && last[1] === currentPos[1]) return prev;
             return [...prev, currentPos];
           });
 
@@ -103,10 +99,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               coords.latitude, coords.longitude
             );
             
-            // فلترة الضجيج البسيط (أقل من 2 متر) لزيادة الدقة
             if (d > 0.002) { 
               setDistance(prev => prev + d);
-              // تحويل السرعة من م/ث إلى كم/س
               setCurrentSpeed(coords.speed ? coords.speed * 3.6 : 0);
             }
           }
@@ -116,7 +110,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           console.error("GPS Error:", error);
           toast({ variant: "destructive", title: "خطأ في الـ GPS", description: "تأكد من تفعيل الموقع الجغرافي للحصول على نتائج دقيقة." });
         },
-        { enableHighAccuracy: true, distanceFilter: 1, maximumAge: 0 }
+        { enableHighAccuracy: true, maximumAge: 0 }
       );
     } else {
       stopTrackingAndSave();
@@ -132,9 +126,11 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     
     if (db && user && distance > 0) {
       const recordsRef = collection(db, 'users', user.uid, 'fitnessRecords');
-      // تقدير الخطوات: المتوسط 1312 خطوة لكل كيلومتر مشي/جري
       const estimatedSteps = Math.floor(distance * 1312);
       
+      // تحويل المصفوفات المتداخلة إلى مصفوفة من الكائنات لتجنب خطأ Firestore
+      const formattedPath = path.map(p => ({ lat: p[0], lng: p[1] }));
+
       addDocumentNonBlocking(recordsRef, {
         date: serverTimestamp(),
         steps: estimatedSteps,
@@ -142,7 +138,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         time: Math.floor(elapsedTime / 60), // بالدقائق
         durationSeconds: elapsedTime,
         userId: user.uid,
-        path: path
+        path: formattedPath
       });
       
       toast({ title: "تم حفظ الجلسة", description: `لقد قطعت ${distance.toFixed(2)} كم وخطوت حوالي ${estimatedSteps} خطوة. بطل!` });
@@ -173,7 +169,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       </div>
 
       <div className="px-6 py-6 space-y-8">
-        {/* بطاقة التحكم الرئيسية */}
         <div className={`rounded-[20px] p-8 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-red-500 shadow-red-200' : 'primary-gradient shadow-primary/20'}`}>
           <div className="relative z-10 space-y-8">
             <div className="flex justify-between items-start">
@@ -208,12 +203,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               )}
             </button>
           </div>
-          {/* لمسات جمالية خلفية */}
           <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
         </div>
 
-        {/* الخارطة الحية */}
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-lg font-bold text-foreground/90 font-cairo">خارطة المسار الفعلي</h3>
@@ -239,7 +232,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           </div>
         </div>
 
-        {/* إحصائيات سريعة */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 space-y-3">
             <div className="h-10 w-10 rounded-[10px] bg-orange-50 flex items-center justify-center">
