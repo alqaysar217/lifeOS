@@ -187,23 +187,23 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const renderHub = () => (
     <div className="px-6 py-6 space-y-8 animate-in fade-in duration-500">
       {/* Today's Summary */}
-      <div className="primary-gradient rounded-[30px] p-6 text-white premium-shadow relative overflow-hidden">
+      <div className="primary-gradient rounded-[10px] p-6 text-white premium-shadow relative overflow-hidden">
         <div className="relative z-10 flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest">نشاط اليوم</p>
-            <h3 className="text-2xl font-black">أداء رائع يا بطل!</h3>
+            <h3 className="text-xl font-black">أداء رائع يا بطل!</h3>
           </div>
-          <div className="h-12 w-12 rounded-[15px] bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+          <div className="h-12 w-12 rounded-[10px] bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
             <Trophy className="h-6 w-6 text-white" />
           </div>
         </div>
         <div className="mt-6 flex gap-4">
-          <div className="flex-1 bg-white/10 p-3 rounded-[20px] backdrop-blur-sm border border-white/10">
+          <div className="flex-1 bg-white/10 p-3 rounded-[10px] backdrop-blur-sm border border-white/10">
             <Footprints className="h-4 w-4 text-white/50 mb-1" />
             <p className="text-[9px] font-bold text-white/60">الخطوات</p>
             <p className="text-lg font-black">{records?.filter(r => r.date?.seconds > (Date.now() / 1000 - 86400)).reduce((acc, r) => acc + (r.steps || 0), 0) || 0}</p>
           </div>
-          <div className="flex-1 bg-white/10 p-3 rounded-[20px] backdrop-blur-sm border border-white/10">
+          <div className="flex-1 bg-white/10 p-3 rounded-[10px] backdrop-blur-sm border border-white/10">
             <Activity className="h-4 w-4 text-white/50 mb-1" />
             <p className="text-[9px] font-bold text-white/60">المسافة</p>
             <p className="text-lg font-black">{(records?.filter(r => r.date?.seconds > (Date.now() / 1000 - 86400)).reduce((acc, r) => acc + (r.distance || 0), 0) || 0).toFixed(1)} <span className="text-[8px]">كم</span></p>
@@ -235,9 +235,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             <div className="py-10 text-center text-xs text-muted-foreground">جاري تحميل السجل...</div>
           ) : records && records.length > 0 ? (
             records.slice(0, 5).map((r, i) => (
-              <div key={i} className="bg-white p-4 rounded-[20px] premium-shadow border border-border/40 flex items-center justify-between">
+              <div key={i} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className={`h-10 w-10 rounded-[12px] flex items-center justify-center ${r.type === 'run' ? 'bg-blue-50' : 'bg-orange-50'}`}>
+                  <div className={`h-10 w-10 rounded-[8px] flex items-center justify-center ${r.type === 'run' ? 'bg-blue-50' : 'bg-orange-50'}`}>
                     {r.type === 'run' ? <Navigation className="h-5 w-5 text-blue-500" /> : <Dumbbell className="h-5 w-5 text-orange-500" />}
                   </div>
                   <div>
@@ -269,26 +269,26 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const renderRunning = () => (
     <div className="animate-in slide-in-from-bottom-4 duration-500 pb-32">
       <div className="px-6 py-6 space-y-8">
-        <div className={`rounded-[30px] p-8 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-red-500' : 'primary-gradient'}`}>
+        <div className={`rounded-[10px] p-6 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-red-500' : 'primary-gradient'}`}>
           <div className="relative z-10">
-            <h3 className="text-xl font-black mb-1">{isTracking ? 'جاري التتبع...' : 'جاهز للبدء؟'}</h3>
-            <p className="text-white/70 text-xs font-bold uppercase mb-8">كارديو صباحي</p>
+            <h3 className="text-lg font-black mb-1">{isTracking ? 'جاري التتبع...' : 'جاهز للبدء؟'}</h3>
+            <p className="text-white/70 text-[10px] font-bold uppercase mb-6">كارديو صباحي</p>
             
-            <div className="grid grid-cols-3 gap-2 mb-10">
+            <div className="grid grid-cols-3 gap-2 mb-6">
               <StatItem icon={Clock} label="الوقت" value={formatTime(elapsedTime)} />
               <StatItem icon={Footprints} label="الخطوات" value={steps} />
               <StatItem icon={Navigation} label="المسافة" value={`${distance.toFixed(2)} كم`} />
             </div>
 
-            <Button onClick={toggleTracking} className="w-full h-16 rounded-[22px] bg-white text-primary font-black text-lg shadow-2xl active:scale-95 transition-all">
-              {isTracking ? <><Square className="h-6 w-6 ml-2 fill-current text-red-500" /> إنهاء الجلسة</> : <><Play className="h-6 w-6 ml-2 fill-current" /> ابدأ الجري</>}
+            <Button onClick={toggleTracking} className="w-full h-12 rounded-[10px] bg-white text-primary font-black text-base shadow-2xl active:scale-95 transition-all">
+              {isTracking ? <><Square className="h-5 w-5 ml-2 fill-current text-red-500" /> إنهاء الجلسة</> : <><Play className="h-5 w-5 ml-2 fill-current" /> ابدأ الجري</>}
             </Button>
           </div>
         </div>
 
         <div className="space-y-4">
           <h3 className="text-lg font-bold text-foreground/90 font-cairo">خارطة المسار</h3>
-          <div className="h-80 w-full rounded-[30px] overflow-hidden bg-slate-50 border border-border/40 shadow-inner premium-shadow relative">
+          <div className="h-80 w-full rounded-[10px] overflow-hidden bg-slate-50 border border-border/40 shadow-inner premium-shadow relative">
             <MapComponent path={path.map(p => [p.lat, p.lng])} />
             {!isTracking && path.length === 0 && (
               <div className="absolute inset-0 z-10 bg-black/5 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3">
@@ -304,38 +304,38 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   const renderRepCounter = () => (
     <div className="px-6 py-6 space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-      <div className={`rounded-[30px] p-10 text-white premium-shadow text-center relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
+      <div className={`rounded-[10px] p-8 text-white premium-shadow text-center relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
         <div className="relative z-10 space-y-6">
-          <div className="h-20 w-20 rounded-[25px] bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 mx-auto shadow-xl">
-            <Dumbbell className="h-10 w-10 text-white" />
+          <div className="h-16 w-16 rounded-[10px] bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 mx-auto shadow-xl">
+            <Dumbbell className="h-8 w-8 text-white" />
           </div>
           <div>
-            <h3 className="text-2xl font-black">{getExerciseName(activeExercise)}</h3>
-            <p className="text-white/70 text-xs font-bold uppercase">ركز على الجودة قبل السرعة</p>
+            <h3 className="text-xl font-black">{getExerciseName(activeExercise)}</h3>
+            <p className="text-white/70 text-[10px] font-bold uppercase">ركز على الجودة قبل السرعة</p>
           </div>
           
-          <div className="flex justify-center gap-8 py-4">
+          <div className="flex justify-center gap-8 py-2">
             <div className="text-center">
               <p className="text-[10px] font-bold text-white/60 mb-1">الوقت</p>
-              <p className="text-3xl font-black tabular-nums">{formatTime(elapsedTime)}</p>
+              <p className="text-2xl font-black tabular-nums">{formatTime(elapsedTime)}</p>
             </div>
             <div className="text-center">
               <p className="text-[10px] font-bold text-white/60 mb-1">العدّات</p>
-              <p className="text-3xl font-black tabular-nums">{reps}</p>
+              <p className="text-2xl font-black tabular-nums">{reps}</p>
             </div>
           </div>
 
           {!isTracking ? (
-            <Button onClick={toggleTracking} className="w-full h-16 rounded-[22px] bg-white text-primary font-black text-lg shadow-2xl active:scale-95 transition-all">
-              <Play className="h-6 w-6 ml-2 fill-current" /> ابدأ التمرين
+            <Button onClick={toggleTracking} className="w-full h-12 rounded-[10px] bg-white text-primary font-black text-base shadow-2xl active:scale-95 transition-all">
+              <Play className="h-5 w-5 ml-2 fill-current" /> ابدأ التمرين
             </Button>
           ) : (
             <div className="space-y-4">
               <div className="flex gap-4">
-                <Button onClick={() => setReps(prev => Math.max(0, prev - 1))} variant="ghost" className="h-14 w-14 rounded-[15px] bg-white/20 text-white font-black text-2xl border border-white/30">-</Button>
-                <Button onClick={() => setReps(prev => prev + 1)} className="flex-1 h-14 rounded-[15px] bg-white text-green-600 font-black text-lg shadow-xl">+</Button>
+                <Button onClick={() => setReps(prev => Math.max(0, prev - 1))} variant="ghost" className="h-12 w-12 rounded-[10px] bg-white/20 text-white font-black text-xl border border-white/30">-</Button>
+                <Button onClick={() => setReps(prev => prev + 1)} className="flex-1 h-12 rounded-[10px] bg-white text-green-600 font-black text-base shadow-xl">+</Button>
               </div>
-              <Button onClick={stopAndSave} className="w-full h-14 rounded-[15px] bg-red-500 text-white font-black text-lg shadow-xl">إنهاء وحفظ</Button>
+              <Button onClick={stopAndSave} className="w-full h-12 rounded-[10px] bg-red-500 text-white font-black text-base shadow-xl">إنهاء وحفظ</Button>
             </div>
           )}
         </div>
@@ -343,8 +343,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       </div>
 
       {/* Instructions */}
-      <div className="bg-white p-6 rounded-[25px] premium-shadow border border-border/40 flex items-start gap-4">
-        <div className="h-10 w-10 rounded-[12px] bg-primary/5 flex items-center justify-center shrink-0">
+      <div className="bg-white p-6 rounded-[10px] premium-shadow border border-border/40 flex items-start gap-4">
+        <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center shrink-0">
           <Timer className="h-5 w-5 text-primary" />
         </div>
         <div className="space-y-1">
@@ -361,7 +361,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     <div className="px-6 py-6 space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-32">
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-foreground/90 font-cairo">تقدمك في الجري (كم)</h3>
-        <div className="h-60 w-full bg-white p-4 rounded-[25px] premium-shadow border border-border/40">
+        <div className="h-60 w-full bg-white p-4 rounded-[10px] premium-shadow border border-border/40">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={statsData}>
               <defs>
@@ -381,7 +381,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-foreground/90 font-cairo">الخطوات الأسبوعية</h3>
-        <div className="h-60 w-full bg-white p-4 rounded-[25px] premium-shadow border border-border/40">
+        <div className="h-60 w-full bg-white p-4 rounded-[10px] premium-shadow border border-border/40">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={statsData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -395,12 +395,12 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white p-6 rounded-[25px] premium-shadow border border-border/40 text-center">
+        <div className="bg-white p-6 rounded-[10px] premium-shadow border border-border/40 text-center">
           <Trophy className="h-6 w-6 text-yellow-500 mx-auto mb-2" />
           <p className="text-[10px] font-bold text-muted-foreground uppercase">أفضل مسافة</p>
           <h4 className="text-xl font-black">{Math.max(...(records?.map(r => r.distance || 0) || [0])).toFixed(1)} <span className="text-xs">كم</span></h4>
         </div>
-        <div className="bg-white p-6 rounded-[25px] premium-shadow border border-border/40 text-center">
+        <div className="bg-white p-6 rounded-[10px] premium-shadow border border-border/40 text-center">
           <Activity className="h-6 w-6 text-primary mx-auto mb-2" />
           <p className="text-[10px] font-bold text-muted-foreground uppercase">إجمالي التمارين</p>
           <h4 className="text-xl font-black">{records?.length || 0}</h4>
@@ -442,8 +442,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 // Helper Components
 function ExerciseCard({ icon: Icon, label, sub, color, onClick }: any) {
   return (
-    <div onClick={onClick} className="bg-white p-5 rounded-[25px] premium-shadow border border-border/40 space-y-4 active:scale-95 transition-all cursor-pointer group">
-      <div className={`h-12 w-12 rounded-[15px] ${color} flex items-center justify-center text-white shadow-lg shadow-black/5 group-hover:scale-110 transition-transform`}>
+    <div onClick={onClick} className="bg-white p-5 rounded-[10px] premium-shadow border border-border/40 space-y-4 active:scale-95 transition-all cursor-pointer group">
+      <div className={`h-12 w-12 rounded-[10px] ${color} flex items-center justify-center text-white shadow-lg shadow-black/5 group-hover:scale-110 transition-transform`}>
         <Icon className="h-6 w-6" />
       </div>
       <div>
@@ -456,7 +456,7 @@ function ExerciseCard({ icon: Icon, label, sub, color, onClick }: any) {
 
 function StatItem({ icon: Icon, label, value }: any) {
   return (
-    <div className="text-center p-3 bg-white/5 rounded-[20px] backdrop-blur-sm border border-white/5 shadow-inner">
+    <div className="text-center p-3 bg-white/5 rounded-[10px] backdrop-blur-sm border border-white/5 shadow-inner">
       <Icon className="h-4 w-4 mx-auto mb-2 text-white/50" />
       <p className="text-[9px] font-bold text-white/60 uppercase mb-1">{label}</p>
       <p className="text-base font-black tabular-nums">{value}</p>
