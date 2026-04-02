@@ -1,12 +1,12 @@
 
 "use client"
 
-import { Zap, Star, Target, Flame, ChevronLeft, ChevronRight, Crown, Plus } from "lucide-react";
+import { Zap, Star, Target, Flame, ChevronLeft, ChevronRight, Crown, Plus, Trophy } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, serverTimestamp } from "firebase/firestore";
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { collection, serverTimestamp, doc } from "firebase/firestore";
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 interface ChallengesScreenProps {
   onBack: () => void;
@@ -23,7 +23,7 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
 
   const { data: challenges, isLoading } = useCollection(challengesQuery);
 
-  const activeChallenge = challenges?.find(c => c.totalDays > 0);
+  const activeChallenge = challenges?.find(c => c.totalDays > 0 && c.currentDay < c.totalDays);
 
   const handleAddChallenge = () => {
     if (!db || !user) return;
@@ -37,12 +37,20 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
     });
   };
 
+  const handleIncrementDay = (challengeId: string, currentDay: number, totalDays: number) => {
+    if (!db || !user || currentDay >= totalDays) return;
+    const challengeRef = doc(db, 'users', user.uid, 'challenges', challengeId);
+    updateDocumentNonBlocking(challengeRef, {
+      currentDay: currentDay + 1
+    });
+  };
+
   const points = challenges?.length ? challenges.length * 100 + 1250 : 0;
   const level = Math.floor(points / 300) || 1;
   const progress = ((points % 1000) / 1000) * 100;
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32">
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -74,16 +82,22 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
         </div>
 
         {activeChallenge ? (
-          <div className="primary-gradient rounded-[10px] p-6 text-white premium-shadow relative overflow-hidden shadow-[0_20px_40px_-15px_rgba(139,92,246,0.4)]">
+          <div 
+            onClick={() => handleIncrementDay(activeChallenge.id, activeChallenge.currentDay, activeChallenge.totalDays)}
+            className="primary-gradient rounded-[10px] p-6 text-white premium-shadow relative overflow-hidden shadow-[0_20px_40px_-15px_rgba(139,92,246,0.4)] cursor-pointer active:scale-[0.98] transition-all"
+          >
             <div className="relative z-10 space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-[10px] bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
-                  <Zap className="h-6 w-6 text-white" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-[10px] bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+                    <Zap className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-white/70 uppercase">التحدي النشط</p>
+                    <h3 className="text-lg font-bold">{activeChallenge.title}</h3>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-white/70 uppercase">التحدي النشط</p>
-                  <h3 className="text-lg font-bold">{activeChallenge.title}</h3>
-                </div>
+                <div className="text-[10px] font-bold bg-white/20 px-2 py-1 rounded-full animate-pulse">اضغط لتحديث التقدم</div>
               </div>
               
               <div className="space-y-3">
@@ -161,4 +175,3 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
     </div>
   );
 }
-import { Trophy } from "lucide-react";

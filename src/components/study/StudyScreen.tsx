@@ -5,8 +5,8 @@ import { GraduationCap, BookOpen, Clock, Calendar, AlertCircle, ChevronLeft, Che
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, serverTimestamp } from "firebase/firestore";
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { collection, serverTimestamp, doc } from "firebase/firestore";
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 interface StudyScreenProps {
   onBack: () => void;
@@ -34,8 +34,16 @@ export function StudyScreen({ onBack }: StudyScreenProps) {
     });
   };
 
+  const handleUpdateProgress = (subjectId: string, currentProgress: number) => {
+    if (!db || !user || currentProgress >= 100) return;
+    const subjectRef = doc(db, 'users', user.uid, 'studyProgress', subjectId);
+    updateDocumentNonBlocking(subjectRef, {
+      progress: Math.min(currentProgress + 5, 100)
+    });
+  };
+
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32">
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -85,7 +93,11 @@ export function StudyScreen({ onBack }: StudyScreenProps) {
           ) : subjects && subjects.length > 0 ? (
             <div className="space-y-4">
               {subjects.map((sub) => (
-                <div key={sub.id} className="bg-white p-5 rounded-[10px] premium-shadow border border-border/40 space-y-4">
+                <div 
+                  key={sub.id} 
+                  onClick={() => handleUpdateProgress(sub.id, sub.progress)}
+                  className="bg-white p-5 rounded-[10px] premium-shadow border border-border/40 space-y-4 cursor-pointer active:scale-[0.98] transition-all"
+                >
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
                       <div className={`h-10 w-10 rounded-[10px] bg-blue-500/10 flex items-center justify-center`}>
@@ -96,7 +108,7 @@ export function StudyScreen({ onBack }: StudyScreenProps) {
                         <p className="text-[10px] text-muted-foreground font-bold">{sub.progress}% مكتمل</p>
                       </div>
                     </div>
-                    <ChevronLeft className="h-4 w-4 text-slate-300" />
+                    <div className="text-[9px] font-bold text-primary bg-primary/5 px-2 py-1 rounded-full">اضغط للزيادة</div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-[9px] font-bold text-muted-foreground">
