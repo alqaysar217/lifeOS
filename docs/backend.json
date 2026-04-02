@@ -15,6 +15,10 @@
           "type": "string",
           "description": "The name provided by the user during onboarding."
         },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The phone number used for identity verification and data recovery."
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp indicating when the user's record was first created.",

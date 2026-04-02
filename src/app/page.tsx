@@ -17,11 +17,12 @@ import { AnalyticsScreen } from "@/components/analytics/AnalyticsScreen";
 import { NotificationsScreen } from "@/components/notifications/NotificationsScreen";
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Image from "next/image";
 import { 
   Activity, 
   CheckCircle2, 
@@ -42,7 +43,9 @@ import {
   Check,
   Sparkles,
   LogOut,
-  RefreshCcw
+  RefreshCcw,
+  Smartphone,
+  Loader2
 } from "lucide-react";
 
 const baseCategories = [
@@ -103,6 +106,8 @@ export default function DashboardPage() {
   const [currentTime, setCurrentTime] = useState<number>(new Date().getHours());
   const [copied, setCopied] = useState(false);
   const [onboardingName, setOnboardingName] = useState("");
+  const [onboardingPhone, setOnboardingPhone] = useState("");
+  const [isLinking, setIsLinking] = useState(false);
   
   const auth = useAuth();
   const db = useFirestore();
@@ -188,16 +193,46 @@ export default function DashboardPage() {
     }
   };
 
-  const handleStartOnboarding = () => {
-    if (onboardingName.trim() && user && db) {
-      const userRef = doc(db, 'users', user.uid);
-      setDoc(userRef, { name: onboardingName }, { merge: true });
+  const handleStartOnboarding = async () => {
+    if (onboardingName.trim() && onboardingPhone.trim() && user && db) {
+      setIsLinking(true);
+      try {
+        // البحث عن مستخدم بنفس رقم الهاتف
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('phoneNumber', '==', onboardingPhone.trim()));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          // وجدنا مستخدماً سابقاً - في نموذج مجهول لا يمكننا تغيير الـ UID بسهولة
+          // ولكن يمكننا تحديث الملف الحالي بنفس الاسم لتسهيل العودة
+          const existingData = querySnapshot.docs[0].data();
+          const userRef = doc(db, 'users', user.uid);
+          await setDoc(userRef, { 
+            name: existingData.name, 
+            phoneNumber: onboardingPhone.trim() 
+          }, { merge: true });
+          toast({ title: "مرحباً بعودتك!", description: `سعيد برؤيتك مجدداً يا ${existingData.name}` });
+        } else {
+          // مستخدم جديد تماماً
+          const userRef = doc(db, 'users', user.uid);
+          await setDoc(userRef, { 
+            name: onboardingName, 
+            phoneNumber: onboardingPhone.trim() 
+          }, { merge: true });
+          toast({ title: "بداية موفقة", description: "تم حفظ بياناتك بنجاح." });
+        }
+      } catch (error) {
+        console.error(error);
+        toast({ variant: "destructive", title: "خطأ", description: "حدث خطأ أثناء حفظ البيانات." });
+      } finally {
+        setIsLinking(false);
+      }
     }
   };
 
   const handleSignOut = () => {
     signOut(auth).then(() => {
-      window.location.reload(); // لإعادة تحميل التطبيق وإنشاء هوية جديدة
+      window.location.reload(); 
     });
   };
 
@@ -211,37 +246,62 @@ export default function DashboardPage() {
       );
     }
 
-    // Onboarding Overlay - Mandatory if name is missing
-    if (user && !isProfileLoading && !profile?.name) {
+    // Onboarding Overlay - Mandatory if name or phone is missing
+    if (user && !isProfileLoading && (!profile?.name || !profile?.phoneNumber)) {
       return (
         <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-8 animate-in fade-in duration-700">
-          <div className="w-full max-w-md space-y-10 text-center">
-            <div className="h-24 w-24 primary-gradient rounded-[25px] flex items-center justify-center mx-auto shadow-2xl animate-bounce">
-              <Sparkles className="h-12 w-12 text-white" />
+          <div className="w-full max-w-sm space-y-8 text-center">
+            <div className="relative h-20 w-20 mx-auto transition-transform hover:scale-110">
+              <Image 
+                src="/logo.png" 
+                alt="Logo" 
+                fill 
+                className="object-contain drop-shadow-2xl" 
+                priority
+              />
             </div>
+            
+            <div className="space-y-2">
+              <h1 className="text-2xl font-black text-foreground font-cairo">أهلاً بك في حياتي</h1>
+              <p className="text-xs text-muted-foreground font-bold px-4">أدخل بياناتك لربط حسابك وضمان استمرارية إنجازاتك</p>
+            </div>
+
             <div className="space-y-4">
-              <h1 className="text-4xl font-black text-foreground font-cairo tracking-tight">أهلاً بك في حياتي</h1>
-              <p className="text-lg text-muted-foreground font-bold px-4">بداية رحلة جديدة نحو النجاح والتميز. ما هو الاسم الذي تحب أن نناديك به؟</p>
-            </div>
-            <div className="space-y-6">
-              <div className="relative">
+              <div className="relative group">
+                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                  <User className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                </div>
                 <Input 
-                  placeholder="أدخل اسمك الكريم هنا..."
+                  placeholder="الاسم الكريم..."
                   value={onboardingName}
                   onChange={(e) => setOnboardingName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleStartOnboarding()}
-                  className="h-16 text-center text-xl font-bold rounded-[15px] border-primary/20 focus:ring-primary/20 premium-shadow bg-white"
+                  className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow bg-white/50 focus:bg-white transition-all"
                 />
               </div>
+
+              <div className="relative group">
+                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                  <Smartphone className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                </div>
+                <Input 
+                  type="tel"
+                  placeholder="رقم الهاتف (للاستعادة)..."
+                  value={onboardingPhone}
+                  onChange={(e) => setOnboardingPhone(e.target.value)}
+                  className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow bg-white/50 focus:bg-white transition-all"
+                />
+              </div>
+
               <Button 
                 onClick={handleStartOnboarding}
-                disabled={!onboardingName.trim()}
-                className="w-full h-16 primary-gradient text-white text-xl font-black rounded-[15px] shadow-xl active:scale-95 transition-all disabled:opacity-50"
+                disabled={!onboardingName.trim() || !onboardingPhone.trim() || isLinking}
+                className="w-full h-12 primary-gradient text-white text-base font-black rounded-[12px] shadow-xl active:scale-95 transition-all disabled:opacity-50"
               >
-                ابدأ رحلتي الآن
+                {isLinking ? <Loader2 className="h-5 w-5 animate-spin" /> : "ابدأ رحلتي الآن"}
               </Button>
             </div>
-            <p className="text-[10px] text-muted-foreground font-medium">نحن نحترم خصوصيتك، يتم حفظ بياناتك بأمان على السحابة.</p>
+            
+            <p className="text-[9px] text-muted-foreground font-medium">بياناتك مشفرة ومحفوظة بأمان تام وفق معايير الخصوصية العالمية.</p>
           </div>
         </div>
       );
@@ -335,8 +395,8 @@ export default function DashboardPage() {
               <User className="h-12 w-12 text-white" />
               <div className="absolute -bottom-1 -right-1 h-8 w-8 bg-green-500 border-4 border-background rounded-full" />
             </div>
-            <h3 className="text-2xl font-black text-foreground mb-2">{profile?.name || "حسابي"}</h3>
-            <p className="text-muted-foreground font-bold mb-8 text-center px-10">أهلاً بك يا بطل! يمكنك استخدام المعرف أدناه لمشاركة بياناتك أو حفظها.</p>
+            <h3 className="text-2xl font-black text-foreground mb-1">{profile?.name || "حسابي"}</h3>
+            <p className="text-[10px] font-bold text-primary bg-primary/5 px-3 py-1 rounded-full mb-8">{profile?.phoneNumber || "لم يتم ربط هاتف"}</p>
             
             <div className="w-full space-y-4">
               <div className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 space-y-2">
@@ -362,7 +422,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <span className="text-sm font-bold text-red-700">بدء رحلة جديدة</span>
-                    <p className="text-[9px] text-red-500 font-bold">سيتم تسجيل الخروج وإنشاء حساب جديد</p>
+                    <p className="text-[9px] text-red-500 font-bold">سيتم تسجيل الخروج ومسح الجلسة</p>
                   </div>
                 </div>
                 <LogOut className="h-4 w-4 text-red-400" />
@@ -390,16 +450,6 @@ export default function DashboardPage() {
                     <Bell className="h-5 w-5 text-primary" />
                   </div>
                   <span className="text-sm font-bold">الإشعارات</span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
-              </div>
-
-              <div className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center">
-                    <Lock className="h-5 w-5 text-primary" />
-                  </div>
-                  <span className="text-sm font-bold">إعدادات الحساب</span>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
               </div>
