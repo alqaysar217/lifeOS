@@ -194,35 +194,46 @@ export default function DashboardPage() {
   };
 
   const renderContent = () => {
-    if (isUserLoading || isProfileLoading) return <div className="min-h-screen flex items-center justify-center">جاري التحميل...</div>;
+    if (isUserLoading || (isProfileLoading && !profile)) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center space-y-4">
+          <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-bold text-muted-foreground">جاري تحضير عالمك الخاص...</p>
+        </div>
+      );
+    }
 
-    // Onboarding Overlay
-    if (user && !profile?.name && activeTab !== 'profile') {
+    // Onboarding Overlay - Mandatory if name is missing
+    if (user && !profile?.name) {
       return (
         <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-8 animate-in fade-in duration-700">
-          <div className="w-full max-w-md space-y-8 text-center">
+          <div className="w-full max-w-md space-y-10 text-center">
             <div className="h-24 w-24 primary-gradient rounded-[25px] flex items-center justify-center mx-auto shadow-2xl animate-bounce">
               <Sparkles className="h-12 w-12 text-white" />
             </div>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-black text-foreground font-cairo">أهلاً بك في حياتي</h1>
-              <p className="text-muted-foreground font-bold">بداية رحلة جديدة نحو النجاح والتميز. ما هو اسمك يا بطل؟</p>
-            </div>
             <div className="space-y-4">
-              <Input 
-                placeholder="أدخل اسمك الكريم هنا..."
-                value={onboardingName}
-                onChange={(e) => setOnboardingName(e.target.value)}
-                className="h-14 text-center text-lg font-bold rounded-[15px] border-primary/20 focus:ring-primary/20 premium-shadow"
-              />
+              <h1 className="text-4xl font-black text-foreground font-cairo tracking-tight">أهلاً بك في حياتي</h1>
+              <p className="text-lg text-muted-foreground font-bold px-4">بداية رحلة جديدة نحو النجاح والتميز. ما هو الاسم الذي تحب أن نناديك به؟</p>
+            </div>
+            <div className="space-y-6">
+              <div className="relative">
+                <Input 
+                  placeholder="أدخل اسمك الكريم هنا..."
+                  value={onboardingName}
+                  onChange={(e) => setOnboardingName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleStartOnboarding()}
+                  className="h-16 text-center text-xl font-bold rounded-[15px] border-primary/20 focus:ring-primary/20 premium-shadow bg-white"
+                />
+              </div>
               <Button 
                 onClick={handleStartOnboarding}
                 disabled={!onboardingName.trim()}
-                className="w-full h-14 primary-gradient text-white text-lg font-black rounded-[15px] shadow-xl active:scale-95 transition-all"
+                className="w-full h-16 primary-gradient text-white text-xl font-black rounded-[15px] shadow-xl active:scale-95 transition-all disabled:opacity-50"
               >
                 ابدأ رحلتي الآن
               </Button>
             </div>
+            <p className="text-[10px] text-muted-foreground font-medium">نحن نحترم خصوصيتك، يتم حفظ بياناتك بأمان على السحابة.</p>
           </div>
         </div>
       );
@@ -311,7 +322,7 @@ export default function DashboardPage() {
         return <NotificationsScreen onBack={handleBack} />;
       case 'profile':
         return (
-          <div className="flex flex-col items-center justify-center min-h-[80vh] px-6 animate-in fade-in duration-500 pb-20 pt-10">
+          <div className="flex flex-col items-center justify-center min-h-[80vh] px-6 animate-in fade-in duration-500 pb-32 pt-10">
             <div className="h-24 w-24 rounded-full primary-gradient flex items-center justify-center mb-6 shadow-2xl relative">
               <User className="h-12 w-12 text-white" />
               <div className="absolute -bottom-1 -right-1 h-8 w-8 bg-green-500 border-4 border-background rounded-full" />
@@ -382,9 +393,9 @@ export default function DashboardPage() {
   };
 
   return (
-    <main className="min-h-screen bg-background pb-32">
+    <main className="min-h-screen bg-background">
       {renderContent()}
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      {profile?.name && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />}
     </main>
   );
 }
