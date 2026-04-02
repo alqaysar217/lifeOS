@@ -10,7 +10,6 @@ import { collection, serverTimestamp } from "firebase/firestore";
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 
-// استيراد الخارطة بشكل ديناميكي لتجنب مشاكل SSR في Next.js
 const MapComponent = dynamic(() => import("./MapComponent"), { 
   ssr: false,
   loading: () => <div className="h-full w-full bg-slate-100 flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
@@ -26,15 +25,18 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const { toast } = useToast();
   
   const [isTracking, setIsTracking] = useState(false);
-  const [distance, setDistance] = useState(0); // بالكيلومتر
-  const [elapsedTime, setElapsedTime] = useState(0); // بالثواني
-  const [currentSpeed, setCurrentSpeed] = useState(0); // كم/ساعة
+  const [distance, setDistance] = useState(0); 
+  const [steps, setSteps] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [currentSpeed, setCurrentSpeed] = useState(0);
   const [path, setPath] = useState<{lat: number, lng: number}[]>([]);
   
   const watchId = useRef<number | null>(null);
   const lastCoord = useRef<GeolocationCoordinates | null>(null);
+  const stepThreshold = 12; // عتبة التسارع لاكتشاف الخطوة
+  const lastStepTime = useRef<number>(0);
+  const strideLength = 0.75; // طول الخطوة الافتراضي بالمتر
 
-  // استعلام السجلات السابقة
   const fitnessQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return collection(db, 'users', user.uid, 'fitnessRecords');
@@ -42,7 +44,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   const { data: records } = useCollection(fitnessQuery);
 
-  // مؤقت الوقت المستغرق
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isTracking) {
@@ -53,9 +54,29 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     return () => clearInterval(timer);
   }, [isTracking]);
 
-  // دالة حساب المسافة بين نقطتين (Haversine Formula)
+  // خوارزمية اكتشاف الخطوات عبر حساس التسارع
+  const handleMotion = (event: DeviceMotionEvent) => {
+    const acc = event.accelerationIncludingGravity;
+    if (!acc || !acc.x || !acc.y || !acc.z) return;
+
+    // حساب القوة الكلية للتسارع
+    const magnitude = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2);
+    const now = Date.now();
+
+    // اكتشاف النبضة (الخطوة) مع منع التكرار السريع (0.25 ثانية بين الخطوات)
+    if (magnitude > stepThreshold && now - lastStepTime.current > 250) {
+      setSteps(prev => prev + 1);
+      lastStepTime.current = now;
+
+      // إذا كان الـ GPS ضعيفاً، نزيد المسافة بناءً على الخطوات
+      if (!lastCoord.current) {
+        setDistance(prev => prev + (strideLength / 1000));
+      }
+    }
+  };
+
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // نصف قطر الأرض بالكيلومتر
+    const R = 6371; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = 
@@ -66,8 +87,25 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     return R * c;
   };
 
-  const toggleTracking = () => {
+  const requestPermissions = async () => {
+    // طلب إذن حساسات الحركة (مهم لـ iOS وبعض إصدارات أندرويد)
+    if (typeof (DeviceMotionEvent as any).requestPermission === 'function') {
+      try {
+        const permission = await (DeviceMotionEvent as any).requestPermission();
+        if (permission !== 'granted') {
+          toast({ variant: "destructive", title: "تنبيه", description: "التطبيق يحتاج الوصول للحساسات لحساب الخطوات." });
+          return false;
+        }
+      } catch (e) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const toggleTracking = async () => {
     if (!isTracking) {
+      const hasMotionPermission = await requestPermissions();
       if (!navigator.geolocation) {
         toast({ variant: "destructive", title: "عذراً", description: "متصفحك لا يدعم نظام تحديد المواقع." });
         return;
@@ -75,11 +113,15 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
       setIsTracking(true);
       setDistance(0);
+      setSteps(0);
       setElapsedTime(0);
       setPath([]);
       lastCoord.current = null;
 
-      // بدء مراقبة الموقع الجغرافي
+      // تفعيل مستشعر الحركة
+      window.addEventListener('devicemotion', handleMotion);
+
+      // تفعيل الـ GPS
       watchId.current = navigator.geolocation.watchPosition(
         (position) => {
           const coords = position.coords;
@@ -98,7 +140,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               coords.latitude, coords.longitude
             );
             
-            if (d > 0.001) { 
+            if (d > 0.002) { // 2 meters movement threshold
               setDistance(prev => prev + d);
               setCurrentSpeed(coords.speed ? coords.speed * 3.6 : 0);
             }
@@ -107,9 +149,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         },
         (error) => {
           console.error("GPS Error:", error);
-          toast({ variant: "destructive", title: "خطأ في الـ GPS", description: "تأكد من تفعيل الموقع الجغرافي للحصول على نتائج دقيقة." });
         },
-        { enableHighAccuracy: true, maximumAge: 0 }
+        { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
       );
     } else {
       stopTrackingAndSave();
@@ -118,26 +159,26 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   const stopTrackingAndSave = () => {
     setIsTracking(false);
+    window.removeEventListener('devicemotion', handleMotion);
     if (watchId.current !== null) {
       navigator.geolocation.clearWatch(watchId.current);
       watchId.current = null;
     }
     
-    if (db && user && distance > 0) {
+    if (db && user && (distance > 0 || steps > 0)) {
       const recordsRef = collection(db, 'users', user.uid, 'fitnessRecords');
-      const estimatedSteps = Math.floor(distance * 1312);
       
       addDocumentNonBlocking(recordsRef, {
         date: serverTimestamp(),
-        steps: estimatedSteps,
+        steps: steps,
         distance: Number(distance.toFixed(3)),
         time: Math.floor(elapsedTime / 60),
         durationSeconds: elapsedTime,
         userId: user.uid,
-        path: path
+        path: path.map(p => ({ lat: p.lat, lng: p.lng }))
       });
       
-      toast({ title: "تم حفظ الجلسة", description: `لقد قطعت ${distance.toFixed(2)} كم وخطوت حوالي ${estimatedSteps} خطوة. بطل!` });
+      toast({ title: "تم حفظ الجلسة", description: `لقد أنجزت ${steps} خطوة بمسافة ${distance.toFixed(2)} كم. بطل!` });
     }
   };
 
@@ -148,7 +189,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     return `${hrs > 0 ? hrs + ':' : ''}${mins < 10 && hrs > 0 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  // تحويل المسار إلى الصيغة التي تقبلها الخريطة
   const mapPath: [number, number][] = path.map(p => [p.lat, p.lng]);
 
   return (
@@ -168,10 +208,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       </div>
 
       <div className="px-6 py-6 space-y-8">
-        {/* بطاقة التتبع المطورة */}
         <div className={`rounded-[30px] p-8 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-red-500 shadow-red-200' : 'primary-gradient shadow-primary/20'}`}>
           <div className="relative z-10">
-            {/* الترويسة */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-4">
                 <div className="h-14 w-14 rounded-[20px] bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner">
@@ -185,7 +223,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               <Activity className={`h-6 w-6 text-white/30 ${isTracking ? 'animate-pulse' : ''}`} />
             </div>
 
-            {/* العدادات الرئيسية */}
             <div className="grid grid-cols-3 gap-2 mb-10">
               <div className="text-center p-3 bg-white/5 rounded-[20px] backdrop-blur-sm">
                 <Clock className="h-4 w-4 mx-auto mb-2 text-white/50" />
@@ -195,7 +232,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               <div className="text-center p-3 bg-white/5 rounded-[20px] backdrop-blur-sm border-x border-white/10">
                 <Footprints className="h-4 w-4 mx-auto mb-2 text-white/50" />
                 <p className="text-[10px] font-bold text-white/60 uppercase mb-1">الخطوات</p>
-                <p className="text-lg font-black tabular-nums">{Math.floor(distance * 1312)}</p>
+                <p className="text-lg font-black tabular-nums">{steps}</p>
               </div>
               <div className="text-center p-3 bg-white/5 rounded-[20px] backdrop-blur-sm">
                 <Navigation className="h-4 w-4 mx-auto mb-2 text-white/50" />
@@ -204,7 +241,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               </div>
             </div>
 
-            {/* أزرار التحكم */}
             <div className="flex gap-4">
               {!isTracking ? (
                 <Button 
@@ -226,12 +262,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             </div>
           </div>
 
-          {/* عناصر زخرفية خلفية */}
           <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
         </div>
 
-        {/* الخارطة */}
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-lg font-bold text-foreground/90 font-cairo">خارطة المسار الفعلي</h3>
@@ -257,7 +291,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           </div>
         </div>
 
-        {/* إحصائيات إضافية */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white p-6 rounded-[25px] premium-shadow border border-border/40 space-y-3">
             <div className="h-10 w-10 rounded-[12px] bg-orange-50 flex items-center justify-center">
@@ -275,7 +308,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             <div>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">آخر جلسة</p>
               <h4 className="text-xl font-black">
-                {records && records.length > 0 ? records[0].distance.toFixed(2) : '0.00'} <span className="text-xs">كم</span>
+                {records && records.length > 0 ? records[records.length - 1].distance.toFixed(2) : '0.00'} <span className="text-xs">كم</span>
               </h4>
             </div>
           </div>
