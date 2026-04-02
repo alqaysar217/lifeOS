@@ -18,6 +18,7 @@ import { NotificationsScreen } from "@/components/notifications/NotificationsScr
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +40,9 @@ import {
   Bell,
   Copy,
   Check,
-  Sparkles
+  Sparkles,
+  LogOut,
+  RefreshCcw
 } from "lucide-react";
 
 const baseCategories = [
@@ -97,7 +100,7 @@ const baseCategories = [
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = React.useState<TabId>('home');
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentTime, setCurrentTime] = useState<number>(5);
+  const [currentTime, setCurrentTime] = useState<number>(new Date().getHours());
   const [copied, setCopied] = useState(false);
   const [onboardingName, setOnboardingName] = useState("");
   
@@ -127,7 +130,6 @@ export default function DashboardPage() {
   }, [user, db, isProfileLoading, profile]);
 
   useEffect(() => {
-    setCurrentTime(new Date().getHours());
     const timer = setInterval(() => {
       setCurrentTime(new Date().getHours());
     }, 60000);
@@ -193,8 +195,14 @@ export default function DashboardPage() {
     }
   };
 
+  const handleSignOut = () => {
+    signOut(auth).then(() => {
+      window.location.reload(); // لإعادة تحميل التطبيق وإنشاء هوية جديدة
+    });
+  };
+
   const renderContent = () => {
-    if (isUserLoading || (isProfileLoading && !profile)) {
+    if (isUserLoading) {
       return (
         <div className="min-h-screen flex flex-col items-center justify-center space-y-4">
           <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -204,7 +212,7 @@ export default function DashboardPage() {
     }
 
     // Onboarding Overlay - Mandatory if name is missing
-    if (user && !profile?.name) {
+    if (user && !isProfileLoading && !profile?.name) {
       return (
         <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-8 animate-in fade-in duration-700">
           <div className="w-full max-w-md space-y-10 text-center">
@@ -342,6 +350,22 @@ export default function DashboardPage() {
                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </button>
                 </div>
+              </div>
+
+              <div 
+                onClick={handleSignOut}
+                className="bg-red-50 p-5 rounded-[15px] border border-red-100 flex items-center justify-between cursor-pointer group active:scale-[0.98] transition-all"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-[10px] bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                    <RefreshCcw className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-bold text-red-700">بدء رحلة جديدة</span>
+                    <p className="text-[9px] text-red-500 font-bold">سيتم تسجيل الخروج وإنشاء حساب جديد</p>
+                  </div>
+                </div>
+                <LogOut className="h-4 w-4 text-red-400" />
               </div>
 
               <div 
