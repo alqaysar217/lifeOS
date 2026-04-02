@@ -47,9 +47,9 @@ export function DashboardHeader({ onSearch }: DashboardHeaderProps) {
                   <Image 
                     src="/logo.png" 
                     alt="لوجو حياتي" 
-                    width={40} 
-                    height={40} 
-                    className="object-contain p-1"
+                    width={44} 
+                    height={44} 
+                    className="object-cover"
                   />
                 </div>
                 <span className="text-xl font-extrabold tracking-tight text-foreground/90 font-cairo">حياتي</span>
