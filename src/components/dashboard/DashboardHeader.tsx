@@ -1,42 +1,108 @@
 "use client"
 
-import { Settings, Bell } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Settings, Bell, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Image from "next/image";
 
-export function DashboardHeader() {
+const quotes = [
+  "النجاح هو مجموع خطوات صغيرة تتكرر كل يوم.",
+  "كن النسخة الأفضل من نفسك اليوم.",
+  "الانضباط هو الجسر بين الأهداف والإنجاز.",
+  "لا تتوقف حتى تفخر بنفسك.",
+  "بداية جديدة، فرصة جديدة للتألق."
+];
+
+interface DashboardHeaderProps {
+  onSearch?: (term: string) => void;
+}
+
+export function DashboardHeader({ onSearch }: DashboardHeaderProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [quote, setQuote] = useState("");
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
+
+  useEffect(() => {
+    // اختيار حكمة عشوائية عند التحميل
+    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+    setQuote(randomQuote);
+  }, []);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    onSearch?.(value);
+  };
+
   return (
     <>
       {/* الشريط العلوي الثابت */}
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 shadow-sm">
-        <div className="px-6 pt-10 pb-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-[10px] primary-gradient flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden bg-white/10">
-              <Image 
-                src="/logo.png" 
-                alt="لوجو حياتي" 
-                width={40} 
-                height={40} 
-                className="object-contain p-1"
-              />
+        <div className="px-6 pt-10 pb-4 flex items-center justify-between gap-4">
+          {!isSearchVisible ? (
+            <>
+              <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="h-11 w-11 rounded-[10px] primary-gradient flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden bg-white/10">
+                  <Image 
+                    src="/logo.png" 
+                    alt="لوجو حياتي" 
+                    width={40} 
+                    height={40} 
+                    className="object-contain p-1"
+                  />
+                </div>
+                <span className="text-xl font-extrabold tracking-tight text-foreground/90 font-cairo">حياتي</span>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setIsSearchVisible(true)}
+                  className="h-11 w-11 rounded-[10px] bg-white border border-border/40 premium-shadow text-muted-foreground hover:text-primary transition-all active:scale-90"
+                >
+                  <Search className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-11 w-11 rounded-[10px] bg-white border border-border/40 premium-shadow text-muted-foreground hover:text-primary transition-all active:scale-90">
+                  <Bell className="h-5 w-5" />
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center gap-2 animate-in fade-in slide-in-from-left-4 duration-300">
+              <div className="relative flex-1">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="ابحث عن قسم، مهمة، أو عادة..." 
+                  className="w-full pr-10 h-11 bg-white border-border/40 premium-shadow rounded-[10px] focus:ring-primary/20 text-xs font-bold"
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  autoFocus
+                />
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => {
+                  setIsSearchVisible(false);
+                  setSearchTerm("");
+                  onSearch?.("");
+                }}
+                className="h-11 w-11 shrink-0 rounded-[10px] bg-slate-50 text-muted-foreground active:scale-90"
+              >
+                <X className="h-5 w-5" />
+              </Button>
             </div>
-            <span className="text-xl font-extrabold tracking-tight text-foreground/90 font-cairo">حياتي</span>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-[10px] bg-white border border-border/40 premium-shadow text-muted-foreground hover:text-primary transition-all">
-              <Bell className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-[10px] bg-white border border-border/40 premium-shadow text-muted-foreground hover:text-primary transition-all">
-              <Settings className="h-5 w-5" />
-            </Button>
-          </div>
+          )}
         </div>
       </div>
       
       {/* قسم الترحيب القابل للتمرير */}
-      <div className="px-6 py-6">
+      <div className="px-6 py-6 space-y-1">
         <h2 className="text-2xl font-extrabold text-foreground font-cairo">أهلاً بك يا بطل 👋</h2>
-        <p className="text-sm text-muted-foreground font-semibold mt-1">إليك ملخص إنجازاتك اليوم</p>
+        <p className="text-xs text-primary/70 font-bold bg-primary/5 inline-block px-3 py-1 rounded-full animate-in fade-in slide-in-from-bottom-2 duration-700">
+          "{quote}"
+        </p>
       </div>
     </>
   );

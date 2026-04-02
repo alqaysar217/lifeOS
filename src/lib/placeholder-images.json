@@ -5,6 +5,12 @@
       "description": "خريطة مسار الجري",
       "imageUrl": "https://picsum.photos/seed/fitness-map/600/400",
       "imageHint": "fitness map path"
+    },
+    {
+      "id": "illustration-empty-tasks",
+      "description": "رسم توضيحي للمهام الفارغة",
+      "imageUrl": "https://picsum.photos/seed/empty-tasks/400/400",
+      "imageHint": "minimalist illustration check"
     }
   ]
 }

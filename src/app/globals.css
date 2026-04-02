@@ -71,3 +71,24 @@
   width: 0px;
   background: transparent;
 }
+
+/* Micro-interactions */
+.tap-shake:active {
+  animation: shake 0.2s ease-in-out;
+}
+
+@keyframes shake {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.success-sparkle {
+  animation: sparkle 0.5s ease-out;
+}
+
+@keyframes sparkle {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.05); filter: brightness(1.2); }
+  100% { transform: scale(1); filter: brightness(1); }
+}

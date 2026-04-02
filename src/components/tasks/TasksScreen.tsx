@@ -1,12 +1,12 @@
-
 "use client"
 
-import { Plus, MoreVertical, Calendar, Folder, Clock, CheckCircle2, Circle, ChevronRight } from "lucide-react";
+import React, { useState } from "react";
+import { Plus, MoreVertical, Calendar, Folder, Clock, CheckCircle2, Circle, ChevronRight, Search, LayoutGrid } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 
-const todayTasks = [
+const initialTasks = [
   { id: 1, title: "مراجعة تقرير المشروع", completed: true, time: "09:00 ص" },
   { id: 2, title: "اجتماع فريق التصميم", completed: false, time: "11:30 ص" },
   { id: 3, title: "تحديث قاعدة البيانات", completed: false, time: "02:00 م" },
@@ -22,12 +22,34 @@ interface TasksScreenProps {
 }
 
 export function TasksScreen({ onBack }: TasksScreenProps) {
+  const [tasks, setTasks] = useState(initialTasks);
+  const [showSparkle, setShowSparkle] = useState<number | null>(null);
+
+  const toggleTask = (id: number) => {
+    setTasks(prev => prev.map(task => {
+      if (task.id === id) {
+        // تأثير احتفالي عند الإتمام
+        if (!task.completed) {
+          setShowSparkle(id);
+          setTimeout(() => setShowSparkle(null), 1000);
+          
+          // محاكاة اهتزاز (Haptic) للمتصفح
+          if (typeof window !== 'undefined' && window.navigator.vibrate) {
+            window.navigator.vibrate(50);
+          }
+        }
+        return { ...task, completed: !task.completed };
+      }
+      return task;
+    }));
+  };
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow">
+            <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow active:scale-90 transition-transform">
               <ChevronRight className="h-5 w-5 text-foreground" />
             </Button>
             <h2 className="text-2xl font-extrabold text-foreground font-cairo">المهام</h2>
@@ -43,13 +65,13 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-foreground/90">المشاريع</h3>
-            <button className="h-8 w-8 rounded-[8px] bg-primary/5 text-primary flex items-center justify-center">
+            <button className="h-8 w-8 rounded-[8px] bg-primary/5 text-primary flex items-center justify-center active:scale-90 transition-transform">
               <Plus className="h-4 w-4" />
             </button>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
             {projects.map((proj, i) => (
-              <div key={i} className="min-w-[200px] bg-white p-5 rounded-[10px] premium-shadow border border-border/40 space-y-4">
+              <div key={i} className="min-w-[200px] bg-white p-5 rounded-[10px] premium-shadow border border-border/40 space-y-4 hover:shadow-lg transition-shadow">
                 <div className="flex justify-between items-start">
                   <div className={`h-10 w-10 rounded-[10px] ${proj.color} flex items-center justify-center text-white`}>
                     <Folder className="h-5 w-5" />
@@ -83,24 +105,66 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             </TabsList>
             
             <TabsContent value="ongoing" className="mt-6 space-y-3">
-              {todayTasks.map((task) => (
-                <div key={task.id} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between group active:scale-[0.99] transition-all">
+              {tasks.filter(t => !t.completed).length > 0 ? (
+                tasks.filter(t => !t.completed).map((task) => (
+                  <div 
+                    key={task.id} 
+                    onClick={() => toggleTask(task.id)}
+                    className={`bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between group active:scale-[0.98] transition-all cursor-pointer ${showSparkle === task.id ? 'success-sparkle border-primary' : ''}`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="h-6 w-6 rounded-full border-2 border-primary/20 flex items-center justify-center text-primary group-hover:border-primary/50 transition-colors">
+                        <Circle className="h-4 w-4 text-transparent" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-foreground">
+                          {task.title}
+                        </h4>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-[10px] text-muted-foreground font-medium">{task.time}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="h-8 w-8 rounded-[8px] bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <MoreVertical className="h-4 w-4 text-slate-300" />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-12 text-center space-y-4 animate-in fade-in zoom-in duration-500">
+                  <div className="h-24 w-24 rounded-full soft-purple-bg flex items-center justify-center mx-auto relative">
+                    <CheckCircle2 className="h-12 w-12 text-primary/40" />
+                    <div className="absolute inset-0 bg-primary/5 rounded-full animate-ping opacity-20" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-foreground">أحسنت! لا توجد مهام حالية</p>
+                    <p className="text-[10px] text-muted-foreground font-medium">استمتع بوقتك أو أضف مهمة جديدة</p>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="completed" className="mt-6 space-y-3">
+              {tasks.filter(t => t.completed).map((task) => (
+                <div 
+                  key={task.id} 
+                  onClick={() => toggleTask(task.id)}
+                  className="bg-slate-50/50 p-4 rounded-[10px] border border-border/40 flex items-center justify-between group active:scale-[0.98] transition-all cursor-pointer"
+                >
                   <div className="flex items-center gap-4">
-                    <div className="h-6 w-6 rounded-full border-2 border-primary/20 flex items-center justify-center text-primary group-hover:border-primary/50 transition-colors">
-                      {task.completed ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4 text-transparent" />}
+                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                      <CheckCircle2 className="h-4 w-4" />
                     </div>
                     <div>
-                      <h4 className={`text-sm font-bold ${task.completed ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                      <h4 className="text-sm font-bold text-muted-foreground line-through">
                         {task.title}
                       </h4>
                       <div className="flex items-center gap-1 mt-0.5">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-[10px] text-muted-foreground font-medium">{task.time}</span>
+                        <Clock className="h-3 w-3 text-muted-foreground/50" />
+                        <span className="text-[10px] text-muted-foreground/50 font-medium">تم الإنجاز</span>
                       </div>
                     </div>
-                  </div>
-                  <div className="h-8 w-8 rounded-[8px] bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <MoreVertical className="h-4 w-4 text-slate-300" />
                   </div>
                 </div>
               ))}
@@ -110,7 +174,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
       </div>
 
       {/* زر إضافة عائم */}
-      <button className="fixed bottom-32 left-8 h-14 w-14 rounded-full primary-gradient text-white flex items-center justify-center shadow-2xl shadow-primary/40 active:scale-90 transition-transform z-40">
+      <button className="fixed bottom-32 left-8 h-14 w-14 rounded-full primary-gradient text-white flex items-center justify-center shadow-2xl shadow-primary/40 active:scale-75 transition-transform z-40 tap-shake">
         <Plus className="h-6 w-6" />
       </button>
     </div>

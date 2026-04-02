@@ -1,7 +1,6 @@
-
 "use client"
 
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { ChallengeHighlight } from "@/components/dashboard/ChallengeHighlight";
 import { CategoryCard } from "@/components/dashboard/CategoryCard";
@@ -14,7 +13,7 @@ import { StudyScreen } from "@/components/study/StudyScreen";
 import { HabitsScreen } from "@/components/habits/HabitsScreen";
 import { Activity, CheckCircle2, GraduationCap, Wallet2, Zap, Trophy, Lock } from "lucide-react";
 
-const categories = [
+const baseCategories = [
   {
     id: 'fitness',
     title: "اللياقة البدنية",
@@ -61,6 +60,50 @@ const categories = [
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = React.useState<TabId>('home');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentTime, setCurrentTime] = useState<number>(new Date().getHours());
+
+  useEffect(() => {
+    // تحديث الوقت الحالي لمعالجة الترتيب الديناميكي
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().getHours());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // الترتيب الديناميكي بناءً على الوقت
+  const sortedCategories = useMemo(() => {
+    let sorted = [...baseCategories];
+    
+    // الصباح (5-12): اللياقة أولاً
+    if (currentTime >= 5 && currentTime < 12) {
+      const fitnessIdx = sorted.findIndex(c => c.id === 'fitness');
+      const item = sorted.splice(fitnessIdx, 1)[0];
+      sorted.unshift(item);
+    } 
+    // منتصف اليوم (12-18): المهام أولاً
+    else if (currentTime >= 12 && currentTime < 18) {
+      const tasksIdx = sorted.findIndex(c => c.id === 'tasks');
+      const item = sorted.splice(tasksIdx, 1)[0];
+      sorted.unshift(item);
+    }
+    // المساء (18-5): العادات والدراسة أولاً
+    else {
+      const habitsIdx = sorted.findIndex(c => c.id === 'habits');
+      const item = sorted.splice(habitsIdx, 1)[0];
+      sorted.unshift(item);
+    }
+
+    // الفلترة بناءً على البحث
+    if (searchTerm) {
+      return sorted.filter(c => 
+        c.title.includes(searchTerm) || 
+        c.description.includes(searchTerm)
+      );
+    }
+
+    return sorted;
+  }, [searchTerm, currentTime]);
 
   const handleBack = () => setActiveTab('home');
 
@@ -69,42 +112,59 @@ export default function DashboardPage() {
       case 'home':
         return (
           <div className="animate-in fade-in duration-500">
-            <DashboardHeader />
-            <ChallengeHighlight />
+            <DashboardHeader onSearch={setSearchTerm} />
+            {!searchTerm && <ChallengeHighlight />}
 
             <div className="px-6 mt-8 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-foreground/90">الأقسام الرئيسية</h2>
-              <button className="text-xs font-semibold text-primary/70 hover:text-primary transition-colors">تعديل الترتيب</button>
+              <h2 className="text-lg font-bold text-foreground/90">
+                {searchTerm ? 'نتائج البحث' : 'الأقسام الرئيسية'}
+              </h2>
+              {!searchTerm && (
+                <button className="text-[10px] font-bold text-primary/70 hover:text-primary transition-colors flex items-center gap-1">
+                  تعديل الترتيب
+                </button>
+              )}
             </div>
 
             <div className="mt-4 px-6 space-y-4">
-              {categories.map((category, index) => (
-                <div key={index} onClick={() => setActiveTab(category.id as TabId)}>
-                  <CategoryCard
-                    title={category.title}
-                    description={category.description}
-                    icon={category.icon}
-                    stat={category.stat}
-                  />
+              {sortedCategories.length > 0 ? (
+                sortedCategories.map((category, index) => (
+                  <div key={category.id} onClick={() => setActiveTab(category.id as TabId)} className="animate-in fade-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms` }}>
+                    <CategoryCard
+                      title={category.title}
+                      description={category.description}
+                      icon={category.icon}
+                      stat={category.stat}
+                    />
+                  </div>
+                ))
+              ) : (
+                <div className="py-20 text-center space-y-4">
+                  <div className="h-20 w-20 rounded-full soft-purple-bg flex items-center justify-center mx-auto">
+                    <Search className="h-10 w-10 text-primary/30" />
+                  </div>
+                  <p className="text-sm font-bold text-muted-foreground">عذراً، لم نجد ما تبحث عنه</p>
                 </div>
-              ))}
+              )}
             </div>
 
             {/* Security Section */}
-            <div className="mx-6 mt-8 p-5 rounded-[10px] bg-white premium-shadow border border-border/40 flex items-center justify-between transition-all active:scale-[0.98]">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-[10px] soft-purple-bg flex items-center justify-center">
-                  <Lock className="h-5 w-5 text-primary" />
+            {!searchTerm && (
+              <div className="mx-6 mt-8 p-5 rounded-[10px] bg-white premium-shadow border border-border/40 flex items-center justify-between transition-all active:scale-[0.98]">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-[10px] soft-purple-bg flex items-center justify-center">
+                    <Lock className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground">قفل التطبيق</h4>
+                    <p className="text-[10px] text-muted-foreground font-medium">حماية بياناتك بكلمة سر</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-sm font-bold text-foreground">قفل التطبيق</h4>
-                  <p className="text-[10px] text-muted-foreground font-medium">حماية بياناتك بكلمة سر</p>
+                <div className="px-3 py-1 rounded-[6px] bg-slate-50 border border-slate-100">
+                  <p className="text-[9px] font-bold text-slate-400">قريباً</p>
                 </div>
               </div>
-              <div className="px-3 py-1 rounded-[6px] bg-slate-50 border border-slate-100">
-                <p className="text-[9px] font-bold text-slate-400">قريباً</p>
-              </div>
-            </div>
+            )}
           </div>
         );
       case 'fitness':
