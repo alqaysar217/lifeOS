@@ -1,7 +1,8 @@
 "use client"
 
-import { Settings, Bell, LayoutGrid } from "lucide-react";
+import { Settings, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 export function DashboardHeader() {
   return (
@@ -10,8 +11,14 @@ export function DashboardHeader() {
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 shadow-sm">
         <div className="px-6 pt-10 pb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-[10px] primary-gradient flex items-center justify-center shadow-lg shadow-primary/20">
-              <LayoutGrid className="h-5 w-5 text-white" />
+            <div className="h-11 w-11 rounded-[10px] primary-gradient flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden bg-white/10">
+              <Image 
+                src="/logo.png" 
+                alt="لوجو حياتي" 
+                width={28} 
+                height={28} 
+                className="object-contain"
+              />
             </div>
             <span className="text-xl font-extrabold tracking-tight text-foreground/90 font-cairo">حياتي</span>
           </div>
