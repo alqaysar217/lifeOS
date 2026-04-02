@@ -1,16 +1,52 @@
 
 "use client"
 
-import React from "react";
+import React, { useMemo } from "react";
 import { TrendingUp, TrendingDown, Target, Zap, Activity, Calendar, ChevronRight, BarChart3, PieChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
 
 interface AnalyticsScreenProps {
   onBack: () => void;
 }
 
 export function AnalyticsScreen({ onBack }: AnalyticsScreenProps) {
+  const db = useFirestore();
+  const { user } = useUser();
+
+  const tasksQuery = useMemoFirebase(() => (!db || !user) ? null : collection(db, 'users', user.uid, 'tasks'), [db, user]);
+  const habitsQuery = useMemoFirebase(() => (!db || !user) ? null : collection(db, 'users', user.uid, 'habits'), [db, user]);
+  const financeQuery = useMemoFirebase(() => (!db || !user) ? null : collection(db, 'users', user.uid, 'financeTransactions'), [db, user]);
+  const fitnessQuery = useMemoFirebase(() => (!db || !user) ? null : collection(db, 'users', user.uid, 'fitnessRecords'), [db, user]);
+
+  const { data: tasks } = useCollection(tasksQuery);
+  const { data: habits } = useCollection(habitsQuery);
+  const { data: finance } = useCollection(financeQuery);
+  const { data: fitness } = useCollection(fitnessQuery);
+
+  const stats = useMemo(() => {
+    const totalTasks = tasks?.length || 0;
+    const completedTasks = tasks?.filter(t => t.status === 'completed').length || 0;
+    const taskCompletionRate = totalTasks > 0 ? Math.floor((completedTasks / totalTasks) * 100) : 0;
+
+    const totalSpent = finance?.reduce((acc, t) => acc + Number(t.amount || 0), 0) || 0;
+    
+    const avgHabitStreak = habits?.length 
+      ? Math.floor(habits.reduce((acc, h) => acc + (h.streak || 0), 0) / habits.length)
+      : 0;
+
+    const totalDistance = fitness?.reduce((acc, r) => acc + (r.distance || 0), 0) || 0;
+
+    return {
+      taskCompletionRate,
+      totalSpent,
+      avgHabitStreak,
+      totalDistance
+    };
+  }, [tasks, habits, finance, fitness]);
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32">
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
@@ -28,7 +64,6 @@ export function AnalyticsScreen({ onBack }: AnalyticsScreenProps) {
       </div>
 
       <div className="px-6 py-6 space-y-8">
-        {/* Performance Insight Header */}
         <div className="bg-white p-6 rounded-[15px] premium-shadow border border-border/40 space-y-4 relative overflow-hidden">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-green-50 flex items-center justify-center">
@@ -36,16 +71,15 @@ export function AnalyticsScreen({ onBack }: AnalyticsScreenProps) {
             </div>
             <div>
               <p className="text-xs font-bold text-muted-foreground">أداء الأسبوع</p>
-              <h3 className="text-lg font-black text-foreground">تحسن بنسبة 15%</h3>
+              <h3 className="text-lg font-black text-foreground">تحسن بنسبة {stats.taskCompletionRate}%</h3>
             </div>
           </div>
           <p className="text-xs text-muted-foreground font-medium leading-relaxed">
-            لقد كنت أكثر نشاطاً في <span className="text-primary font-bold">اللياقة البدنية</span> هذا الأسبوع مقارنة بالأسبوع الماضي.
+            لقد حققت معدل إنجاز رائع في <span className="text-primary font-bold">المهام اليومية</span> هذا الأسبوع.
           </p>
           <div className="absolute top-0 left-0 w-24 h-24 bg-green-400/5 rounded-full blur-2xl" />
         </div>
 
-        {/* Smart Charts Visualization (Mockup) */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-foreground/90 font-cairo">معدل الإنجاز اليومي</h3>
@@ -69,7 +103,6 @@ export function AnalyticsScreen({ onBack }: AnalyticsScreenProps) {
           </div>
         </div>
 
-        {/* Goal Tracking Indicators */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 space-y-3">
             <div className="h-10 w-10 rounded-[10px] bg-blue-50 flex items-center justify-center">
@@ -77,11 +110,7 @@ export function AnalyticsScreen({ onBack }: AnalyticsScreenProps) {
             </div>
             <div>
               <h4 className="text-xs font-bold text-foreground">اللياقة</h4>
-              <p className="text-lg font-black text-foreground">8.5 <span className="text-[10px] text-muted-foreground">كم</span></p>
-            </div>
-            <div className="flex items-center gap-1 text-[9px] font-bold text-green-500">
-              <TrendingUp className="h-3 w-3" />
-              <span>+12%</span>
+              <p className="text-lg font-black text-foreground">{stats.totalDistance.toFixed(1)} <span className="text-[10px] text-muted-foreground">كم</span></p>
             </div>
           </div>
           
@@ -91,30 +120,21 @@ export function AnalyticsScreen({ onBack }: AnalyticsScreenProps) {
             </div>
             <div>
               <h4 className="text-xs font-bold text-foreground">المهام</h4>
-              <p className="text-lg font-black text-foreground">24 <span className="text-[10px] text-muted-foreground">مهمة</span></p>
-            </div>
-            <div className="flex items-center gap-1 text-[9px] font-bold text-red-400">
-              <TrendingDown className="h-3 w-3" />
-              <span>-5%</span>
+              <p className="text-lg font-black text-foreground">{tasks?.length || 0} <span className="text-[10px] text-muted-foreground">مهمة</span></p>
             </div>
           </div>
         </div>
 
-        {/* Detailed Stats List */}
         <div className="space-y-4">
           <h3 className="text-lg font-bold text-foreground/90 font-cairo">تحليل العادات</h3>
           <div className="space-y-3">
-            {[
-              { label: "شرب الماء", val: 80, color: "bg-blue-500" },
-              { label: "القراءة", val: 65, color: "bg-orange-500" },
-              { label: "الرياضة", val: 90, color: "bg-green-500" }
-            ].map((habit, i) => (
+            {habits?.map((habit, i) => (
               <div key={i} className="bg-white p-4 rounded-[12px] premium-shadow border border-border/40 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-foreground">{habit.label}</span>
-                  <span className="text-[10px] font-bold text-primary">{habit.val}% الالتزام</span>
+                  <span className="text-xs font-bold text-foreground">{habit.title}</span>
+                  <span className="text-[10px] font-bold text-primary">{habit.streak * 5}% الالتزام</span>
                 </div>
-                <Progress value={habit.val} className="h-1.5" />
+                <Progress value={Math.min(habit.streak * 5, 100)} className="h-1.5" />
               </div>
             ))}
           </div>

@@ -1,10 +1,12 @@
 
 "use client"
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Send, Bot, User, Sparkles, ChevronRight, BrainCircuit, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
 
 interface AIScreenProps {
   onBack: () => void;
@@ -18,15 +20,39 @@ const suggestions = [
 ];
 
 export function AIScreen({ onBack }: AIScreenProps) {
+  const db = useFirestore();
+  const { user } = useUser();
+
+  const tasksQuery = useMemoFirebase(() => (!db || !user) ? null : collection(db, 'users', user.uid, 'tasks'), [db, user]);
+  const habitsQuery = useMemoFirebase(() => (!db || !user) ? null : collection(db, 'users', user.uid, 'habits'), [db, user]);
+
+  const { data: tasks } = useCollection(tasksQuery);
+  const { data: habits } = useCollection(habitsQuery);
+
   const [messages, setMessages] = useState([
-    { id: 1, type: 'ai', text: "أهلاً بك يا بطل! أنا مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟" },
-    { id: 2, type: 'ai', text: "لقد لاحظت أن أداءك في الجري تحسن بنسبة 10% هذا الأسبوع. استمر في هذا الإنجاز!" },
-    { id: 3, type: 'ai', text: "بالمناسبة، تأخرت قليلاً في مهامك أمس، هل نراجع جدولك اليوم؟" }
+    { id: 1, type: 'ai', text: "أهلاً بك يا بطل! أنا مساعدك الذكي. كيف يمكنني مساعدتك اليوم؟" }
   ]);
+
+  useEffect(() => {
+    if (tasks && habits) {
+      const pendingTasks = tasks.filter(t => t.status !== 'completed').length;
+      const incompleteHabits = habits.filter(h => h.status !== 'completed').length;
+
+      if (pendingTasks > 0 || incompleteHabits > 0) {
+        setMessages(prev => [
+          ...prev,
+          { 
+            id: Date.now(), 
+            type: 'ai', 
+            text: `لقد لاحظت أن لديك ${pendingTasks} مهام معلقة و ${incompleteHabits} عادات لم تكتمل اليوم. هل نراجعها معاً؟` 
+          }
+        ]);
+      }
+    }
+  }, [tasks, habits]);
 
   return (
     <div className="flex flex-col h-screen bg-background animate-in fade-in duration-500">
-      {/* Header */}
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow">
@@ -47,7 +73,6 @@ export function AIScreen({ onBack }: AIScreenProps) {
         </div>
       </div>
 
-      {/* Chat Content */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.type === 'user' ? 'justify-start' : 'justify-end'} animate-in slide-in-from-bottom-2`}>
@@ -67,7 +92,6 @@ export function AIScreen({ onBack }: AIScreenProps) {
           </div>
         ))}
         
-        {/* Suggestion Chips */}
         <div className="flex flex-wrap gap-2 pt-4">
           {suggestions.map((s, i) => (
             <button key={i} className="px-4 py-2 rounded-full bg-white border border-border/40 premium-shadow text-xs font-bold text-primary hover:bg-primary/5 transition-colors">
@@ -77,7 +101,6 @@ export function AIScreen({ onBack }: AIScreenProps) {
         </div>
       </div>
 
-      {/* Input Area */}
       <div className="p-6 bg-background border-t border-border/5">
         <div className="relative flex items-center gap-2 bg-white rounded-[15px] premium-shadow border border-border/40 p-2">
           <Input 

@@ -4,17 +4,24 @@
 import { GraduationCap, BookOpen, Clock, Calendar, AlertCircle, ChevronLeft, ChevronRight, PlayCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-
-const subjects = [
-  { title: "قواعد البيانات", progress: 85, color: "bg-blue-500", lessons: "12/15" },
-  { title: "نظم التشغيل", progress: 45, color: "bg-purple-500", lessons: "5/12" },
-];
+import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
 
 interface StudyScreenProps {
   onBack: () => void;
 }
 
 export function StudyScreen({ onBack }: StudyScreenProps) {
+  const db = useFirestore();
+  const { user } = useUser();
+
+  const studyQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return collection(db, 'users', user.uid, 'studyProgress');
+  }, [db, user]);
+
+  const { data: subjects } = useCollection(studyQuery);
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
@@ -32,7 +39,6 @@ export function StudyScreen({ onBack }: StudyScreenProps) {
       </div>
 
       <div className="px-6 py-6 space-y-8">
-        {/* جلسة اليوم الرئيسية */}
         <div className="primary-gradient rounded-[10px] p-6 text-white premium-shadow relative overflow-hidden">
           <div className="relative z-10 flex items-center justify-between">
             <div className="space-y-4">
@@ -57,7 +63,6 @@ export function StudyScreen({ onBack }: StudyScreenProps) {
           </div>
         </div>
 
-        {/* تنبيه الاختبارات */}
         <div className="bg-orange-50 p-5 rounded-[10px] border border-orange-100 flex items-center gap-4">
           <div className="h-12 w-12 rounded-[10px] bg-orange-100 flex items-center justify-center shrink-0">
             <AlertCircle className="h-6 w-6 text-orange-600" />
@@ -69,23 +74,22 @@ export function StudyScreen({ onBack }: StudyScreenProps) {
           <Calendar className="h-5 w-5 text-orange-300" />
         </div>
 
-        {/* قائمة المواد */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-foreground/90">المواد الدراسية</h3>
             <button className="text-xs text-primary font-bold">إضافة مادة</button>
           </div>
           <div className="space-y-4">
-            {subjects.map((sub, i) => (
+            {subjects?.map((sub, i) => (
               <div key={i} className="bg-white p-5 rounded-[10px] premium-shadow border border-border/40 space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    <div className={`h-10 w-10 rounded-[10px] ${sub.color}/10 flex items-center justify-center`}>
-                      <BookOpen className={`h-5 w-5 ${sub.color.replace('bg-', 'text-')}`} />
+                    <div className={`h-10 w-10 rounded-[10px] bg-blue-500/10 flex items-center justify-center`}>
+                      <BookOpen className={`h-5 w-5 text-blue-500`} />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-foreground">{sub.title}</h4>
-                      <p className="text-[10px] text-muted-foreground font-bold">{sub.lessons} درس</p>
+                      <h4 className="text-sm font-bold text-foreground">{sub.subject}</h4>
+                      <p className="text-[10px] text-muted-foreground font-bold">{sub.progress}% مكتمل</p>
                     </div>
                   </div>
                   <ChevronLeft className="h-4 w-4 text-slate-300" />
@@ -95,7 +99,7 @@ export function StudyScreen({ onBack }: StudyScreenProps) {
                     <span>التقدم في المادة</span>
                     <span>{sub.progress}%</span>
                   </div>
-                  <Progress value={sub.progress} className={`h-1.5 ${sub.color.replace('bg-', 'bg-opacity-20 ')}`} />
+                  <Progress value={sub.progress} className={`h-1.5`} />
                 </div>
               </div>
             ))}
