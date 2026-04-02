@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from "react";
-import { Play, MapPin, Clock, Zap, Target, Dumbbell, ChevronRight, Navigation, Activity, Square, Loader2 } from "lucide-react";
+import { Play, MapPin, Clock, Zap, Target, Dumbbell, ChevronRight, Navigation, Activity, Square, Loader2, Footprints } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
@@ -29,7 +29,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const [distance, setDistance] = useState(0); // بالكيلومتر
   const [elapsedTime, setElapsedTime] = useState(0); // بالثواني
   const [currentSpeed, setCurrentSpeed] = useState(0); // كم/ساعة
-  const [path, setPath] = useState<[number, number][]>([]);
+  const [path, setPath] = useState<{lat: number, lng: number}[]>([]);
   
   const watchId = useRef<number | null>(null);
   const lastCoord = useRef<GeolocationCoordinates | null>(null);
@@ -83,13 +83,12 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       watchId.current = navigator.geolocation.watchPosition(
         (position) => {
           const coords = position.coords;
-          const currentPos: [number, number] = [coords.latitude, coords.longitude];
+          const currentPos = { lat: coords.latitude, lng: coords.longitude };
           
           setPath(prev => {
             if (prev.length === 0) return [currentPos];
-            // تجنب إضافة نفس النقطة مرتين
             const last = prev[prev.length - 1];
-            if (last[0] === currentPos[0] && last[1] === currentPos[1]) return prev;
+            if (last.lat === currentPos.lat && last.lng === currentPos.lng) return prev;
             return [...prev, currentPos];
           });
 
@@ -99,7 +98,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               coords.latitude, coords.longitude
             );
             
-            if (d > 0.002) { 
+            if (d > 0.001) { 
               setDistance(prev => prev + d);
               setCurrentSpeed(coords.speed ? coords.speed * 3.6 : 0);
             }
@@ -128,17 +127,14 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       const recordsRef = collection(db, 'users', user.uid, 'fitnessRecords');
       const estimatedSteps = Math.floor(distance * 1312);
       
-      // تحويل المصفوفات المتداخلة إلى مصفوفة من الكائنات لتجنب خطأ Firestore
-      const formattedPath = path.map(p => ({ lat: p[0], lng: p[1] }));
-
       addDocumentNonBlocking(recordsRef, {
         date: serverTimestamp(),
         steps: estimatedSteps,
         distance: Number(distance.toFixed(3)),
-        time: Math.floor(elapsedTime / 60), // بالدقائق
+        time: Math.floor(elapsedTime / 60),
         durationSeconds: elapsedTime,
         userId: user.uid,
-        path: formattedPath
+        path: path
       });
       
       toast({ title: "تم حفظ الجلسة", description: `لقد قطعت ${distance.toFixed(2)} كم وخطوت حوالي ${estimatedSteps} خطوة. بطل!` });
@@ -152,6 +148,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     return `${hrs > 0 ? hrs + ':' : ''}${mins < 10 && hrs > 0 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  // تحويل المسار إلى الصيغة التي تقبلها الخريطة
+  const mapPath: [number, number][] = path.map(p => [p.lat, p.lng]);
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32">
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
@@ -160,7 +159,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow">
               <ChevronRight className="h-5 w-5 text-foreground" />
             </Button>
-            <h2 className="text-2xl font-extrabold text-foreground font-cairo">تتبع الجري المباشر</h2>
+            <h2 className="text-2xl font-extrabold text-foreground font-cairo">النشاط البدني</h2>
           </div>
           <div className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow flex items-center justify-center text-primary">
             <Activity className="h-5 w-5" />
@@ -169,86 +168,115 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       </div>
 
       <div className="px-6 py-6 space-y-8">
-        <div className={`rounded-[20px] p-8 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-red-500 shadow-red-200' : 'primary-gradient shadow-primary/20'}`}>
-          <div className="relative z-10 space-y-8">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-white/70 text-xs font-bold mb-2 uppercase tracking-widest">{isTracking ? 'تتبع نشط الآن' : 'جاهز للبدء؟'}</p>
-                <h3 className="text-4xl font-black tabular-nums">{isTracking ? formatTime(elapsedTime) : '00:00'}</h3>
+        {/* بطاقة التتبع المطورة */}
+        <div className={`rounded-[30px] p-8 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-red-500 shadow-red-200' : 'primary-gradient shadow-primary/20'}`}>
+          <div className="relative z-10">
+            {/* الترويسة */}
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-[20px] bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-inner">
+                  <Dumbbell className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black">{isTracking ? 'جاري التتبع...' : 'جاهز للبدء؟'}</h3>
+                  <p className="text-white/70 text-xs font-bold tracking-wide uppercase">كارديو صباحي</p>
+                </div>
               </div>
-              <div className={`h-14 w-14 rounded-[15px] bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 ${isTracking ? 'animate-pulse' : ''}`}>
-                <Navigation className="h-7 w-7 text-white" />
-              </div>
+              <Activity className={`h-6 w-6 text-white/30 ${isTracking ? 'animate-pulse' : ''}`} />
             </div>
-            
-            <div className="grid grid-cols-2 gap-8">
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-white/70 uppercase">المسافة (كم)</span>
-                <p className="text-2xl font-black tabular-nums">{distance.toFixed(3)}</p>
+
+            {/* العدادات الرئيسية */}
+            <div className="grid grid-cols-3 gap-2 mb-10">
+              <div className="text-center p-3 bg-white/5 rounded-[20px] backdrop-blur-sm">
+                <Clock className="h-4 w-4 mx-auto mb-2 text-white/50" />
+                <p className="text-[10px] font-bold text-white/60 uppercase mb-1">الوقت</p>
+                <p className="text-lg font-black tabular-nums">{formatTime(elapsedTime)}</p>
               </div>
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-white/70 uppercase">السرعة (كم/س)</span>
-                <p className="text-2xl font-black tabular-nums">{currentSpeed.toFixed(1)}</p>
+              <div className="text-center p-3 bg-white/5 rounded-[20px] backdrop-blur-sm border-x border-white/10">
+                <Footprints className="h-4 w-4 mx-auto mb-2 text-white/50" />
+                <p className="text-[10px] font-bold text-white/60 uppercase mb-1">الخطوات</p>
+                <p className="text-lg font-black tabular-nums">{Math.floor(distance * 1312)}</p>
+              </div>
+              <div className="text-center p-3 bg-white/5 rounded-[20px] backdrop-blur-sm">
+                <Navigation className="h-4 w-4 mx-auto mb-2 text-white/50" />
+                <p className="text-[10px] font-bold text-white/60 uppercase mb-1">المسافة</p>
+                <p className="text-lg font-black tabular-nums">{distance.toFixed(2)}<span className="text-[10px] ml-0.5">كم</span></p>
               </div>
             </div>
 
-            <button 
-              onClick={toggleTracking} 
-              className={`w-full bg-white h-14 rounded-[15px] font-black text-sm flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all group ${isTracking ? 'text-red-500' : 'text-primary'}`}
-            >
-              {isTracking ? (
-                <><Square className="h-5 w-5 fill-current" /> إنهاء وحفظ الإنجاز</>
+            {/* أزرار التحكم */}
+            <div className="flex gap-4">
+              {!isTracking ? (
+                <Button 
+                  onClick={toggleTracking} 
+                  className="flex-1 bg-white text-primary hover:bg-white/90 h-16 rounded-[22px] font-black text-lg shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3"
+                >
+                  <Play className="h-6 w-6 fill-current" />
+                  ابدأ الجري
+                </Button>
               ) : (
-                <><Play className="h-5 w-5 fill-current" /> ابدأ التتبع الحقيقي</>
+                <Button 
+                  onClick={toggleTracking} 
+                  className="flex-1 bg-white text-red-500 hover:bg-white/90 h-16 rounded-[22px] font-black text-lg shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3"
+                >
+                  <Square className="h-6 w-6 fill-current" />
+                  إنهاء الجلسة
+                </Button>
               )}
-            </button>
+            </div>
           </div>
+
+          {/* عناصر زخرفية خلفية */}
           <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
         </div>
 
+        {/* الخارطة */}
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-lg font-bold text-foreground/90 font-cairo">خارطة المسار الفعلي</h3>
             {isTracking && (
-              <div className="flex items-center gap-1.5 bg-green-500/10 px-3 py-1 rounded-full">
+              <div className="flex items-center gap-1.5 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
                 <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-ping" />
                 <span className="text-[10px] font-black text-green-600 uppercase">موقعك مباشر</span>
               </div>
             )}
           </div>
-          <div className="relative h-80 w-full rounded-[20px] overflow-hidden bg-slate-50 border border-border/40 shadow-inner premium-shadow">
-            <MapComponent path={path} />
+          <div className="relative h-80 w-full rounded-[30px] overflow-hidden bg-slate-50 border border-border/40 shadow-inner premium-shadow">
+            <MapComponent path={mapPath} />
             {!isTracking && path.length === 0 && (
               <div className="absolute inset-0 z-10 bg-black/5 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3 pointer-events-none">
                 <div className="h-16 w-16 rounded-full bg-white/80 flex items-center justify-center shadow-sm">
                   <MapPin className="h-8 w-8 text-primary/40" />
                 </div>
                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-white/80 px-4 py-2 rounded-full shadow-sm">
-                  اضغط "ابدأ التتبع" لتفعيل الخريطة
+                  اضغط "ابدأ الجري" لتفعيل الخريطة
                 </p>
               </div>
             )}
           </div>
         </div>
 
+        {/* إحصائيات إضافية */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 space-y-3">
-            <div className="h-10 w-10 rounded-[10px] bg-orange-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-[25px] premium-shadow border border-border/40 space-y-3">
+            <div className="h-10 w-10 rounded-[12px] bg-orange-50 flex items-center justify-center">
               <Zap className="h-5 w-5 text-orange-500" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase">الخطوات المقدَّرة</p>
-              <h4 className="text-xl font-black">{Math.floor(distance * 1312)}</h4>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">السرعة الحالية</p>
+              <h4 className="text-xl font-black">{currentSpeed.toFixed(1)} <span className="text-xs">كم/س</span></h4>
             </div>
           </div>
-          <div className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 space-y-3">
-            <div className="h-10 w-10 rounded-[10px] bg-blue-50 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-blue-500" />
+          <div className="bg-white p-6 rounded-[25px] premium-shadow border border-border/40 space-y-3">
+            <div className="h-10 w-10 rounded-[12px] bg-blue-50 flex items-center justify-center">
+              <Activity className="h-5 w-5 text-blue-500" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase">الوقت النشط</p>
-              <h4 className="text-xl font-black">{Math.floor(elapsedTime / 60)} <span className="text-xs">دقيقة</span></h4>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">آخر جلسة</p>
+              <h4 className="text-xl font-black">
+                {records && records.length > 0 ? records[0].distance.toFixed(2) : '0.00'} <span className="text-xs">كم</span>
+              </h4>
             </div>
           </div>
         </div>
