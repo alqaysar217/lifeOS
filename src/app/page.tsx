@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -11,7 +12,22 @@ import { TasksScreen } from "@/components/tasks/TasksScreen";
 import { FinanceScreen } from "@/components/finance/FinanceScreen";
 import { StudyScreen } from "@/components/study/StudyScreen";
 import { HabitsScreen } from "@/components/habits/HabitsScreen";
-import { Activity, CheckCircle2, GraduationCap, Wallet2, Zap, Trophy, Lock } from "lucide-react";
+import { AIScreen } from "@/components/ai/AIScreen";
+import { AnalyticsScreen } from "@/components/analytics/AnalyticsScreen";
+import { NotificationsScreen } from "@/components/notifications/NotificationsScreen";
+import { 
+  Activity, 
+  CheckCircle2, 
+  GraduationCap, 
+  Wallet2, 
+  Zap, 
+  Trophy, 
+  Lock, 
+  Search, 
+  BarChart3, 
+  Bot,
+  ChevronRight
+} from "lucide-react";
 
 const baseCategories = [
   {
@@ -61,40 +77,34 @@ const baseCategories = [
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = React.useState<TabId>('home');
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentTime, setCurrentTime] = useState<number>(new Date().getHours());
+  const [currentTime, setCurrentTime] = useState<number>(5); // Default to a safe hour for SSR
 
   useEffect(() => {
-    // تحديث الوقت الحالي لمعالجة الترتيب الديناميكي
+    setCurrentTime(new Date().getHours());
     const timer = setInterval(() => {
       setCurrentTime(new Date().getHours());
     }, 60000);
     return () => clearInterval(timer);
   }, []);
 
-  // الترتيب الديناميكي بناءً على الوقت
   const sortedCategories = useMemo(() => {
     let sorted = [...baseCategories];
-    
-    // الصباح (5-12): اللياقة أولاً
     if (currentTime >= 5 && currentTime < 12) {
       const fitnessIdx = sorted.findIndex(c => c.id === 'fitness');
       const item = sorted.splice(fitnessIdx, 1)[0];
       sorted.unshift(item);
     } 
-    // منتصف اليوم (12-18): المهام أولاً
     else if (currentTime >= 12 && currentTime < 18) {
       const tasksIdx = sorted.findIndex(c => c.id === 'tasks');
       const item = sorted.splice(tasksIdx, 1)[0];
       sorted.unshift(item);
     }
-    // المساء (18-5): العادات والدراسة أولاً
     else {
       const habitsIdx = sorted.findIndex(c => c.id === 'habits');
       const item = sorted.splice(habitsIdx, 1)[0];
       sorted.unshift(item);
     }
 
-    // الفلترة بناءً على البحث
     if (searchTerm) {
       return sorted.filter(c => 
         c.title.includes(searchTerm) || 
@@ -112,11 +122,14 @@ export default function DashboardPage() {
       case 'home':
         return (
           <div className="animate-in fade-in duration-500">
-            <DashboardHeader onSearch={setSearchTerm} />
+            <DashboardHeader 
+              onSearch={setSearchTerm} 
+              onNotifications={() => setActiveTab('notifications')} 
+            />
             {!searchTerm && <ChallengeHighlight />}
 
             <div className="px-6 mt-8 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-foreground/90">
+              <h2 className="text-lg font-bold text-foreground/90 font-cairo">
                 {searchTerm ? 'نتائج البحث' : 'الأقسام الرئيسية'}
               </h2>
               {!searchTerm && (
@@ -129,7 +142,7 @@ export default function DashboardPage() {
             <div className="mt-4 px-6 space-y-4">
               {sortedCategories.length > 0 ? (
                 sortedCategories.map((category, index) => (
-                  <div key={category.id} onClick={() => setActiveTab(category.id as TabId)} className="animate-in fade-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms` }}>
+                  <div key={category.id} onClick={() => setActiveTab(category.id as TabId)} className="animate-in fade-in slide-in-from-bottom-2 cursor-pointer" style={{ animationDelay: `${index * 50}ms` }}>
                     <CategoryCard
                       title={category.title}
                       description={category.description}
@@ -148,21 +161,22 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Security Section */}
+            {/* Smart Summary Shortcut */}
             {!searchTerm && (
-              <div className="mx-6 mt-8 p-5 rounded-[10px] bg-white premium-shadow border border-border/40 flex items-center justify-between transition-all active:scale-[0.98]">
+              <div 
+                onClick={() => setActiveTab('analytics')}
+                className="mx-6 mt-8 p-5 rounded-[15px] primary-gradient text-white premium-shadow flex items-center justify-between transition-all active:scale-[0.98] cursor-pointer"
+              >
                 <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-[10px] soft-purple-bg flex items-center justify-center">
-                    <Lock className="h-5 w-5 text-primary" />
+                  <div className="h-12 w-12 rounded-[12px] bg-white/20 backdrop-blur-md flex items-center justify-center">
+                    <BarChart3 className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-foreground">قفل التطبيق</h4>
-                    <p className="text-[10px] text-muted-foreground font-medium">حماية بياناتك بكلمة سر</p>
+                    <h4 className="text-sm font-bold">ملخص الأسبوع</h4>
+                    <p className="text-[10px] text-white/70 font-medium">أداؤك تحسن بنسبة 15%</p>
                   </div>
                 </div>
-                <div className="px-3 py-1 rounded-[6px] bg-slate-50 border border-slate-100">
-                  <p className="text-[9px] font-bold text-slate-400">قريباً</p>
-                </div>
+                <ChevronRight className="h-5 w-5 text-white/50" />
               </div>
             )}
           </div>
@@ -179,6 +193,12 @@ export default function DashboardPage() {
         return <StudyScreen onBack={handleBack} />;
       case 'habits':
         return <HabitsScreen onBack={handleBack} />;
+      case 'ai':
+        return <AIScreen onBack={handleBack} />;
+      case 'analytics':
+        return <AnalyticsScreen onBack={handleBack} />;
+      case 'notifications':
+        return <NotificationsScreen onBack={handleBack} />;
       case 'profile':
         return (
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-muted-foreground animate-in fade-in duration-500">
@@ -186,7 +206,7 @@ export default function DashboardPage() {
               <Lock className="h-8 w-8 text-white" />
             </div>
             <p className="font-bold">حسابي قيد التطوير</p>
-            <button onClick={handleBack} className="mt-6 text-primary font-bold text-sm">العودة للرئيسية</button>
+            <button onClick={handleBack} className="mt-6 text-primary font-bold text-sm font-cairo">العودة للرئيسية</button>
           </div>
         );
       default:

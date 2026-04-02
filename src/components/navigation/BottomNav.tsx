@@ -1,17 +1,18 @@
+
 "use client"
 
-import { Home, Dumbbell, Trophy, CheckSquare, User } from "lucide-react";
+import { Home, Activity, BarChart3, Bot, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import React from "react";
 
-export type TabId = 'home' | 'fitness' | 'challenges' | 'tasks' | 'profile' | 'finance' | 'study' | 'habits';
+export type TabId = 'home' | 'fitness' | 'analytics' | 'ai' | 'tasks' | 'challenges' | 'profile' | 'finance' | 'study' | 'habits' | 'notifications';
 
 const tabs = [
   { id: 'home', label: 'الرئيسية', icon: Home },
-  { id: 'fitness', label: 'اللياقة', icon: Dumbbell },
-  { id: 'challenges', label: 'التحديات', icon: Trophy },
+  { id: 'fitness', label: 'اللياقة', icon: Activity },
+  { id: 'analytics', label: 'الإحصائيات', icon: BarChart3 },
+  { id: 'ai', label: 'المساعد', icon: Bot },
   { id: 'tasks', label: 'المهام', icon: CheckSquare },
-  { id: 'profile', label: 'حسابي', icon: User },
 ];
 
 interface BottomNavProps {
@@ -46,7 +47,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
                 <Icon className={cn("h-5 w-5", isActive ? "scale-110" : "")} />
               </div>
               <span className={cn(
-                "text-[11px] font-bold transition-colors duration-300",
+                "text-[10px] font-bold transition-colors duration-300 font-cairo",
                 isActive ? "text-primary" : "text-muted-foreground/50"
               )}>
                 {tab.label}
@@ -55,7 +56,6 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
           );
         })}
       </nav>
-      {/* تغطية كاملة للقاع لضمان عدم وجود فجوات */}
       <div className="h-4 bg-white/95 backdrop-blur-lg" />
     </div>
   );

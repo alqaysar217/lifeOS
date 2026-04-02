@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from "react";
@@ -16,9 +17,10 @@ const quotes = [
 
 interface DashboardHeaderProps {
   onSearch?: (term: string) => void;
+  onNotifications?: () => void;
 }
 
-export function DashboardHeader({ onSearch }: DashboardHeaderProps) {
+export function DashboardHeader({ onSearch, onNotifications }: DashboardHeaderProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [quote, setQuote] = useState("");
   const [isSearchVisible, setIsSearchVisible] = useState(false);
@@ -41,12 +43,12 @@ export function DashboardHeader({ onSearch }: DashboardHeaderProps) {
           {!isSearchVisible ? (
             <>
               <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="h-14 w-14 flex items-center justify-center relative drop-shadow-xl transition-transform active:scale-95">
+                <div className="h-14 w-14 flex items-center justify-center relative transition-transform active:scale-95">
                   <Image 
                     src="/logo.png" 
                     alt="لوجو حياتي" 
                     fill
-                    className="object-contain"
+                    className="object-contain drop-shadow-md"
                     priority
                   />
                 </div>
@@ -61,8 +63,14 @@ export function DashboardHeader({ onSearch }: DashboardHeaderProps) {
                 >
                   <Search className="h-5 w-5" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-11 w-11 rounded-[10px] bg-white border border-border/40 premium-shadow text-muted-foreground hover:text-primary transition-all active:scale-90">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={onNotifications}
+                  className="h-11 w-11 rounded-[10px] bg-white border border-border/40 premium-shadow text-muted-foreground hover:text-primary transition-all active:scale-90 relative"
+                >
                   <Bell className="h-5 w-5" />
+                  <div className="absolute top-2.5 left-2.5 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />
                 </Button>
               </div>
             </>
@@ -97,7 +105,7 @@ export function DashboardHeader({ onSearch }: DashboardHeaderProps) {
       
       <div className="px-6 py-6 space-y-1">
         <h2 className="text-2xl font-extrabold text-foreground font-cairo">أهلاً بك يا بطل 👋</h2>
-        <p className="text-xs text-primary/70 font-bold bg-primary/5 inline-block px-3 py-1 rounded-full animate-in fade-in slide-in-from-bottom-2 duration-700">
+        <p className="text-[11px] text-primary/70 font-bold bg-primary/5 inline-block px-3 py-1 rounded-full animate-in fade-in slide-in-from-bottom-2 duration-700">
           "{quote}"
         </p>
       </div>
