@@ -1,7 +1,7 @@
 
 "use client"
 
-import { Home, Activity, BarChart3, Bot, CheckSquare } from "lucide-react";
+import { Home, Activity, Trophy, CheckSquare, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import React from "react";
 
@@ -10,9 +10,9 @@ export type TabId = 'home' | 'fitness' | 'analytics' | 'ai' | 'tasks' | 'challen
 const tabs = [
   { id: 'home', label: 'الرئيسية', icon: Home },
   { id: 'fitness', label: 'اللياقة', icon: Activity },
-  { id: 'analytics', label: 'الإحصائيات', icon: BarChart3 },
-  { id: 'ai', label: 'المساعد', icon: Bot },
+  { id: 'challenges', label: 'التحديات', icon: Trophy },
   { id: 'tasks', label: 'المهام', icon: CheckSquare },
+  { id: 'profile', label: 'حسابي', icon: User },
 ];
 
 interface BottomNavProps {
