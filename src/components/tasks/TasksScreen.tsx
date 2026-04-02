@@ -75,7 +75,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         {/* تبويبات المهام */}
         <div className="space-y-4">
           <h3 className="text-lg font-bold text-foreground/90">قائمة المهام</h3>
-          <Tabs defaultValue="ongoing" className="w-full">
+          <Tabs defaultValue="ongoing" className="w-full" dir="rtl">
             <TabsList className="w-full bg-white premium-shadow border border-border/40 h-12 p-1.5 rounded-[10px]">
               <TabsTrigger value="ongoing" className="flex-1 rounded-[8px] data-[state=active]:primary-gradient data-[state=active]:text-white text-xs font-bold">قيد التنفيذ</TabsTrigger>
               <TabsTrigger value="completed" className="flex-1 rounded-[8px] data-[state=active]:primary-gradient data-[state=active]:text-white text-xs font-bold">مكتمل</TabsTrigger>
