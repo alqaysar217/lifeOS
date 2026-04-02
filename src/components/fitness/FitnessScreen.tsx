@@ -6,18 +6,29 @@ import {
   Play, MapPin, Clock, Zap, Target, Dumbbell, ChevronRight, 
   Navigation, Activity, Square, Loader2, Footprints, 
   ChevronLeft, History, BarChart3, Plus, Trophy, Timer,
-  Tally5, CheckCircle2
+  Tally5, CheckCircle2, Trash2, AlertTriangle
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, serverTimestamp, query, orderBy, limit } from "firebase/firestore";
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { collection, serverTimestamp, query, orderBy, doc } from "firebase/firestore";
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer, AreaChart, Area 
+  XAxis, YAxis, CartesianGrid, 
+  Tooltip, ResponsiveContainer, AreaChart, Area, LineChart, Line 
 } from 'recharts';
 
 const MapComponent = dynamic(() => import("./MapComponent"), { 
@@ -178,15 +189,32 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     if (activeExercise !== 'run') setView('hub');
   };
 
+  const handleDeleteRecord = (recordId: string) => {
+    if (!db || !user) return;
+    const docRef = doc(db, 'users', user.uid, 'fitnessRecords', recordId);
+    deleteDocumentNonBlocking(docRef);
+    toast({ title: "تم الحذف", description: "تمت إزالة السجل بنجاح." });
+  };
+
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
     return `${m}:${sec < 10 ? '0' : ''}${sec}`;
   };
 
+  const getExerciseName = (type: string): string => {
+    switch (type) {
+      case 'run': return 'الجري والمشي';
+      case 'pushups': return 'تمارين الضغط';
+      case 'squats': return 'تمارين القرفصاء';
+      case 'abs': return 'تمارين البطن';
+      case 'jumprope': return 'نط الحبل';
+      default: return 'تمرين رياضي';
+    }
+  };
+
   const renderHub = () => (
     <div className="px-6 py-6 space-y-8 animate-in fade-in duration-500">
-      {/* Today's Summary */}
       <div className="primary-gradient rounded-[10px] p-6 text-white premium-shadow relative overflow-hidden">
         <div className="relative z-10 flex items-center justify-between">
           <div className="space-y-1">
@@ -211,7 +239,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         </div>
       </div>
 
-      {/* Exercises Categories */}
       <div className="space-y-4">
         <h3 className="text-lg font-bold text-foreground/90 font-cairo">اختر تمرينك</h3>
         <div className="grid grid-cols-2 gap-4">
@@ -224,7 +251,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         </div>
       </div>
 
-      {/* History Log */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold text-foreground/90 font-cairo">سجل النشاطات</h3>
@@ -235,23 +261,25 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             <div className="py-10 text-center text-xs text-muted-foreground">جاري تحميل السجل...</div>
           ) : records && records.length > 0 ? (
             records.slice(0, 5).map((r, i) => (
-              <div key={i} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between">
+              <div key={r.id} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={`h-10 w-10 rounded-[8px] flex items-center justify-center ${r.type === 'run' ? 'bg-blue-50' : 'bg-orange-50'}`}>
                     {r.type === 'run' ? <Navigation className="h-5 w-5 text-blue-500" /> : <Dumbbell className="h-5 w-5 text-orange-500" />}
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-foreground">{r.type === 'run' ? 'جري ومشي' : getExerciseName(r.type)}</h4>
+                    <h4 className="text-sm font-bold text-foreground">{getExerciseName(r.type)}</h4>
                     <p className="text-[10px] text-muted-foreground font-medium">
                       {r.date?.seconds ? new Date(r.date.seconds * 1000).toLocaleString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'قيد الحفظ'}
                     </p>
                   </div>
                 </div>
-                <div className="text-left">
-                  <p className="text-sm font-black text-primary">
-                    {r.type === 'run' ? `${r.distance} كم` : `${r.reps} عدة`}
-                  </p>
-                  <p className="text-[8px] font-bold text-muted-foreground uppercase">{formatTime(r.durationSeconds || 0)}</p>
+                <div className="text-left flex items-center gap-3">
+                  <div className="text-left">
+                    <p className="text-sm font-black text-primary">
+                      {r.type === 'run' ? `${r.distance} كم` : `${r.reps} عدة`}
+                    </p>
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase">{formatTime(r.durationSeconds || 0)}</p>
+                  </div>
                 </div>
               </div>
             ))
@@ -302,6 +330,60 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             )}
           </div>
         </div>
+
+        {/* Running Log Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-foreground/90 font-cairo">سجل الجري</h3>
+            <History className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="space-y-3">
+            {records?.filter(r => r.type === 'run').map((r) => (
+              <div key={r.id} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-[8px] bg-blue-50 flex items-center justify-center">
+                    <Navigation className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground">{r.distance} كم</h4>
+                    <p className="text-[10px] text-muted-foreground font-medium">
+                      {r.date?.seconds ? new Date(r.date.seconds * 1000).toLocaleString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'قيد الحفظ'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-left">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase">{formatTime(r.durationSeconds || 0)}</p>
+                    <p className="text-[8px] font-bold text-primary">{r.steps} خطوة</p>
+                  </div>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/40 hover:text-destructive hover:bg-destructive/5 rounded-full">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="font-cairo" dir="rtl">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-right">هل أنت متأكد من الحذف؟</AlertDialogTitle>
+                        <AlertDialogDescription className="text-right">
+                          سيتم حذف سجل الجري هذا نهائياً ولن تتمكن من استعادته.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="flex-row-reverse gap-2">
+                        <AlertDialogAction onClick={() => handleDeleteRecord(r.id)} className="bg-destructive hover:bg-destructive/90 text-white font-bold">حذف</AlertDialogAction>
+                        <AlertDialogCancel className="font-bold">إلغاء</AlertDialogCancel>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            ))}
+            {records?.filter(r => r.type === 'run').length === 0 && (
+              <p className="text-center py-6 text-xs font-bold text-muted-foreground">لا يوجد تاريخ جري مسبق</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -346,7 +428,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         <div className="absolute -right-20 -top-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
       </div>
 
-      {/* Instructions */}
       <div className="bg-white p-6 rounded-[10px] premium-shadow border border-border/40 flex items-start gap-4">
         <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center shrink-0">
           <Timer className="h-5 w-5 text-primary" />
@@ -466,15 +547,4 @@ function StatItem({ icon: Icon, label, value }: any) {
       <p className="text-base font-black tabular-nums">{value}</p>
     </div>
   );
-}
-
-function getExerciseName(type: ExerciseType): string {
-  switch (type) {
-    case 'run': return 'الجري والمشي';
-    case 'pushups': return 'تمارين الضغط';
-    case 'squats': return 'تمارين القرفصاء';
-    case 'abs': return 'تمارين البطن';
-    case 'jumprope': return 'نط الحبل';
-    default: return 'تمرين رياضي';
-  }
 }
