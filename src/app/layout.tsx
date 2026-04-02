@@ -2,6 +2,7 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { PWARegister } from '@/components/PWARegister';
+import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'حياتي',
@@ -31,8 +32,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/logo.png" />
       </head>
       <body className="font-cairo antialiased bg-background text-foreground selection:bg-primary/20 overflow-x-hidden">
-        <PWARegister />
-        {children}
+        <FirebaseClientProvider>
+          <PWARegister />
+          {children}
+        </FirebaseClientProvider>
       </body>
     </html>
   );

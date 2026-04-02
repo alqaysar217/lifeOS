@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from "react";
@@ -5,44 +6,56 @@ import { Plus, MoreVertical, Calendar, Folder, Clock, CheckCircle2, Circle, Chev
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-
-const initialTasks = [
-  { id: 1, title: "مراجعة تقرير المشروع", completed: true, time: "09:00 ص" },
-  { id: 2, title: "اجتماع فريق التصميم", completed: false, time: "11:30 ص" },
-  { id: 3, title: "تحديث قاعدة البيانات", completed: false, time: "02:00 م" },
-];
-
-const projects = [
-  { title: "تطبيق حياتي", progress: 75, tasks: 12, color: "bg-primary" },
-  { title: "خطة التدريب", progress: 40, tasks: 5, color: "bg-blue-500" },
-];
+import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, doc, query, where, serverTimestamp } from "firebase/firestore";
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 interface TasksScreenProps {
   onBack: () => void;
 }
 
 export function TasksScreen({ onBack }: TasksScreenProps) {
-  const [tasks, setTasks] = useState(initialTasks);
-  const [showSparkle, setShowSparkle] = useState<number | null>(null);
+  const db = useFirestore();
+  const { user } = useUser();
+  const [showSparkle, setShowSparkle] = useState<string | null>(null);
 
-  const toggleTask = (id: number) => {
-    setTasks(prev => prev.map(task => {
-      if (task.id === id) {
-        // تأثير احتفالي عند الإتمام
-        if (!task.completed) {
-          setShowSparkle(id);
-          setTimeout(() => setShowSparkle(null), 1000);
-          
-          // محاكاة اهتزاز (Haptic) للمتصفح
-          if (typeof window !== 'undefined' && window.navigator.vibrate) {
-            window.navigator.vibrate(50);
-          }
-        }
-        return { ...task, completed: !task.completed };
+  const tasksQuery = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return collection(db, 'users', user.uid, 'tasks');
+  }, [db, user]);
+
+  const { data: tasks } = useCollection(tasksQuery);
+
+  const toggleTask = (taskId: string, currentStatus: string) => {
+    if (!db || !user) return;
+    const taskRef = doc(db, 'users', user.uid, 'tasks', taskId);
+    const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+    
+    if (newStatus === 'completed') {
+      setShowSparkle(taskId);
+      setTimeout(() => setShowSparkle(null), 1000);
+      if (typeof window !== 'undefined' && window.navigator.vibrate) {
+        window.navigator.vibrate(50);
       }
-      return task;
-    }));
+    }
+    
+    updateDocumentNonBlocking(taskRef, { status: newStatus });
   };
+
+  const handleAddTask = () => {
+    if (!db || !user) return;
+    const tasksRef = collection(db, 'users', user.uid, 'tasks');
+    addDocumentNonBlocking(tasksRef, {
+      title: "مهمة جديدة",
+      status: "pending",
+      project: "تطبيق حياتي",
+      createdAt: serverTimestamp(),
+      userId: user.uid
+    });
+  };
+
+  const ongoingTasks = tasks?.filter(t => t.status !== 'completed') || [];
+  const completedTasks = tasks?.filter(t => t.status === 'completed') || [];
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -61,16 +74,18 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
       </div>
 
       <div className="px-6 py-6 space-y-8">
-        {/* قسم المشاريع */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-foreground/90">المشاريع</h3>
-            <button className="h-8 w-8 rounded-[8px] bg-primary/5 text-primary flex items-center justify-center active:scale-90 transition-transform">
+            <button onClick={handleAddTask} className="h-8 w-8 rounded-[8px] bg-primary/5 text-primary flex items-center justify-center active:scale-90 transition-transform">
               <Plus className="h-4 w-4" />
             </button>
           </div>
           <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-            {projects.map((proj, i) => (
+            {[
+              { title: "تطبيق حياتي", progress: 75, tasks: 12, color: "bg-primary" },
+              { title: "خطة التدريب", progress: 40, tasks: 5, color: "bg-blue-500" },
+            ].map((proj, i) => (
               <div key={i} className="min-w-[200px] bg-white p-5 rounded-[10px] premium-shadow border border-border/40 space-y-4 hover:shadow-lg transition-shadow">
                 <div className="flex justify-between items-start">
                   <div className={`h-10 w-10 rounded-[10px] ${proj.color} flex items-center justify-center text-white`}>
@@ -94,7 +109,6 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
           </div>
         </div>
 
-        {/* تبويبات المهام */}
         <div className="space-y-4">
           <h3 className="text-lg font-bold text-foreground/90">قائمة المهام</h3>
           <Tabs defaultValue="ongoing" className="w-full" dir="rtl">
@@ -105,11 +119,11 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             </TabsList>
             
             <TabsContent value="ongoing" className="mt-6 space-y-3">
-              {tasks.filter(t => !t.completed).length > 0 ? (
-                tasks.filter(t => !t.completed).map((task) => (
+              {ongoingTasks.length > 0 ? (
+                ongoingTasks.map((task) => (
                   <div 
                     key={task.id} 
-                    onClick={() => toggleTask(task.id)}
+                    onClick={() => toggleTask(task.id, task.status)}
                     className={`bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between group active:scale-[0.98] transition-all cursor-pointer ${showSparkle === task.id ? 'success-sparkle border-primary' : ''}`}
                   >
                     <div className="flex items-center gap-4">
@@ -122,7 +136,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
                         </h4>
                         <div className="flex items-center gap-1 mt-0.5">
                           <Clock className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-[10px] text-muted-foreground font-medium">{task.time}</span>
+                          <span className="text-[10px] text-muted-foreground font-medium">اليوم</span>
                         </div>
                       </div>
                     </div>
@@ -146,10 +160,10 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             </TabsContent>
             
             <TabsContent value="completed" className="mt-6 space-y-3">
-              {tasks.filter(t => t.completed).map((task) => (
+              {completedTasks.map((task) => (
                 <div 
                   key={task.id} 
-                  onClick={() => toggleTask(task.id)}
+                  onClick={() => toggleTask(task.id, task.status)}
                   className="bg-slate-50/50 p-4 rounded-[10px] border border-border/40 flex items-center justify-between group active:scale-[0.98] transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-4">
@@ -173,8 +187,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         </div>
       </div>
 
-      {/* زر إضافة عائم */}
-      <button className="fixed bottom-32 left-8 h-14 w-14 rounded-full primary-gradient text-white flex items-center justify-center shadow-2xl shadow-primary/40 active:scale-75 transition-transform z-40 tap-shake">
+      <button onClick={handleAddTask} className="fixed bottom-32 left-8 h-14 w-14 rounded-full primary-gradient text-white flex items-center justify-center shadow-2xl shadow-primary/40 active:scale-75 transition-transform z-40 tap-shake">
         <Plus className="h-6 w-6" />
       </button>
     </div>

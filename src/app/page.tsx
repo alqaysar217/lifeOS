@@ -15,6 +15,9 @@ import { HabitsScreen } from "@/components/habits/HabitsScreen";
 import { AIScreen } from "@/components/ai/AIScreen";
 import { AnalyticsScreen } from "@/components/analytics/AnalyticsScreen";
 import { NotificationsScreen } from "@/components/notifications/NotificationsScreen";
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { 
   Activity, 
   CheckCircle2, 
@@ -44,21 +47,21 @@ const baseCategories = [
     title: "اللياقة البدنية",
     description: "تتبع نشاطك البدني وصحتك اليومية",
     icon: Activity,
-    stat: "3 تمارين"
+    stat: "نشط"
   },
   {
     id: 'tasks',
     title: "المهام اليومية",
     description: "قائمة المهام والأهداف المراد إنجازها",
     icon: CheckCircle2,
-    stat: "5 مهام"
+    stat: "جاري"
   },
   {
     id: 'study',
     title: "الخطة الدراسية",
     description: "جدولة المواد الدراسية وساعات المراجعة",
     icon: GraduationCap,
-    stat: "ساعتان"
+    stat: "مستمر"
   },
   {
     id: 'finance',
@@ -72,14 +75,14 @@ const baseCategories = [
     title: "بناء العادات",
     description: "الالتزام بالعادات الصحية واليومية",
     icon: Zap,
-    stat: "80% التزام"
+    stat: "نشط"
   },
   {
     id: 'challenges',
     title: "مركز التحديات",
     description: "تحديات اجتماعية وفردية محفزة",
     icon: Trophy,
-    stat: "2 نشط"
+    stat: "نشط"
   }
 ];
 
@@ -87,6 +90,27 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = React.useState<TabId>('home');
   const [searchTerm, setSearchTerm] = useState("");
   const [currentTime, setCurrentTime] = useState<number>(5);
+  
+  const auth = useAuth();
+  const db = useFirestore();
+  const { user, isUserLoading } = useUser();
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      initiateAnonymousSignIn(auth);
+    }
+  }, [user, isUserLoading, auth]);
+
+  useEffect(() => {
+    if (user && db) {
+      const userRef = doc(db, 'users', user.uid);
+      setDoc(userRef, {
+        id: user.uid,
+        createdAt: serverTimestamp(),
+        passcodeEnabled: false
+      }, { merge: true });
+    }
+  }, [user, db]);
 
   useEffect(() => {
     setCurrentTime(new Date().getHours());
@@ -99,9 +123,7 @@ export default function DashboardPage() {
   const sortedCategories = useMemo(() => {
     let sorted = [...baseCategories];
     
-    // منطق الترتيب الديناميكي بناءً على الوقت
     if (currentTime >= 5 && currentTime < 12) {
-      // الصباح: المساعد الذكي واللياقة في البداية
       const itemsToMove = ['ai', 'fitness'];
       itemsToMove.reverse().forEach(id => {
         const idx = sorted.findIndex(c => c.id === id);
@@ -112,7 +134,6 @@ export default function DashboardPage() {
       });
     } 
     else if (currentTime >= 12 && currentTime < 18) {
-      // الظهر: المهام أولاً
       const tasksIdx = sorted.findIndex(c => c.id === 'tasks');
       if (tasksIdx > -1) {
         const item = sorted.splice(tasksIdx, 1)[0];
@@ -120,7 +141,6 @@ export default function DashboardPage() {
       }
     }
     else {
-      // المساء: العادات والدراسة أولاً
       const itemsToMove = ['habits', 'study'];
       itemsToMove.reverse().forEach(id => {
         const idx = sorted.findIndex(c => c.id === id);
@@ -144,6 +164,8 @@ export default function DashboardPage() {
   const handleBack = () => setActiveTab('home');
 
   const renderContent = () => {
+    if (isUserLoading) return <div className="min-h-screen flex items-center justify-center">جاري التحميل...</div>;
+
     switch (activeTab) {
       case 'home':
         return (
