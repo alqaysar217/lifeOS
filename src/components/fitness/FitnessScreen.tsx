@@ -280,8 +280,12 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               <StatItem icon={Navigation} label="المسافة" value={`${distance.toFixed(2)} كم`} />
             </div>
 
-            <Button onClick={toggleTracking} className="w-full h-12 rounded-[10px] bg-white text-primary font-black text-base shadow-2xl active:scale-95 transition-all">
-              {isTracking ? <><Square className="h-5 w-5 ml-2 fill-current text-red-500" /> إنهاء الجلسة</> : <><Play className="h-5 w-5 ml-2 fill-current" /> ابدأ الجري</>}
+            <Button 
+              onClick={toggleTracking} 
+              variant="secondary"
+              className={`w-full h-12 rounded-[10px] font-black text-base shadow-2xl active:scale-95 transition-all border-none hover:bg-white/90 ${isTracking ? 'bg-white text-red-500' : 'bg-white text-primary'}`}
+            >
+              {isTracking ? <><Square className="h-5 w-5 ml-2 fill-current" /> إنهاء الجلسة</> : <><Play className="h-5 w-5 ml-2 fill-current" /> ابدأ الجري</>}
             </Button>
           </div>
         </div>
