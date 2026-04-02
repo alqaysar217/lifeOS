@@ -15,9 +15,9 @@ export function DashboardHeader() {
               <Image 
                 src="/logo.png" 
                 alt="لوجو حياتي" 
-                width={28} 
-                height={28} 
-                className="object-contain"
+                width={40} 
+                height={40} 
+                className="object-contain p-1"
               />
             </div>
             <span className="text-xl font-extrabold tracking-tight text-foreground/90 font-cairo">حياتي</span>
