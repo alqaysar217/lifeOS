@@ -1,11 +1,12 @@
 
 "use client"
 
-import { Zap, Star, Target, Flame, ChevronLeft, ChevronRight, Crown } from "lucide-react";
+import { Zap, Star, Target, Flame, ChevronLeft, ChevronRight, Crown, Plus } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { collection, serverTimestamp } from "firebase/firestore";
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 interface ChallengesScreenProps {
   onBack: () => void;
@@ -20,16 +21,24 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
     return collection(db, 'users', user.uid, 'challenges');
   }, [db, user]);
 
-  const { data: challenges } = useCollection(challengesQuery);
+  const { data: challenges, isLoading } = useCollection(challengesQuery);
 
-  const activeChallenge = challenges?.find(c => c.totalDays > 0) || {
-    title: "تحدي الـ 100 يوم جري",
-    currentDay: 12,
-    totalDays: 100
+  const activeChallenge = challenges?.find(c => c.totalDays > 0);
+
+  const handleAddChallenge = () => {
+    if (!db || !user) return;
+    const challengesRef = collection(db, 'users', user.uid, 'challenges');
+    addDocumentNonBlocking(challengesRef, {
+      title: "تحدي الـ 100 يوم",
+      currentDay: 1,
+      totalDays: 100,
+      userId: user.uid,
+      createdAt: serverTimestamp()
+    });
   };
 
-  const points = challenges?.length ? challenges.length * 100 + 1250 : 1250;
-  const level = Math.floor(points / 300);
+  const points = challenges?.length ? challenges.length * 100 + 1250 : 0;
+  const level = Math.floor(points / 300) || 1;
   const progress = ((points % 1000) / 1000) * 100;
 
   return (
@@ -64,68 +73,92 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
           </div>
         </div>
 
-        <div className="primary-gradient rounded-[10px] p-6 text-white premium-shadow relative overflow-hidden shadow-[0_20px_40px_-15px_rgba(139,92,246,0.4)]">
-          <div className="relative z-10 space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-[10px] bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
-                <Zap className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold text-white/70 uppercase">التحدي النشط</p>
-                <h3 className="text-lg font-bold">{activeChallenge.title}</h3>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex justify-between items-end">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold">{activeChallenge.currentDay}</span>
-                  <span className="text-xs text-white/70">/ {activeChallenge.totalDays} يوم</span>
+        {activeChallenge ? (
+          <div className="primary-gradient rounded-[10px] p-6 text-white premium-shadow relative overflow-hidden shadow-[0_20px_40px_-15px_rgba(139,92,246,0.4)]">
+            <div className="relative z-10 space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-[10px] bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+                  <Zap className="h-6 w-6 text-white" />
                 </div>
-                <span className="text-[10px] font-bold bg-white/20 px-2 py-1 rounded-[6px]">باقي {activeChallenge.totalDays - activeChallenge.currentDay} يوم</span>
+                <div>
+                  <p className="text-[10px] font-semibold text-white/70 uppercase">التحدي النشط</p>
+                  <h3 className="text-lg font-bold">{activeChallenge.title}</h3>
+                </div>
               </div>
-              <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
-                <div className="h-full bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.6)]" style={{ width: `${(activeChallenge.currentDay / activeChallenge.totalDays) * 100}%` }} />
+              
+              <div className="space-y-3">
+                <div className="flex justify-between items-end">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-bold">{activeChallenge.currentDay}</span>
+                    <span className="text-xs text-white/70">/ {activeChallenge.totalDays} يوم</span>
+                  </div>
+                  <span className="text-[10px] font-bold bg-white/20 px-2 py-1 rounded-[6px]">باقي {activeChallenge.totalDays - activeChallenge.currentDay} يوم</span>
+                </div>
+                <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
+                  <div className="h-full bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.6)]" style={{ width: `${(activeChallenge.currentDay / activeChallenge.totalDays) * 100}%` }} />
+                </div>
               </div>
             </div>
+            <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-pink-400/30 blur-[60px] rounded-full" />
+            <div className="absolute top-0 right-0 p-4">
+              <Crown className="h-6 w-6 text-white/20" />
+            </div>
           </div>
-          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-pink-400/30 blur-[60px] rounded-full" />
-          <div className="absolute top-0 right-0 p-4">
-            <Crown className="h-6 w-6 text-white/20" />
+        ) : (
+          <div className="bg-white p-8 rounded-[15px] premium-shadow border border-border/40 text-center space-y-4">
+            <Trophy className="h-12 w-12 text-muted-foreground/20 mx-auto" />
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-foreground">ابدأ تحديك الأول اليوم!</h3>
+              <p className="text-[10px] text-muted-foreground">التحديات تساعدك على الالتزام وتحقيق أهدافك</p>
+            </div>
+            <Button onClick={handleAddChallenge} className="primary-gradient text-white font-bold w-full rounded-[10px]">بدء تحدي جديد</Button>
           </div>
-        </div>
+        )}
 
         <div className="space-y-4">
-          <h3 className="text-lg font-bold text-foreground/90">تحديات أخرى</h3>
-          <div className="space-y-3">
-            {challenges?.map((ch, i) => (
-              <div key={i} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 space-y-3 active:scale-[0.98] transition-all">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-[8px] soft-purple-bg flex items-center justify-center">
-                      <Target className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-foreground">{ch.title}</h4>
-                      <p className="text-[10px] text-muted-foreground font-medium">تحدي</p>
-                    </div>
-                  </div>
-                  <div className="h-8 w-8 rounded-[8px] bg-slate-50 flex items-center justify-center">
-                    <ChevronLeft className="h-4 w-4 text-slate-300" />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-[9px] font-bold text-muted-foreground">
-                    <span>التقدم</span>
-                    <span>{Math.floor((ch.currentDay / ch.totalDays) * 100)}%</span>
-                  </div>
-                  <Progress value={(ch.currentDay / ch.totalDays) * 100} className="h-1.5 bg-secondary" />
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-foreground/90">سجل التحديات</h3>
+            <button onClick={handleAddChallenge} className="h-8 w-8 rounded-[8px] bg-primary/5 text-primary flex items-center justify-center">
+              <Plus className="h-4 w-4" />
+            </button>
           </div>
+          
+          {isLoading ? (
+            <div className="py-10 text-center text-xs text-muted-foreground">جاري التحميل...</div>
+          ) : challenges && challenges.length > 0 ? (
+            <div className="space-y-3">
+              {challenges.map((ch) => (
+                <div key={ch.id} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 space-y-3 active:scale-[0.98] transition-all">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-[8px] soft-purple-bg flex items-center justify-center">
+                        <Target className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-foreground">{ch.title}</h4>
+                        <p className="text-[10px] text-muted-foreground font-medium">تحدي</p>
+                      </div>
+                    </div>
+                    <div className="h-8 w-8 rounded-[8px] bg-slate-50 flex items-center justify-center">
+                      <ChevronLeft className="h-4 w-4 text-slate-300" />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-[9px] font-bold text-muted-foreground">
+                      <span>التقدم</span>
+                      <span>{Math.floor((ch.currentDay / ch.totalDays) * 100)}%</span>
+                    </div>
+                    <Progress value={(ch.currentDay / ch.totalDays) * 100} className="h-1.5 bg-secondary" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-10 text-center text-xs text-muted-foreground">لا يوجد تاريخ تحديات مسبق</div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+import { Trophy } from "lucide-react";

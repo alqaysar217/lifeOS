@@ -1,11 +1,12 @@
 
 "use client"
 
-import { GraduationCap, BookOpen, Clock, Calendar, AlertCircle, ChevronLeft, ChevronRight, PlayCircle } from "lucide-react";
+import { GraduationCap, BookOpen, Clock, Calendar, AlertCircle, ChevronLeft, ChevronRight, PlayCircle, Plus } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { collection, serverTimestamp } from "firebase/firestore";
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 interface StudyScreenProps {
   onBack: () => void;
@@ -20,7 +21,18 @@ export function StudyScreen({ onBack }: StudyScreenProps) {
     return collection(db, 'users', user.uid, 'studyProgress');
   }, [db, user]);
 
-  const { data: subjects } = useCollection(studyQuery);
+  const { data: subjects, isLoading } = useCollection(studyQuery);
+
+  const handleAddSubject = () => {
+    if (!db || !user) return;
+    const studyRef = collection(db, 'users', user.uid, 'studyProgress');
+    addDocumentNonBlocking(studyRef, {
+      subject: "مادة جديدة",
+      progress: 0,
+      userId: user.uid,
+      createdAt: serverTimestamp()
+    });
+  };
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -43,17 +55,13 @@ export function StudyScreen({ onBack }: StudyScreenProps) {
           <div className="relative z-10 flex items-center justify-between">
             <div className="space-y-4">
               <div>
-                <p className="text-white/70 text-[10px] font-bold uppercase tracking-wider">جلسة اليوم المقترحة</p>
-                <h3 className="text-xl font-bold">مراجعة خوارزميات البحث</h3>
+                <p className="text-white/70 text-[10px] font-bold uppercase tracking-wider">نصيحة اليوم</p>
+                <h3 className="text-xl font-bold">الاستمرارية سر النجاح</h3>
               </div>
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5">
-                  <Clock className="h-4 w-4 text-white/70" />
-                  <span className="text-xs font-bold">ساعتان</span>
-                </div>
                 <button className="bg-white text-primary px-4 py-1.5 rounded-[8px] font-bold text-xs flex items-center gap-2 shadow-xl active:scale-95 transition-transform">
                   <PlayCircle className="h-3.5 w-3.5" />
-                  ابدأ الآن
+                  ابدأ المراجعة
                 </button>
               </div>
             </div>
@@ -63,47 +71,49 @@ export function StudyScreen({ onBack }: StudyScreenProps) {
           </div>
         </div>
 
-        <div className="bg-orange-50 p-5 rounded-[10px] border border-orange-100 flex items-center gap-4">
-          <div className="h-12 w-12 rounded-[10px] bg-orange-100 flex items-center justify-center shrink-0">
-            <AlertCircle className="h-6 w-6 text-orange-600" />
-          </div>
-          <div className="flex-1">
-            <h4 className="text-sm font-bold text-orange-900">اختبار قادم!</h4>
-            <p className="text-[11px] text-orange-700 font-medium">لديك اختبار "قواعد بيانات" بعد <span className="font-black">3 أيام</span></p>
-          </div>
-          <Calendar className="h-5 w-5 text-orange-300" />
-        </div>
-
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-foreground/90">المواد الدراسية</h3>
-            <button className="text-xs text-primary font-bold">إضافة مادة</button>
+            <button onClick={handleAddSubject} className="text-xs text-primary font-bold flex items-center gap-1">
+              <Plus className="h-3 w-3" />
+              إضافة مادة
+            </button>
           </div>
-          <div className="space-y-4">
-            {subjects?.map((sub, i) => (
-              <div key={i} className="bg-white p-5 rounded-[10px] premium-shadow border border-border/40 space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className={`h-10 w-10 rounded-[10px] bg-blue-500/10 flex items-center justify-center`}>
-                      <BookOpen className={`h-5 w-5 text-blue-500`} />
+          
+          {isLoading ? (
+            <div className="py-10 text-center text-xs text-muted-foreground">جاري التحميل...</div>
+          ) : subjects && subjects.length > 0 ? (
+            <div className="space-y-4">
+              {subjects.map((sub) => (
+                <div key={sub.id} className="bg-white p-5 rounded-[10px] premium-shadow border border-border/40 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className={`h-10 w-10 rounded-[10px] bg-blue-500/10 flex items-center justify-center`}>
+                        <BookOpen className={`h-5 w-5 text-blue-500`} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-foreground">{sub.subject}</h4>
+                        <p className="text-[10px] text-muted-foreground font-bold">{sub.progress}% مكتمل</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-foreground">{sub.subject}</h4>
-                      <p className="text-[10px] text-muted-foreground font-bold">{sub.progress}% مكتمل</p>
+                    <ChevronLeft className="h-4 w-4 text-slate-300" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] font-bold text-muted-foreground">
+                      <span>التقدم في المادة</span>
+                      <span>{sub.progress}%</span>
                     </div>
+                    <Progress value={sub.progress} className={`h-1.5`} />
                   </div>
-                  <ChevronLeft className="h-4 w-4 text-slate-300" />
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[9px] font-bold text-muted-foreground">
-                    <span>التقدم في المادة</span>
-                    <span>{sub.progress}%</span>
-                  </div>
-                  <Progress value={sub.progress} className={`h-1.5`} />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-20 text-center space-y-3">
+              <GraduationCap className="h-10 w-10 text-muted-foreground/20 mx-auto" />
+              <p className="text-xs font-bold text-muted-foreground">ابدأ بإضافة موادك الدراسية هنا</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
