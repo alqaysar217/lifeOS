@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -156,6 +157,10 @@
           "type": "string",
           "description": "Reference to the User whose fitness activity is being recorded. (Relationship: User 1:N FitnessRecord)"
         },
+        "type": {
+          "type": "string",
+          "description": "The type of fitness activity (e.g., 'run', 'pushups', 'squats', 'abs', 'jumprope')."
+        },
         "date": {
           "type": "string",
           "description": "The date when the fitness activity occurred.",
@@ -169,18 +174,21 @@
           "type": "number",
           "description": "The distance covered during the activity, typically in kilometers or miles."
         },
-        "time": {
+        "reps": {
           "type": "number",
-          "description": "The duration of the fitness activity, typically in minutes or hours."
+          "description": "The number of repetitions for stationary exercises."
+        },
+        "durationSeconds": {
+          "type": "number",
+          "description": "The duration of the fitness activity in seconds."
         }
       },
       "required": [
         "id",
         "userId",
+        "type",
         "date",
-        "steps",
-        "distance",
-        "time"
+        "durationSeconds"
       ]
     },
     "FinanceTransaction": {
@@ -265,11 +273,11 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores core user data and settings. The 'userId' in the path corresponds to the device's unique ID (request.auth.uid via Anonymous Authentication).",
+          "description": "Stores core user data and settings.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user, corresponding to the device ID (request.auth.uid)."
+              "description": "The unique identifier for the user."
             }
           ]
         }
@@ -281,15 +289,15 @@
           "schema": {
             "$ref": "#/backend/entities/Habit"
           },
-          "description": "Manages individual habits for a specific user. Includes denormalized 'userId' field for explicit ownership and query flexibility, but authorization primarily relies on the path.",
+          "description": "Manages individual habits for a specific user.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user who owns this habit."
+              "description": "The unique identifier for the user."
             },
             {
               "name": "habitId",
-              "description": "The unique identifier for the habit document."
+              "description": "The unique identifier for the habit."
             }
           ]
         }
@@ -301,15 +309,15 @@
           "schema": {
             "$ref": "#/backend/entities/Task"
           },
-          "description": "Stores individual tasks for a specific user. Includes denormalized 'userId' field for explicit ownership and query flexibility, but authorization primarily relies on the path.",
+          "description": "Stores individual tasks for a specific user.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user who owns this task."
+              "description": "The unique identifier for the user."
             },
             {
               "name": "taskId",
-              "description": "The unique identifier for the task document."
+              "description": "The unique identifier for the task."
             }
           ]
         }
@@ -321,15 +329,15 @@
           "schema": {
             "$ref": "#/backend/entities/Challenge"
           },
-          "description": "Tracks challenges a specific user is undertaking. Includes denormalized 'userId' field for explicit ownership and query flexibility, but authorization primarily relies on the path.",
+          "description": "Tracks challenges a specific user is undertaking.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user undertaking this challenge."
+              "description": "The unique identifier for the user."
             },
             {
               "name": "challengeId",
-              "description": "The unique identifier for the challenge document."
+              "description": "The unique identifier for the challenge."
             }
           ]
         }
@@ -341,15 +349,15 @@
           "schema": {
             "$ref": "#/backend/entities/FitnessRecord"
           },
-          "description": "Captures daily or session-based fitness activity records for a specific user. Includes denormalized 'userId' field for explicit ownership and query flexibility, but authorization primarily relies on the path.",
+          "description": "Captures fitness activity records.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user whose fitness activity is recorded."
+              "description": "The unique identifier for the user."
             },
             {
               "name": "fitnessRecordId",
-              "description": "The unique identifier for the fitness record document."
+              "description": "The unique identifier for the record."
             }
           ]
         }
@@ -361,15 +369,15 @@
           "schema": {
             "$ref": "#/backend/entities/FinanceTransaction"
           },
-          "description": "Records individual financial transactions for a specific user. Includes denormalized 'userId' field for explicit ownership and query flexibility, but authorization primarily relies on the path.",
+          "description": "Records individual financial transactions.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user who made this transaction."
+              "description": "The unique identifier for the user."
             },
             {
               "name": "financeTransactionId",
-              "description": "The unique identifier for the finance transaction document."
+              "description": "The unique identifier for the transaction."
             }
           ]
         }
@@ -381,20 +389,19 @@
           "schema": {
             "$ref": "#/backend/entities/StudyProgress"
           },
-          "description": "Tracks a user's progress in various study subjects. Includes denormalized 'userId' field for explicit ownership and query flexibility, but authorization primarily relies on the path.",
+          "description": "Tracks a user's study progress.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user whose study progress is being tracked."
+              "description": "The unique identifier for the user."
             },
             {
               "name": "studyProgressId",
-              "description": "The unique identifier for the study progress entry document."
+              "description": "The unique identifier for the progress entry."
             }
           ]
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed following the core principles of Authorization Independence, Structural Segregation, and Access Modeling, specifically tailored for a device-based, single-user application without explicit login.\n\n**Authorization Independence (CRITICAL):**\nAll user-specific data (Habits, Tasks, Challenges, Fitness, Finance, Study) are stored in subcollections directly under a user's dedicated document: `/users/{userId}/<collectionName>/{documentId}`. This hierarchical structure ensures that the `userId` in the path segment directly dictates ownership and access permissions. For example, `/users/{userId}/habits/{habitId}` clearly indicates that `habitId` belongs to `userId`. This design eliminates the need for `get()` calls in Firestore Security Rules to check parent document attributes for authorization. Rules can simply compare `request.auth.uid` (which is assumed to be the `device_id` from Firebase Anonymous Authentication, mapping to `userId` in the path) directly against the `{userId}` wildcard in the path. This makes authorization atomic, efficient, and robust, as there are no cross-document dependencies.\n\n**Support for QAPs (Queries as Permissions):**\nBy strictly segregating each user's data under their respective `userId` document, `list` queries inherently comply with security rules. When a client requests `/users/{request.auth.uid}/habits`, the rules will ensure that only documents where the path's `{userId}` matches `request.auth.uid` are returned. This prevents clients from inadvertently or maliciously querying data belonging to other users, as unauthorized queries would simply yield no results or be denied by the rules. The database structure itself acts as a strong access control mechanism, fulfilling the QAP principle.\n\n**Structural Segregation & Access Modeling:**\nEach logical entity (Habit, Task, etc.) gets its own subcollection under the user's document, ensuring that all documents within a given subcollection (`/users/{userId}/habits`) share the same security posture (owned by `userId`). This uses the 'Path-Based Ownership' and 'Hierarchical Paths for User-Owned Data' models, which are highly secure and simplify rule writing. The `userId` field is also explicitly included within each document of the subcollections, serving as a denormalized field for data integrity and query flexibility, even though the path is the primary authorization enforcer for security rules. This radical consistency ensures that the data's intent and ownership are always clear."
+    ]
   }
 }
