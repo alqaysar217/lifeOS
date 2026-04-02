@@ -33,9 +33,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   
   const watchId = useRef<number | null>(null);
   const lastCoord = useRef<GeolocationCoordinates | null>(null);
-  const stepThreshold = 12; // عتبة التسارع لاكتشاف الخطوة
+  const stepThreshold = 12; 
   const lastStepTime = useRef<number>(0);
-  const strideLength = 0.75; // طول الخطوة الافتراضي بالمتر
+  const strideLength = 0.75; 
+  const wakeLock = useRef<any>(null);
 
   const fitnessQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -44,31 +45,51 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   const { data: records } = useCollection(fitnessQuery);
 
+  // طلب منع خمول الشاشة
+  const requestWakeLock = async () => {
+    if ('wakeLock' in navigator) {
+      try {
+        wakeLock.current = await (navigator as any).wakeLock.request('screen');
+      } catch (err) {
+        console.error(`${err.name}, ${err.message}`);
+      }
+    }
+  };
+
+  const releaseWakeLock = async () => {
+    if (wakeLock.current) {
+      await wakeLock.current.release();
+      wakeLock.current = null;
+    }
+  };
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isTracking) {
       timer = setInterval(() => {
         setElapsedTime(prev => prev + 1);
       }, 1000);
+      requestWakeLock();
+    } else {
+      releaseWakeLock();
     }
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      releaseWakeLock();
+    };
   }, [isTracking]);
 
-  // خوارزمية اكتشاف الخطوات عبر حساس التسارع
   const handleMotion = (event: DeviceMotionEvent) => {
     const acc = event.accelerationIncludingGravity;
     if (!acc || !acc.x || !acc.y || !acc.z) return;
 
-    // حساب القوة الكلية للتسارع
     const magnitude = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2);
     const now = Date.now();
 
-    // اكتشاف النبضة (الخطوة) مع منع التكرار السريع (0.25 ثانية بين الخطوات)
     if (magnitude > stepThreshold && now - lastStepTime.current > 250) {
       setSteps(prev => prev + 1);
       lastStepTime.current = now;
 
-      // إذا كان الـ GPS ضعيفاً، نزيد المسافة بناءً على الخطوات
       if (!lastCoord.current) {
         setDistance(prev => prev + (strideLength / 1000));
       }
@@ -88,7 +109,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   };
 
   const requestPermissions = async () => {
-    // طلب إذن حساسات الحركة (مهم لـ iOS وبعض إصدارات أندرويد)
     if (typeof (DeviceMotionEvent as any).requestPermission === 'function') {
       try {
         const permission = await (DeviceMotionEvent as any).requestPermission();
@@ -118,10 +138,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       setPath([]);
       lastCoord.current = null;
 
-      // تفعيل مستشعر الحركة
       window.addEventListener('devicemotion', handleMotion);
 
-      // تفعيل الـ GPS
       watchId.current = navigator.geolocation.watchPosition(
         (position) => {
           const coords = position.coords;
@@ -140,7 +158,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               coords.latitude, coords.longitude
             );
             
-            if (d > 0.002) { // 2 meters movement threshold
+            if (d > 0.001) { 
               setDistance(prev => prev + d);
               setCurrentSpeed(coords.speed ? coords.speed * 3.6 : 0);
             }
@@ -150,7 +168,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         (error) => {
           console.error("GPS Error:", error);
         },
-        { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
       );
     } else {
       stopTrackingAndSave();
