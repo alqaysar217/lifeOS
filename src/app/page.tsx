@@ -27,10 +27,18 @@ import {
   BarChart3, 
   Bot,
   ChevronRight,
-  User
+  User,
+  Settings
 } from "lucide-react";
 
 const baseCategories = [
+  {
+    id: 'ai',
+    title: "المساعد الذكي",
+    description: "تواصل مع مساعدك الشخصي المدعوم بالذكاء الاصطناعي",
+    icon: Bot,
+    stat: "نشط"
+  },
   {
     id: 'fitness',
     title: "اللياقة البدنية",
@@ -90,20 +98,37 @@ export default function DashboardPage() {
 
   const sortedCategories = useMemo(() => {
     let sorted = [...baseCategories];
+    
+    // منطق الترتيب الديناميكي بناءً على الوقت
     if (currentTime >= 5 && currentTime < 12) {
-      const fitnessIdx = sorted.findIndex(c => c.id === 'fitness');
-      const item = sorted.splice(fitnessIdx, 1)[0];
-      sorted.unshift(item);
+      // الصباح: المساعد الذكي واللياقة في البداية
+      const itemsToMove = ['ai', 'fitness'];
+      itemsToMove.reverse().forEach(id => {
+        const idx = sorted.findIndex(c => c.id === id);
+        if (idx > -1) {
+          const item = sorted.splice(idx, 1)[0];
+          sorted.unshift(item);
+        }
+      });
     } 
     else if (currentTime >= 12 && currentTime < 18) {
+      // الظهر: المهام أولاً
       const tasksIdx = sorted.findIndex(c => c.id === 'tasks');
-      const item = sorted.splice(tasksIdx, 1)[0];
-      sorted.unshift(item);
+      if (tasksIdx > -1) {
+        const item = sorted.splice(tasksIdx, 1)[0];
+        sorted.unshift(item);
+      }
     }
     else {
-      const habitsIdx = sorted.findIndex(c => c.id === 'habits');
-      const item = sorted.splice(habitsIdx, 1)[0];
-      sorted.unshift(item);
+      // المساء: العادات والدراسة أولاً
+      const itemsToMove = ['habits', 'study'];
+      itemsToMove.reverse().forEach(id => {
+        const idx = sorted.findIndex(c => c.id === id);
+        if (idx > -1) {
+          const item = sorted.splice(idx, 1)[0];
+          sorted.unshift(item);
+        }
+      });
     }
 
     if (searchTerm) {
@@ -210,6 +235,19 @@ export default function DashboardPage() {
             <p className="text-muted-foreground font-bold mb-8">أهلاً بك يا بطل!</p>
             
             <div className="w-full space-y-4">
+              <div 
+                onClick={() => setActiveTab('notifications')}
+                className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex items-center justify-between cursor-pointer"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                  </div>
+                  <span className="text-sm font-bold">الإشعارات</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
+              </div>
+
               <div className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center">
