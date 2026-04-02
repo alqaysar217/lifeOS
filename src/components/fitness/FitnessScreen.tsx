@@ -1,14 +1,19 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef } from "react";
 import { Play, MapPin, Clock, Zap, Target, Dumbbell, ChevronRight, ChevronLeft, Navigation, Activity, Square, Loader2 } from "lucide-react";
-import Image from "next/image";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, serverTimestamp } from "firebase/firestore";
 import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
+
+const MapComponent = dynamic(() => import("./MapComponent"), { 
+  ssr: false,
+  loading: () => <div className="h-full w-full bg-slate-100 flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
+});
 
 const exercises = [
   { title: "نط الحبل", duration: "10 دقائق", kcal: "120", icon: Dumbbell },
@@ -26,9 +31,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const { toast } = useToast();
   const [isTracking, setIsTracking] = useState(false);
   const [distance, setDistance] = useState(0);
-  const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [currentSpeed, setCurrentSpeed] = useState(0);
+  const [path, setPath] = useState<[number, number][]>([]);
+  
   const watchId = useRef<number | null>(null);
   const lastCoord = useRef<GeolocationCoordinates | null>(null);
 
@@ -71,12 +77,16 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       setIsTracking(true);
       setDistance(0);
       setElapsedTime(0);
-      setStartTime(Date.now());
+      setPath([]);
       lastCoord.current = null;
 
       watchId.current = navigator.geolocation.watchPosition(
         (position) => {
           const coords = position.coords;
+          const currentPos: [number, number] = [coords.latitude, coords.longitude];
+          
+          setPath(prev => [...prev, currentPos]);
+
           if (lastCoord.current) {
             const d = calculateDistance(
               lastCoord.current.latitude, lastCoord.current.longitude,
@@ -89,7 +99,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           }
           lastCoord.current = coords;
         },
-        (error) => console.error(error),
+        (error) => {
+          console.error(error);
+          toast({ variant: "destructive", title: "خطأ GPS", description: "تعذر الحصول على موقعك بدقة." });
+        },
         { enableHighAccuracy: true, distanceFilter: 1 }
       );
     } else {
@@ -108,7 +121,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         steps: Math.floor(distance * 1300), // Estimation
         distance: Number(distance.toFixed(2)),
         time: Math.floor(elapsedTime / 60),
-        userId: user.uid
+        userId: user.uid,
+        path: path // Optionally store the path coordinates
       });
       toast({ title: "تم الحفظ", description: `لقد قطعت مسافة ${distance.toFixed(2)} كم بنجاح!` });
     }
@@ -172,10 +186,15 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-lg font-bold text-foreground/90 font-cairo">الموقع الجغرافي</h3>
-          <div className="relative h-48 w-full rounded-[15px] overflow-hidden bg-slate-100 border border-border/40 flex items-center justify-center">
-            <MapPin className={`h-12 w-12 text-primary/20 ${isTracking ? 'animate-bounce' : ''}`} />
-            <p className="absolute bottom-4 text-[10px] font-bold text-muted-foreground uppercase">استخدام GPS الجهاز للحساب الدقيق</p>
+          <h3 className="text-lg font-bold text-foreground/90 font-cairo">خريطة المسار الحي</h3>
+          <div className="relative h-64 w-full rounded-[15px] overflow-hidden bg-slate-100 border border-border/40 shadow-inner">
+            <MapComponent path={path} />
+            {!isTracking && path.length === 0 && (
+              <div className="absolute inset-0 z-10 bg-black/5 flex flex-col items-center justify-center gap-2 pointer-events-none">
+                <MapPin className="h-8 w-8 text-primary/40" />
+                <p className="text-[10px] font-bold text-muted-foreground uppercase">اضغط "ابدأ الجري" لتفعيل الخريطة</p>
+              </div>
+            )}
           </div>
         </div>
 
