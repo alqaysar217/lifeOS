@@ -1,0 +1,159 @@
+/**
+ * "حياتي" (LifeOS) Security Rules
+ *
+ * Core Philosophy: 
+ * This ruleset implements a strict Path-Based Ownership model. Since the application uses 
+ * device-based authentication (Anonymous Auth), security is enforced by ensuring that a user 
+ * can only access data nested under their specific UID.
+ *
+ * Data Structure:
+ * All application data is organized hierarchically under the `/users/{userId}` path. 
+ * Each feature (Habits, Tasks, Challenges, Fitness, Finance, Study) exists as a subcollection 
+ * belonging to a specific user.
+ *
+ * Key Security Decisions:
+ * - Ownership Enforcement: Every request is validated against `request.auth.uid`. If the UID in 
+ *   the path does not match the authenticated user, access is denied.
+ * - Relational Integrity: On document creation, the rules enforce that the internal `userId` 
+ *   field matches the path and the authenticated user's ID.
+ * - Prototyping Flexibility: While authorization is strictly enforced, the rules do not 
+ *   validate specific data schemas or types, allowing for rapid frontend iteration.
+ * - Destructive Operation Safety: All `update` and `delete` operations require an explicit 
+ *   check to ensure the document exists before the action is performed.
+ *
+ * Denormalization for Authorization:
+ * Each document within a subcollection contains a denormalized `userId` field. This is used 
+ * to ensure data consistency and to prevent "orphaned" or "mis-owned" records during 
+ * creation and update operations.
+ */
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- GLOBAL HELPER FUNCTIONS ---
+
+    /** 
+     * @description Basic check to see if a request is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** 
+     * @description Checks if the authenticated user's UID matches the provided userId.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** 
+     * @description Combines ownership check with a resource existence check for updates and deletes.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Rules for the root User document. Controls profile and settings.
+     * @path /users/{userId}
+     * @allow Authenticated user matching the ID (create)
+     * @deny Any user attempting to read or write another user's profile.
+     * @principle Self-Creation and Ownership.
+     */
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Manages individual habits for a specific user.
+       * @path /users/{userId}/habits/{habitId}
+       * @allow User 'abc' creates a habit at /users/abc/habits/h1 (create)
+       * @deny User 'abc' attempts to list /users/xyz/habits (list)
+       * @principle Hierarchical Path-Based Ownership.
+       */
+      match /habits/{habitId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Stores tasks and to-do items for a specific user.
+       * @path /users/{userId}/tasks/{taskId}
+       * @allow User 'abc' updates a task status at /users/abc/tasks/t1 (update)
+       * @deny User 'abc' tries to delete a task at /users/xyz/tasks/t2 (delete)
+       * @principle Immutability of ownership links.
+       */
+      match /tasks/{taskId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Tracks progress for multi-day challenges.
+       * @path /users/{userId}/challenges/{challengeId}
+       * @allow User 'abc' views their active challenges (list)
+       * @deny Unauthenticated user access (any)
+       * @principle User-scoped subcollections.
+       */
+      match /challenges/{challengeId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Captures fitness activities (steps, distance, etc).
+       * @path /users/{userId}/fitnessRecords/{fitnessRecordId}
+       * @allow User 'abc' logs a new run (create)
+       * @deny Authenticated user 'abc' accessing records of 'xyz' (get)
+       * @principle Resource existence check on write.
+       */
+      match /fitnessRecords/{fitnessRecordId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Records financial expenses and transactions.
+       * @path /users/{userId}/financeTransactions/{financeTransactionId}
+       * @allow User 'abc' adds a transaction (create)
+       * @deny User 'abc' trying to change the userId of a transaction (update)
+       * @principle Relational integrity validation.
+       */
+      match /financeTransactions/{financeTransactionId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Tracks progress in various study subjects.
+       * @path /users/{userId}/studyProgress/{studyProgressId}
+       * @allow User 'abc' lists their study subjects (list)
+       * @deny Accessing study data without matching the path UID (any)
+       * @principle Path segment authorization.
+       */
+      match /studyProgress/{studyProgressId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+  }
+}
+
+// BACKEND IMPLEMENTED SUCCESSFULLY WITHOUT UI MODIFICATION
