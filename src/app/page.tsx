@@ -31,7 +31,8 @@ import {
   Bot,
   ChevronRight,
   User,
-  Settings
+  Settings,
+  Wallet
 } from "lucide-react";
 
 const baseCategories = [
@@ -253,17 +254,30 @@ export default function DashboardPage() {
               <User className="h-12 w-12 text-white" />
               <div className="absolute -bottom-1 -right-1 h-8 w-8 bg-green-500 border-4 border-background rounded-full" />
             </div>
-            <h3 className="text-2xl font-black text-foreground mb-2">الملف الشخصي</h3>
+            <h3 className="text-2xl font-black text-foreground mb-2">حسابي</h3>
             <p className="text-muted-foreground font-bold mb-8">أهلاً بك يا بطل!</p>
             
             <div className="w-full space-y-4">
+              <div 
+                onClick={() => setActiveTab('finance')}
+                className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex items-center justify-between cursor-pointer"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center">
+                    <Wallet className="h-5 w-5 text-primary" />
+                  </div>
+                  <span className="text-sm font-bold">المصاريف والمالية</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
+              </div>
+
               <div 
                 onClick={() => setActiveTab('notifications')}
                 className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex items-center justify-between cursor-pointer"
               >
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center">
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                    <Bell className="h-5 w-5 text-primary" />
                   </div>
                   <span className="text-sm font-bold">الإشعارات</span>
                 </div>
