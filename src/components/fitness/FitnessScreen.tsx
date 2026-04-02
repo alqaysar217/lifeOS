@@ -6,11 +6,14 @@ import {
   Play, MapPin, Clock, Zap, Target, Dumbbell, ChevronRight, 
   Navigation, Activity, Square, Loader2, Footprints, 
   ChevronLeft, History, BarChart3, Plus, Trophy, Timer,
-  Tally5, CheckCircle2, Trash2, AlertTriangle
+  Tally5, CheckCircle2, Trash2, AlertTriangle, Calendar as CalendarIcon,
+  PlusCircle
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -22,8 +25,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter
+} from "@/components/ui/dialog";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, serverTimestamp, query, orderBy, doc } from "firebase/firestore";
+import { collection, serverTimestamp, query, orderBy, doc, Timestamp } from "firebase/firestore";
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -57,6 +69,12 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   // Rep counter stats
   const [reps, setReps] = useState(0);
 
+  // Manual entry state
+  const [isManualDialogOpen, setIsManualDialogOpen] = useState(false);
+  const [manualDistance, setManualDistance] = useState("");
+  const [manualSteps, setManualSteps] = useState("");
+  const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
+
   const db = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
@@ -76,7 +94,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const statsData = useMemo(() => {
     if (!records) return [];
     return [...records].reverse().slice(-7).map(r => ({
-      name: new Date(r.date?.seconds * 1000).toLocaleDateString('ar-EG', { weekday: 'short' }),
+      name: r.date?.seconds ? new Date(r.date.seconds * 1000).toLocaleDateString('ar-EG', { weekday: 'short' }) : '؟',
       distance: r.distance || 0,
       steps: r.steps || 0,
       reps: r.reps || 0
@@ -184,9 +202,35 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         userId: user.uid,
         path: activeExercise === 'run' ? path : []
       });
-      toast({ title: "تم الحفظ", description: "تم تسجيل النشاط في السجل بنجاح." });
+      toast({ title: "تم الحفظ", description: "تم تسجيل النشاط بنجاح." });
     }
     if (activeExercise !== 'run') setView('hub');
+  };
+
+  const handleManualSave = () => {
+    if (!db || !user || !manualDistance || !manualSteps) {
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى إدخال المسافة والخطوات." });
+      return;
+    }
+
+    const customDate = new Date(manualDate);
+    
+    addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), {
+      type: 'run',
+      date: Timestamp.fromDate(customDate),
+      steps: Number(manualSteps),
+      distance: Number(manualDistance),
+      reps: 0,
+      durationSeconds: 0,
+      userId: user.uid,
+      path: [],
+      isManual: true
+    });
+
+    toast({ title: "تمت الإضافة", description: "تمت إضافة السجل اليدوي بنجاح." });
+    setIsManualDialogOpen(false);
+    setManualDistance("");
+    setManualSteps("");
   };
 
   const handleDeleteRecord = (recordId: string) => {
@@ -240,7 +284,17 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-bold text-foreground/90 font-cairo">اختر تمرينك</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-foreground/90 font-cairo">اختر تمرينك</h3>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setIsManualDialogOpen(true)}
+            className="h-8 rounded-[8px] text-[10px] font-bold border-primary/20 bg-primary/5 text-primary"
+          >
+            <PlusCircle className="h-3 w-3 ml-1" /> إضافة سجل سابق
+          </Button>
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <ExerciseCard icon={Navigation} label="الجري / المشي" sub="تتبع GPS" color="bg-blue-500" onClick={() => { setActiveExercise('run'); setView('running'); }} />
           <ExerciseCard icon={Dumbbell} label="تمارين الضغط" sub="عدّ يدوي" color="bg-orange-500" onClick={() => { setActiveExercise('pushups'); setView('rep_counter'); }} />
@@ -251,7 +305,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 pb-20">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold text-foreground/90 font-cairo">سجل النشاطات</h3>
           <History className="h-4 w-4 text-muted-foreground" />
@@ -260,7 +314,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           {isHistoryLoading ? (
             <div className="py-10 text-center text-xs text-muted-foreground">جاري تحميل السجل...</div>
           ) : records && records.length > 0 ? (
-            records.slice(0, 5).map((r, i) => (
+            records.slice(0, 10).map((r) => (
               <div key={r.id} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={`h-10 w-10 rounded-[8px] flex items-center justify-center ${r.type === 'run' ? 'bg-blue-50' : 'bg-orange-50'}`}>
@@ -270,6 +324,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     <h4 className="text-sm font-bold text-foreground">{getExerciseName(r.type)}</h4>
                     <p className="text-[10px] text-muted-foreground font-medium">
                       {r.date?.seconds ? new Date(r.date.seconds * 1000).toLocaleString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'قيد الحفظ'}
+                      {r.isManual && " (إدخال يدوي)"}
                     </p>
                   </div>
                 </div>
@@ -278,7 +333,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     <p className="text-sm font-black text-primary">
                       {r.type === 'run' ? `${r.distance} كم` : `${r.reps} عدة`}
                     </p>
-                    <p className="text-[8px] font-bold text-muted-foreground uppercase">{formatTime(r.durationSeconds || 0)}</p>
+                    <p className="text-[8px] font-bold text-muted-foreground uppercase">{r.isManual ? `${r.steps} خطوة` : formatTime(r.durationSeconds || 0)}</p>
                   </div>
                 </div>
               </div>
@@ -291,6 +346,32 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           )}
         </div>
       </div>
+
+      <Dialog open={isManualDialogOpen} onOpenChange={setIsManualDialogOpen}>
+        <DialogContent className="font-cairo w-[90%] rounded-[20px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-right">إضافة سجل جري قديم</DialogTitle>
+            <DialogDescription className="text-right">أدخل بيانات الجلسات التي قمت بها قبل استخدام التطبيق.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="distance" className="text-right block">المسافة (كيلومتر)</Label>
+              <Input id="distance" type="number" placeholder="مثلاً: 3.5" value={manualDistance} onChange={(e) => setManualDistance(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="steps" className="text-right block">عدد الخطوات</Label>
+              <Input id="steps" type="number" placeholder="مثلاً: 4500" value={manualSteps} onChange={(e) => setManualSteps(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="date" className="text-right block">تاريخ النشاط</Label>
+              <Input id="date" type="date" value={manualDate} onChange={(e) => setManualDate(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleManualSave} className="w-full primary-gradient font-bold text-white">حفظ السجل</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 
@@ -331,7 +412,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           </div>
         </div>
 
-        {/* Running Log Section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-foreground/90 font-cairo">سجل الجري</h3>
@@ -348,12 +428,13 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     <h4 className="text-sm font-bold text-foreground">{r.distance} كم</h4>
                     <p className="text-[10px] text-muted-foreground font-medium">
                       {r.date?.seconds ? new Date(r.date.seconds * 1000).toLocaleString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'قيد الحفظ'}
+                      {r.isManual && " (يدوي)"}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-left">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase">{formatTime(r.durationSeconds || 0)}</p>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase">{r.isManual ? "سجل قديم" : formatTime(r.durationSeconds || 0)}</p>
                     <p className="text-[8px] font-bold text-primary">{r.steps} خطوة</p>
                   </div>
                   
@@ -366,12 +447,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     <AlertDialogContent className="font-cairo" dir="rtl">
                       <AlertDialogHeader>
                         <AlertDialogTitle className="text-right">هل أنت متأكد من الحذف؟</AlertDialogTitle>
-                        <AlertDialogDescription className="text-right">
-                          سيتم حذف سجل الجري هذا نهائياً ولن تتمكن من استعادته.
-                        </AlertDialogDescription>
+                        <AlertDialogDescription className="text-right">سيتم حذف السجل نهائياً.</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter className="flex-row-reverse gap-2">
-                        <AlertDialogAction onClick={() => handleDeleteRecord(r.id)} className="bg-destructive hover:bg-destructive/90 text-white font-bold">حذف</AlertDialogAction>
+                        <AlertDialogAction onClick={() => handleDeleteRecord(r.id)} className="bg-destructive text-white font-bold">حذف</AlertDialogAction>
                         <AlertDialogCancel className="font-bold">إلغاء</AlertDialogCancel>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -379,9 +458,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 </div>
               </div>
             ))}
-            {records?.filter(r => r.type === 'run').length === 0 && (
-              <p className="text-center py-6 text-xs font-bold text-muted-foreground">لا يوجد تاريخ جري مسبق</p>
-            )}
           </div>
         </div>
       </div>

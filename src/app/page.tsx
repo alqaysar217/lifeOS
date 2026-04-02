@@ -18,6 +18,7 @@ import { NotificationsScreen } from "@/components/notifications/NotificationsScr
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Activity, 
   CheckCircle2, 
@@ -33,7 +34,9 @@ import {
   User,
   Settings,
   Wallet,
-  Bell
+  Bell,
+  Copy,
+  Check
 } from "lucide-react";
 
 const baseCategories = [
@@ -92,10 +95,12 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = React.useState<TabId>('home');
   const [searchTerm, setSearchTerm] = useState("");
   const [currentTime, setCurrentTime] = useState<number>(5);
+  const [copied, setCopied] = useState(false);
   
   const auth = useAuth();
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -164,6 +169,15 @@ export default function DashboardPage() {
   }, [searchTerm, currentTime]);
 
   const handleBack = () => setActiveTab('home');
+
+  const copyUID = () => {
+    if (user) {
+      navigator.clipboard.writeText(user.uid);
+      setCopied(true);
+      toast({ title: "تم النسخ", description: "تم نسخ معرف المستخدم بنجاح." });
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const renderContent = () => {
     if (isUserLoading) return <div className="min-h-screen flex items-center justify-center">جاري التحميل...</div>;
@@ -250,15 +264,28 @@ export default function DashboardPage() {
         return <NotificationsScreen onBack={handleBack} />;
       case 'profile':
         return (
-          <div className="flex flex-col items-center justify-center min-h-[80vh] px-6 animate-in fade-in duration-500">
+          <div className="flex flex-col items-center justify-center min-h-[80vh] px-6 animate-in fade-in duration-500 pb-20">
             <div className="h-24 w-24 rounded-full primary-gradient flex items-center justify-center mb-6 shadow-2xl relative">
               <User className="h-12 w-12 text-white" />
               <div className="absolute -bottom-1 -right-1 h-8 w-8 bg-green-500 border-4 border-background rounded-full" />
             </div>
             <h3 className="text-2xl font-black text-foreground mb-2">حسابي</h3>
-            <p className="text-muted-foreground font-bold mb-8">أهلاً بك يا بطل!</p>
+            <p className="text-muted-foreground font-bold mb-8 text-center px-10">أهلاً بك يا بطل! يمكنك استخدام المعرف أدناه لمشاركة بياناتك أو حفظها.</p>
             
             <div className="w-full space-y-4">
+              <div className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 space-y-2">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase">معرف المستخدم (UID)</p>
+                <div className="flex items-center justify-between bg-slate-50 p-3 rounded-[10px] border border-border/20">
+                  <code className="text-xs font-mono text-primary break-all">{user?.uid}</code>
+                  <button 
+                    onClick={copyUID}
+                    className="h-8 w-8 flex items-center justify-center bg-white rounded-full shadow-sm text-primary active:scale-90 transition-transform"
+                  >
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
               <div 
                 onClick={() => setActiveTab('finance')}
                 className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex items-center justify-between cursor-pointer"
@@ -296,7 +323,7 @@ export default function DashboardPage() {
               </div>
               
               <div className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex flex-col items-center justify-center gap-2 border-dashed">
-                <p className="text-xs font-bold text-muted-foreground">هذا القسم قيد التطوير</p>
+                <p className="text-xs font-bold text-muted-foreground">نظام تشغيل حياتك المتكامل</p>
                 <button onClick={handleBack} className="text-primary font-bold text-sm">العودة للرئيسية</button>
               </div>
             </div>
