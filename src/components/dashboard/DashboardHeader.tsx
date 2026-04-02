@@ -41,12 +41,12 @@ export function DashboardHeader({ onSearch }: DashboardHeaderProps) {
           {!isSearchVisible ? (
             <>
               <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="h-12 w-12 rounded-[12px] primary-gradient flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden relative">
+                <div className="h-14 w-14 flex items-center justify-center relative drop-shadow-xl transition-transform active:scale-95">
                   <Image 
                     src="/logo.png" 
                     alt="لوجو حياتي" 
                     fill
-                    className="object-cover"
+                    className="object-contain"
                     priority
                   />
                 </div>
