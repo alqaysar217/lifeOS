@@ -19,6 +19,8 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from "@/fireb
 import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
   Activity, 
   CheckCircle2, 
@@ -36,7 +38,8 @@ import {
   Wallet,
   Bell,
   Copy,
-  Check
+  Check,
+  Sparkles
 } from "lucide-react";
 
 const baseCategories = [
@@ -96,11 +99,15 @@ export default function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentTime, setCurrentTime] = useState<number>(5);
   const [copied, setCopied] = useState(false);
+  const [onboardingName, setOnboardingName] = useState("");
   
   const auth = useAuth();
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
+
+  const userDocRef = useMemoFirebase(() => (db && user) ? doc(db, 'users', user.uid) : null, [db, user]);
+  const { data: profile, isLoading: isProfileLoading } = useDoc(userDocRef);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -109,7 +116,7 @@ export default function DashboardPage() {
   }, [user, isUserLoading, auth]);
 
   useEffect(() => {
-    if (user && db) {
+    if (user && db && !isProfileLoading && !profile) {
       const userRef = doc(db, 'users', user.uid);
       setDoc(userRef, {
         id: user.uid,
@@ -117,7 +124,7 @@ export default function DashboardPage() {
         passcodeEnabled: false
       }, { merge: true });
     }
-  }, [user, db]);
+  }, [user, db, isProfileLoading, profile]);
 
   useEffect(() => {
     setCurrentTime(new Date().getHours());
@@ -179,8 +186,47 @@ export default function DashboardPage() {
     }
   };
 
+  const handleStartOnboarding = () => {
+    if (onboardingName.trim() && user && db) {
+      const userRef = doc(db, 'users', user.uid);
+      setDoc(userRef, { name: onboardingName }, { merge: true });
+    }
+  };
+
   const renderContent = () => {
-    if (isUserLoading) return <div className="min-h-screen flex items-center justify-center">جاري التحميل...</div>;
+    if (isUserLoading || isProfileLoading) return <div className="min-h-screen flex items-center justify-center">جاري التحميل...</div>;
+
+    // Onboarding Overlay
+    if (user && !profile?.name && activeTab !== 'profile') {
+      return (
+        <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-8 animate-in fade-in duration-700">
+          <div className="w-full max-w-md space-y-8 text-center">
+            <div className="h-24 w-24 primary-gradient rounded-[25px] flex items-center justify-center mx-auto shadow-2xl animate-bounce">
+              <Sparkles className="h-12 w-12 text-white" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-black text-foreground font-cairo">أهلاً بك في حياتي</h1>
+              <p className="text-muted-foreground font-bold">بداية رحلة جديدة نحو النجاح والتميز. ما هو اسمك يا بطل؟</p>
+            </div>
+            <div className="space-y-4">
+              <Input 
+                placeholder="أدخل اسمك الكريم هنا..."
+                value={onboardingName}
+                onChange={(e) => setOnboardingName(e.target.value)}
+                className="h-14 text-center text-lg font-bold rounded-[15px] border-primary/20 focus:ring-primary/20 premium-shadow"
+              />
+              <Button 
+                onClick={handleStartOnboarding}
+                disabled={!onboardingName.trim()}
+                className="w-full h-14 primary-gradient text-white text-lg font-black rounded-[15px] shadow-xl active:scale-95 transition-all"
+              >
+                ابدأ رحلتي الآن
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     switch (activeTab) {
       case 'home':
@@ -189,6 +235,7 @@ export default function DashboardPage() {
             <DashboardHeader 
               onSearch={setSearchTerm} 
               onNotifications={() => setActiveTab('notifications')} 
+              userName={profile?.name}
             />
             {!searchTerm && <ChallengeHighlight />}
 
@@ -264,12 +311,12 @@ export default function DashboardPage() {
         return <NotificationsScreen onBack={handleBack} />;
       case 'profile':
         return (
-          <div className="flex flex-col items-center justify-center min-h-[80vh] px-6 animate-in fade-in duration-500 pb-20">
+          <div className="flex flex-col items-center justify-center min-h-[80vh] px-6 animate-in fade-in duration-500 pb-20 pt-10">
             <div className="h-24 w-24 rounded-full primary-gradient flex items-center justify-center mb-6 shadow-2xl relative">
               <User className="h-12 w-12 text-white" />
               <div className="absolute -bottom-1 -right-1 h-8 w-8 bg-green-500 border-4 border-background rounded-full" />
             </div>
-            <h3 className="text-2xl font-black text-foreground mb-2">حسابي</h3>
+            <h3 className="text-2xl font-black text-foreground mb-2">{profile?.name || "حسابي"}</h3>
             <p className="text-muted-foreground font-bold mb-8 text-center px-10">أهلاً بك يا بطل! يمكنك استخدام المعرف أدناه لمشاركة بياناتك أو حفظها.</p>
             
             <div className="w-full space-y-4">

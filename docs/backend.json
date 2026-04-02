@@ -11,6 +11,10 @@
           "type": "string",
           "description": "Unique identifier for the User entity, typically corresponding to a device ID."
         },
+        "name": {
+          "type": "string",
+          "description": "The name provided by the user during onboarding."
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp indicating when the user's record was first created.",

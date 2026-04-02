@@ -18,9 +18,10 @@ const quotes = [
 interface DashboardHeaderProps {
   onSearch?: (term: string) => void;
   onNotifications?: () => void;
+  userName?: string;
 }
 
-export function DashboardHeader({ onSearch, onNotifications }: DashboardHeaderProps) {
+export function DashboardHeader({ onSearch, onNotifications, userName }: DashboardHeaderProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [quote, setQuote] = useState("");
   const [isSearchVisible, setIsSearchVisible] = useState(false);
@@ -104,7 +105,7 @@ export function DashboardHeader({ onSearch, onNotifications }: DashboardHeaderPr
       </div>
       
       <div className="px-6 py-6 space-y-1">
-        <h2 className="text-2xl font-extrabold text-foreground font-cairo">أهلاً بك يا بطل 👋</h2>
+        <h2 className="text-2xl font-extrabold text-foreground font-cairo">أهلاً بك يا بطل {userName ? userName : ""} 👋</h2>
         <p className="text-[11px] text-primary/70 font-bold bg-primary/5 inline-block px-3 py-1 rounded-full animate-in fade-in slide-in-from-bottom-2 duration-700">
           "{quote}"
         </p>
