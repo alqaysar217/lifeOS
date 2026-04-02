@@ -1,6 +1,7 @@
 'use server';
 /**
- * @fileOverview تدفق لتوليد فيديوهات تحفيزية مخصصة باستخدام Veo 3.
+ * @fileOverview تدفق لتوليد فيديوهات تحفيزية مخصصة باستخدام Veo.
+ * تم التحديث لاستخدام veo-2.0-generate-001 لضمان التوافر والاستقرار.
  */
 
 import { ai } from '@/ai/genkit';
@@ -31,22 +32,27 @@ const motivationalVideoFlow = ai.defineFlow(
   async (input) => {
     // 1. توليد وصف المشهد بناءً على الإنجازات
     const { text: sceneDescription } = await ai.generate({
-      prompt: `بناءً على هذا الإنجاز: "${input.progressSummary}"، صف مشهداً سينمائياً تحفيزياً قصيراً (8 ثوانٍ) يصلح لتوليده كفيديو. المشهد يجب أن يكون ملهماً، مثل تسلق قمة جبل أو شروق شمس فوق غابة. اجعل الوصف باللغة الإنجليزية للموديل.`,
+      prompt: `بناءً على هذا الإنجاز: "${input.progressSummary}"، صف مشهداً سينمائياً تحفيزياً قصيراً (5-8 ثوانٍ) يصلح لتوليده كفيديو. المشهد يجب أن يكون ملهماً، مثل تسلق قمة جبل أو شروق شمس فوق غابة. اجعل الوصف باللغة الإنجليزية للموديل.`,
     });
 
-    // 2. توليد الفيديو باستخدام Veo 3
+    // 2. توليد الفيديو باستخدام Veo 2.0 المستقر
     let { operation } = await ai.generate({
-      model: googleAI.model('veo-3.0-generate-preview'),
+      model: googleAI.model('veo-2.0-generate-001'),
       prompt: sceneDescription || 'A majestic sunrise over a calm ocean, cinematic lighting, 4k, highly detailed, motivational atmosphere.',
+      config: {
+        durationSeconds: 5,
+        aspectRatio: '16:9',
+      }
     });
 
     if (!operation) {
       throw new Error('فشل الموديل في بدء عملية التوليد.');
     }
 
-    // الانتظار حتى اكتمال العملية (فيديو التوليد بطيء)
+    // الانتظار حتى اكتمال العملية (فيديو التوليد قد يستغرق دقيقة)
     while (!operation.done) {
       operation = await ai.checkOperation(operation);
+      if (operation.done) break;
       await new Promise((resolve) => setTimeout(resolve, 5000));
     }
 
@@ -59,10 +65,13 @@ const motivationalVideoFlow = ai.defineFlow(
       throw new Error('لم يتم العثور على الفيديو المولد.');
     }
 
-    // جلب الفيديو وتحويله لـ base64
-    const fetch = (await import('node-fetch')).default;
-    const response = await fetch(`${videoPart.media.url}&key=${process.env.GEMINI_API_KEY}`);
-    const buffer = await response.arrayBuffer();
+    // جلب الفيديو وتحويله لـ base64 باستخدام fetch العالمي
+    const videoResponse = await fetch(`${videoPart.media.url}&key=${process.env.GEMINI_API_KEY}`);
+    if (!videoResponse.ok) {
+      throw new Error('فشل تحميل ملف الفيديو من السيرفر.');
+    }
+    
+    const buffer = await videoResponse.arrayBuffer();
     const base64Video = Buffer.from(buffer).toString('base64');
 
     return {
