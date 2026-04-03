@@ -379,24 +379,38 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               </div>
             ) : (
               <div className="px-6 py-6 space-y-6">
-                <div className={`rounded-[15px] p-6 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-red-600' : historyPath ? 'bg-slate-800' : 'primary-gradient'}`}>
+                <div className={`rounded-[15px] py-4 px-5 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-red-600' : historyPath ? 'bg-slate-800' : 'primary-gradient'}`}>
                   <div className="relative z-10">
-                    <div className="flex justify-between items-start mb-6">
-                      <h3 className="text-xl font-black">{isTracking ? 'جاري التتبع...' : historyPath ? 'استعراض المسار' : 'جلسة جديدة'}</h3>
+                    <div className="flex justify-between items-start mb-4">
+                      <h3 className="text-lg font-black">{isTracking ? 'جاري التتبع...' : historyPath ? 'استعراض المسار' : 'جلسة جديدة'}</h3>
                     </div>
                     
-                    <div className="grid grid-cols-3 gap-3 mb-8">
-                      <div className="text-center bg-white/10 p-2 rounded-lg"><Clock className="h-4 w-4 mx-auto mb-1 opacity-50"/><p className="text-[9px] font-bold opacity-70">الوقت</p><p className="text-sm font-black tabular-nums">{formatTime(elapsedTime)}</p></div>
-                      <div className="text-center bg-white/10 p-2 rounded-lg"><Footprints className="h-4 w-4 mx-auto mb-1 opacity-50"/><p className="text-[9px] font-bold opacity-70">الخطوات</p><p className="text-sm font-black tabular-nums">{steps}</p></div>
-                      <div className="text-center bg-white/10 p-2 rounded-lg"><Navigation className="h-4 w-4 mx-auto mb-1 opacity-50"/><p className="text-[9px] font-bold opacity-70">المسافة</p><p className="text-sm font-black tabular-nums">{distance.toFixed(2)} كم</p></div>
+                    <div className="grid grid-cols-3 gap-2 mb-5">
+                      <div className="text-center bg-white/10 py-2 px-1 rounded-lg">
+                        <Clock className="h-3.5 w-3.5 mx-auto mb-0.5 opacity-50"/>
+                        <p className="text-[8px] font-bold opacity-70">الوقت</p>
+                        <p className="text-xs font-black tabular-nums">{formatTime(elapsedTime)}</p>
+                      </div>
+                      <div className="text-center bg-white/10 py-2 px-1 rounded-lg">
+                        <Footprints className="h-3.5 w-3.5 mx-auto mb-0.5 opacity-50"/>
+                        <p className="text-[8px] font-bold opacity-70">الخطوات</p>
+                        <p className="text-xs font-black tabular-nums">{steps}</p>
+                      </div>
+                      <div className="text-center bg-white/10 py-2 px-1 rounded-lg">
+                        <Navigation className="h-3.5 w-3.5 mx-auto mb-0.5 opacity-50"/>
+                        <p className="text-[8px] font-bold opacity-70">المسافة</p>
+                        <p className="text-xs font-black tabular-nums whitespace-nowrap">
+                          {distance.toFixed(2)} <span className="text-[9px]">كم</span>
+                        </p>
+                      </div>
                     </div>
 
                     {!historyPath && (
-                      <Button onClick={toggleTracking} variant="secondary" className={`w-full h-14 rounded-[12px] font-black text-base shadow-2xl active:scale-95 transition-all ${isTracking ? 'bg-white text-red-500' : 'bg-white text-primary'}`}>
-                        {isTracking ? <><Square className="h-5 w-5 ml-2 fill-current" /> إنهاء الجلسة</> : <><Play className="h-5 w-5 ml-2 fill-current" /> ابدأ الآن</>}
+                      <Button onClick={toggleTracking} variant="secondary" className={`w-full h-12 rounded-[12px] font-black text-sm shadow-2xl active:scale-95 transition-all ${isTracking ? 'bg-white text-red-500' : 'bg-white text-primary'}`}>
+                        {isTracking ? <><Square className="h-4 w-4 ml-2 fill-current" /> إنهاء الجلسة</> : <><Play className="h-4 w-4 ml-2 fill-current" /> ابدأ الآن</>}
                       </Button>
                     )}
-                    {historyPath && <Button onClick={() => setHistoryPath(null)} className="w-full h-12 rounded-[12px] bg-white/20 hover:bg-white/30 text-white font-bold border border-white/20">العودة للجلسات النشطة</Button>}
+                    {historyPath && <Button onClick={() => setHistoryPath(null)} className="w-full h-11 rounded-[12px] bg-white/20 hover:bg-white/30 text-white font-bold border border-white/20 text-xs">العودة للجلسات النشطة</Button>}
                   </div>
                   <div className="absolute -right-20 -bottom-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
                 </div>
@@ -449,7 +463,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                               </div>
                               <div className="text-left flex items-center gap-3">
                                 <div className="text-left">
-                                  <p className="text-sm font-black text-foreground">{r.distance?.toFixed(2)} كم</p>
+                                  <p className="text-sm font-black text-foreground whitespace-nowrap">{r.distance?.toFixed(2)} كم</p>
                                   <p className="text-[9px] font-bold text-muted-foreground">{formatTime(r.durationSeconds || 0)}</p>
                                 </div>
                                 <AlertDialog>
@@ -518,4 +532,3 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     </div>
   );
 }
-
