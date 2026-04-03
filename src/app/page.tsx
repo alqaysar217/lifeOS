@@ -47,7 +47,8 @@ import {
   RefreshCcw,
   Smartphone,
   Loader2,
-  Save
+  Save,
+  Pencil
 } from "lucide-react";
 
 const baseCategories = [
@@ -119,6 +120,8 @@ export default function DashboardPage(props: {
   // State for editing profile
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
   
   const auth = useAuth();
   const db = useFirestore();
@@ -211,6 +214,8 @@ export default function DashboardPage(props: {
         phoneNumber: editPhone.trim()
       });
       toast({ title: "تم التحديث", description: "تم حفظ بياناتك الشخصية بنجاح." });
+      setIsEditingName(false);
+      setIsEditingPhone(false);
     } else {
       toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى التأكد من إدخال الاسم ورقم الهاتف." });
     }
@@ -415,44 +420,80 @@ export default function DashboardPage(props: {
             
             <div className="w-full space-y-6">
               <div className="space-y-4">
+                {/* Name Field */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-muted-foreground mr-2 uppercase tracking-wider">الاسم الكريم</label>
-                  <div className="relative group">
-                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                      <User className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    </div>
-                    <Input 
-                      placeholder="أدخل اسمك..."
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow bg-white/50 focus:bg-white transition-all"
-                    />
+                  <div className="flex items-center justify-between px-2">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">الاسم الكريم</label>
+                    {!isEditingName && (
+                      <button onClick={() => setIsEditingName(true)} className="text-primary hover:text-primary/80 transition-colors">
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
+                  
+                  {isEditingName ? (
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                        <User className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      </div>
+                      <Input 
+                        placeholder="أدخل اسمك..."
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow bg-white/50 focus:bg-white transition-all"
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-12 px-5 flex items-center justify-between rounded-[12px] bg-white border border-border/40 premium-shadow">
+                      <span className="text-sm font-bold text-foreground">{profile?.name || "غير مسجل"}</span>
+                      <User className="h-4 w-4 text-muted-foreground/30" />
+                    </div>
+                  )}
                 </div>
 
+                {/* Phone Field */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-muted-foreground mr-2 uppercase tracking-wider">رقم الهاتف</label>
-                  <div className="relative group">
-                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                      <Smartphone className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    </div>
-                    <Input 
-                      type="tel"
-                      placeholder="أدخل رقم هاتفك..."
-                      value={editPhone}
-                      onChange={(e) => setEditPhone(e.target.value)}
-                      className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow bg-white/50 focus:bg-white transition-all"
-                    />
+                  <div className="flex items-center justify-between px-2">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">رقم الهاتف</label>
+                    {!isEditingPhone && (
+                      <button onClick={() => setIsEditingPhone(true)} className="text-primary hover:text-primary/80 transition-colors">
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
+
+                  {isEditingPhone ? (
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                        <Smartphone className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                      </div>
+                      <Input 
+                        type="tel"
+                        placeholder="أدخل رقم هاتفك..."
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow bg-white/50 focus:bg-white transition-all"
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-12 px-5 flex items-center justify-between rounded-[12px] bg-white border border-border/40 premium-shadow">
+                      <span className="text-sm font-bold text-foreground">{profile?.phoneNumber || "غير مسجل"}</span>
+                      <Smartphone className="h-4 w-4 text-muted-foreground/30" />
+                    </div>
+                  )}
                 </div>
 
-                <Button 
-                  onClick={handleUpdateProfile}
-                  className="w-full h-12 primary-gradient text-white text-base font-black rounded-[12px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
-                >
-                  <Save className="h-5 w-5" />
-                  حفظ التغييرات
-                </Button>
+                {(isEditingName || isEditingPhone) && (
+                  <Button 
+                    onClick={handleUpdateProfile}
+                    className="w-full h-12 primary-gradient text-white text-base font-black rounded-[12px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Save className="h-5 w-5" />
+                    حفظ التغييرات
+                  </Button>
+                )}
               </div>
 
               <div className="pt-4 space-y-3">
