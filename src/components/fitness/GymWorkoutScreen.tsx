@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from "react";
@@ -12,7 +11,8 @@ import {
   Calendar, 
   LayoutGrid,
   Loader2,
-  X
+  X,
+  ChevronLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -306,3 +306,15 @@ function ExerciseList({ dayId, muscleId, db, user }: { dayId: string, muscleId: 
     </div>
   );
 }
+
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
