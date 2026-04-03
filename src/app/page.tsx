@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, use } from "react";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { ChallengeHighlight } from "@/components/dashboard/ChallengeHighlight";
 import { CategoryCard } from "@/components/dashboard/CategoryCard";
@@ -101,7 +101,16 @@ const baseCategories = [
   }
 ];
 
-export default function DashboardPage() {
+interface DashboardPageProps {
+  params: Promise<any>;
+  searchParams: Promise<any>;
+}
+
+export default function DashboardPage({ params: paramsPromise, searchParams: searchParamsPromise }: DashboardPageProps) {
+  // فك المعاملات لتجنب خطأ التعداد في Next.js 15
+  const _params = use(paramsPromise);
+  const _searchParams = use(searchParamsPromise);
+
   const [activeTab, setActiveTab] = React.useState<TabId>('home');
   const [searchTerm, setSearchTerm] = useState("");
   const [currentTime, setCurrentTime] = useState<number>(new Date().getHours());

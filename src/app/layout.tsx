@@ -17,11 +17,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
+export default async function RootLayout(props: {
   children: React.ReactNode;
-}>) {
+  params: Promise<any>;
+}) {
+  // فك المعاملات لضمان التوافق مع Next.js 15
+  const params = await props.params;
+
   return (
     <html lang="ar" dir="rtl">
       <head>
@@ -34,7 +36,7 @@ export default function RootLayout({
       <body className="font-cairo antialiased bg-background text-foreground selection:bg-primary/20 overflow-x-hidden">
         <FirebaseClientProvider>
           <PWARegister />
-          {children}
+          {props.children}
         </FirebaseClientProvider>
       </body>
     </html>
