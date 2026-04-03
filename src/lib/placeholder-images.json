@@ -17,6 +17,36 @@
       "description": "صورة الملف الشخصي للمستخدم",
       "imageUrl": "https://picsum.photos/seed/user-avatar/400/400",
       "imageHint": "person portrait"
+    },
+    {
+      "id": "exercise-run",
+      "description": "صورة تمرين الجري",
+      "imageUrl": "https://picsum.photos/seed/run-exercise/200/200",
+      "imageHint": "running person"
+    },
+    {
+      "id": "exercise-pushups",
+      "description": "صورة تمرين الضغط",
+      "imageUrl": "https://picsum.photos/seed/pushups-exercise/200/200",
+      "imageHint": "pushups exercise"
+    },
+    {
+      "id": "exercise-squats",
+      "description": "صورة تمرين القرفصاء",
+      "imageUrl": "https://picsum.photos/seed/squats-exercise/200/200",
+      "imageHint": "squats exercise"
+    },
+    {
+      "id": "exercise-abs",
+      "description": "صورة تمرين البطن",
+      "imageUrl": "https://picsum.photos/seed/abs-exercise/200/200",
+      "imageHint": "abs workout"
+    },
+    {
+      "id": "exercise-jumprope",
+      "description": "صورة تمرين نط الحبل",
+      "imageUrl": "https://picsum.photos/seed/jumprope-exercise/200/200",
+      "imageHint": "skipping rope"
     }
   ]
 }

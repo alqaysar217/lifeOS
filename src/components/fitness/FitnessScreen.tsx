@@ -15,6 +15,7 @@ import {
   Flame
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebas
 import { collection, serverTimestamp, query, orderBy, doc } from "firebase/firestore";
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { 
   XAxis, YAxis, CartesianGrid, 
   Tooltip, ResponsiveContainer, AreaChart, Area, LineChart, Line 
@@ -334,6 +336,17 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     }
   };
 
+  const getExerciseImage = (type: string) => {
+    switch (type) {
+      case 'run': return PlaceHolderImages.find(img => img.id === 'exercise-run')?.imageUrl;
+      case 'pushups': return PlaceHolderImages.find(img => img.id === 'exercise-pushups')?.imageUrl;
+      case 'squats': return PlaceHolderImages.find(img => img.id === 'exercise-squats')?.imageUrl;
+      case 'abs': return PlaceHolderImages.find(img => img.id === 'exercise-abs')?.imageUrl;
+      case 'jumprope': return PlaceHolderImages.find(img => img.id === 'exercise-jumprope')?.imageUrl;
+      default: return null;
+    }
+  };
+
   const getExerciseColor = (type: string) => {
     switch (type) {
       case 'run': return 'bg-blue-500';
@@ -417,19 +430,25 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               <h3 className="text-lg font-bold text-foreground/90 font-cairo">ابدأ نشاطك</h3>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { id: 'run', view: 'running' as const },
-                  { id: 'pushups', view: 'rep_counter' as const },
-                  { id: 'jumprope', view: 'rep_counter' as const },
-                  { id: 'squats', view: 'rep_counter' as const },
-                  { id: 'abs', view: 'rep_counter' as const },
+                  { id: 'run', view: 'running' as const, hint: 'running person' },
+                  { id: 'pushups', view: 'rep_counter' as const, hint: 'pushups exercise' },
+                  { id: 'jumprope', view: 'rep_counter' as const, hint: 'skipping rope' },
+                  { id: 'squats', view: 'rep_counter' as const, hint: 'squats exercise' },
+                  { id: 'abs', view: 'rep_counter' as const, hint: 'abs workout' },
                 ].map((ex) => (
                   <div 
                     key={ex.id}
                     onClick={() => { setActiveExercise(ex.id as ExerciseType); setView(ex.view); }} 
                     className="bg-white p-5 rounded-[12px] premium-shadow border border-border/40 space-y-4 active:scale-95 transition-all cursor-pointer group"
                   >
-                    <div className={`h-12 w-12 rounded-[10px] ${getExerciseColor(ex.id)} flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-110 group-hover:rotate-3`}>
-                      {getExerciseIcon(ex.id)}
+                    <div className={`h-16 w-full rounded-[10px] relative overflow-hidden transition-transform group-hover:scale-105`}>
+                      <Image 
+                        src={getExerciseImage(ex.id) || "https://picsum.photos/seed/exercise/200/200"} 
+                        alt={ex.id} 
+                        fill 
+                        className="object-cover"
+                        data-ai-hint={ex.hint}
+                      />
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-foreground">{getExerciseName(ex.id)}</h4>
@@ -471,7 +490,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           </div>
         )}
 
-        {/* بقية الشاشات (سواء الجري أو العد اليدوي أو الإحصائيات) تبقى كما هي مع تحديث الأيقونات فيها أيضاً */}
         {/* شاشة الجري والمشي */}
         {view === 'running' && (
           <div className={`animate-in slide-in-from-bottom-4 duration-500 pb-32 ${isMapExpanded ? 'fixed inset-0 z-[60] bg-background' : ''}`}>
@@ -611,7 +629,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           </div>
         )}
 
-        {/* بقية الكود لشاشات التمارين اليدوية كما هي... */}
+        {/* شاشة العد اليدوي */}
         {view === 'rep_counter' && (
           <div className="px-6 py-6 space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-32">
              <div className={`rounded-[20px] p-5 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
@@ -672,7 +690,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 </DialogContent>
              </Dialog>
 
-             {/* سجل التمارين الخاص بهذا النوع */}
              <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-foreground/90 font-cairo">سجل التمارين</h3>
