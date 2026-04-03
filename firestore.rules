@@ -11,71 +11,47 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if isSignedIn(); 
-      
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+      allow create, update, delete: if isOwner(userId);
 
+      match /challenges/{challengeId} {
+        allow get, list, create, update, delete: if isOwner(userId);
+      }
+
+      match /challengeResults/{resultId} {
+        allow get, list, create, update, delete: if isOwner(userId);
+      }
+      
+      match /fitnessRecords/{recordId} {
+        allow get, list, create, update, delete: if isOwner(userId);
+      }
+      
       match /habits/{habitId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
+        allow get, list, create, update, delete: if isOwner(userId);
       }
 
       match /tasks/{taskId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
+        allow get, list, create, update, delete: if isOwner(userId);
       }
 
-      match /challenges/{challengeId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
+      match /financeTransactions/{transId} {
+        allow get, list, create, update, delete: if isOwner(userId);
       }
 
-      match /fitnessRecords/{fitnessRecordId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
+      match /studyProgress/{progId} {
+        allow get, list, create, update, delete: if isOwner(userId);
       }
 
-      // Gym System Rules
       match /gymDays/{dayId} {
         allow get, list, create, update, delete: if isOwner(userId);
-        
         match /muscles/{muscleId} {
           allow get, list, create, update, delete: if isOwner(userId);
-          
           match /exercises/{exerciseId} {
             allow get, list, create, update, delete: if isOwner(userId);
           }
         }
-      }
-
-      match /financeTransactions/{financeTransactionId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
-      }
-
-      match /studyProgress/{studyProgressId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
       }
     }
   }

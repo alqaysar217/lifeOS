@@ -11,37 +11,10 @@
         "name": { "type": "string" },
         "phoneNumber": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
-        "passcodeEnabled": { "type": "boolean" }
+        "passcodeEnabled": { "type": "boolean" },
+        "totalPoints": { "type": "number", "default": 0 }
       },
       "required": ["id", "createdAt", "passcodeEnabled"]
-    },
-    "Habit": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Habit",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "title": { "type": "string" },
-        "streak": { "type": "number" },
-        "lastCompleted": { "type": "string", "format": "date-time" },
-        "status": { "type": "string" }
-      },
-      "required": ["id", "userId", "title", "streak", "lastCompleted", "status"]
-    },
-    "Task": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Task",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "title": { "type": "string" },
-        "status": { "type": "string" },
-        "project": { "type": "string" },
-        "dueDate": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "userId", "title", "status", "project"]
     },
     "Challenge": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -51,78 +24,30 @@
         "id": { "type": "string" },
         "userId": { "type": "string" },
         "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["fitness", "custom", "daily"] },
+        "templateId": { "type": "string" },
+        "targetValue": { "type": "number" },
+        "durationValue": { "type": "number" },
+        "durationType": { "type": "string", "enum": ["days", "minutes"] },
+        "status": { "type": "string", "enum": ["active", "completed", "failed"] },
+        "points": { "type": "number" },
+        "startDate": { "type": "string", "format": "date-time" },
         "currentDay": { "type": "number" },
         "totalDays": { "type": "number" }
       },
-      "required": ["id", "userId", "title", "currentDay", "totalDays"]
+      "required": ["userId", "title", "type", "status"]
     },
-    "FitnessRecord": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FitnessRecord",
+    "ChallengeResult": {
+      "title": "ChallengeResult",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
+        "challengeId": { "type": "string" },
         "userId": { "type": "string" },
-        "type": { "type": "string" },
-        "date": { "type": "string", "format": "date" },
-        "steps": { "type": "number" },
-        "distance": { "type": "number" },
-        "reps": { "type": "number" },
-        "durationSeconds": { "type": "number" }
-      },
-      "required": ["id", "userId", "type", "date", "durationSeconds"]
-    },
-    "GymDay": {
-      "title": "GymDay",
-      "type": "object",
-      "properties": {
-        "dayName": { "type": "string", "enum": ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"] },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["dayName"]
-    },
-    "GymMuscle": {
-      "title": "GymMuscle",
-      "type": "object",
-      "properties": {
-        "name": { "type": "string" }
-      },
-      "required": ["name"]
-    },
-    "GymExercise": {
-      "title": "GymExercise",
-      "type": "object",
-      "properties": {
-        "name": { "type": "string" },
-        "sets": { "type": "number" },
-        "reps": { "type": "string" }
-      },
-      "required": ["name", "sets", "reps"]
-    },
-    "FinanceTransaction": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "FinanceTransaction",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "amount": { "type": "number" },
-        "category": { "type": "string" },
+        "result": { "type": "string", "enum": ["success", "fail"] },
+        "value": { "type": "number" },
         "date": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "userId", "amount", "category", "date"]
-    },
-    "StudyProgress": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "StudyProgress",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "subject": { "type": "string" },
-        "progress": { "type": "number" }
-      },
-      "required": ["id", "userId", "subject", "progress"]
+      "required": ["challengeId", "userId", "result", "value", "date"]
     }
   },
   "auth": {
@@ -139,27 +64,19 @@
         }
       },
       {
-        "path": "/users/{userId}/gymDays/{dayId}",
+        "path": "/users/{userId}/challenges/{challengeId}",
         "definition": {
-          "entityName": "gymDay",
-          "schema": { "$ref": "#/backend/entities/GymDay" },
-          "description": "Days in the workout plan."
+          "entityName": "challenge",
+          "schema": { "$ref": "#/backend/entities/Challenge" },
+          "description": "User challenges."
         }
       },
       {
-        "path": "/users/{userId}/gymDays/{dayId}/muscles/{muscleId}",
+        "path": "/users/{userId}/challengeResults/{resultId}",
         "definition": {
-          "entityName": "gymMuscle",
-          "schema": { "$ref": "#/backend/entities/GymMuscle" },
-          "description": "Muscle groups per day."
-        }
-      },
-      {
-        "path": "/users/{userId}/gymDays/{dayId}/muscles/{muscleId}/exercises/{exerciseId}",
-        "definition": {
-          "entityName": "gymExercise",
-          "schema": { "$ref": "#/backend/entities/GymExercise" },
-          "description": "Exercises per muscle group."
+          "entityName": "challengeResult",
+          "schema": { "$ref": "#/backend/entities/ChallengeResult" },
+          "description": "Results of challenge attempts."
         }
       }
     ]
