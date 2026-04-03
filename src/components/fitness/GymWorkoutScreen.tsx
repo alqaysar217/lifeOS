@@ -54,6 +54,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
@@ -393,12 +401,26 @@ function GymTableView({ gymDays, db, user, onSelectDay }: { gymDays: any[] | nul
       </div>
 
       {selectedDayId ? (
-        <div className="bg-white p-6 rounded-[10px] premium-shadow border border-border/40 space-y-8 animate-in slide-in-from-bottom-2">
+        <div className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 space-y-6 animate-in slide-in-from-bottom-2">
           <div className="flex items-center justify-between border-b pb-4">
-            <h3 className="text-xl font-black text-foreground">جدول {gymDays?.find(d => d.id === selectedDayId)?.dayName}</h3>
+            <h3 className="text-lg font-black text-foreground">جدول {gymDays?.find(d => d.id === selectedDayId)?.dayName}</h3>
             <Button variant="ghost" size="sm" onClick={() => onSelectDay(selectedDayId)} className="text-xs font-bold text-primary">إدارة التمارين</Button>
           </div>
-          <MuscleTableView dayId={selectedDayId} db={db} user={user} />
+          
+          <div className="overflow-hidden border rounded-[10px]">
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow>
+                  <TableHead className="text-right font-bold text-foreground">اسم التمرين</TableHead>
+                  <TableHead className="text-center font-bold text-foreground">المجموعات</TableHead>
+                  <TableHead className="text-center font-bold text-foreground">التكرارات</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <MuscleTableView dayId={selectedDayId} db={db} user={user} />
+              </TableBody>
+            </Table>
+          </div>
         </div>
       ) : (
         <div className="py-20 text-center space-y-3 opacity-30">
@@ -419,19 +441,18 @@ function MuscleTableView({ dayId, db, user }: { dayId: string, db: any, user: an
   const { data: muscles } = useCollection(musclesQuery);
 
   return (
-    <div className="space-y-10">
+    <>
       {muscles?.map(muscle => (
-        <div key={muscle.id} className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-            <h4 className="text-lg font-black text-foreground">{muscle.name}</h4>
-          </div>
-          <div className="pr-4 space-y-3">
-            <ExerciseTableView dayId={dayId} muscleId={muscle.id} db={db} user={user} />
-          </div>
-        </div>
+        <React.Fragment key={muscle.id}>
+          <TableRow className="bg-primary/5 hover:bg-primary/10 transition-colors">
+            <TableCell colSpan={3} className="text-center font-black py-2.5 text-primary text-base">
+              {muscle.name}
+            </TableCell>
+          </TableRow>
+          <ExerciseTableView dayId={dayId} muscleId={muscle.id} db={db} user={user} />
+        </React.Fragment>
       ))}
-    </div>
+    </>
   );
 }
 
@@ -444,18 +465,15 @@ function ExerciseTableView({ dayId, muscleId, db, user }: { dayId: string, muscl
   const { data: exercises } = useCollection(exQuery);
 
   return (
-    <div className="space-y-2">
+    <>
       {exercises?.map(ex => (
-        <div key={ex.id} className="flex items-center justify-between text-sm py-2 border-b border-dashed border-slate-100 last:border-0">
-          <span className="font-bold text-foreground/80">{ex.name}</span>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-muted-foreground">{ex.sets} مجموعات</span>
-            <div className="h-1 w-1 rounded-full bg-slate-200" />
-            <span className="text-xs font-black text-primary">{ex.reps}</span>
-          </div>
-        </div>
+        <TableRow key={ex.id} className="hover:bg-slate-50 transition-colors">
+          <TableCell className="font-bold text-foreground/80">{ex.name}</TableCell>
+          <TableCell className="text-center font-medium">{ex.sets}</TableCell>
+          <TableCell className="text-center font-black text-primary">{ex.reps}</TableCell>
+        </TableRow>
       ))}
-    </div>
+    </>
   );
 }
 
