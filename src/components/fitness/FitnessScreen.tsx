@@ -332,7 +332,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       case 'run': return <Footprints className="h-6 w-6" />;
       case 'pushups': return <Dumbbell className="h-6 w-6" />;
       case 'squats': return <Zap className="h-6 w-6" />;
-      case 'abs': return <Activity className="h-6 w-6" />;
+      case 'abs': return <Flame className="h-6 w-6" />;
       case 'jumprope': return <TimerReset className="h-6 w-6" />;
       case 'pullups': return <Activity className="h-6 w-6" />;
       default: return <Activity className="h-6 w-6" />;
@@ -403,11 +403,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   <p className="text-sm font-black">{dailyStats.steps}</p>
                 </div>
                 <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
-                  <Navigation className="h-4 w-4 text-white/50 mb-1" />
-                  <p className="text-[8px] font-bold text-white/60">مسافة</p>
-                  <p className="text-sm font-black">{dailyStats.distance.toFixed(1)} <span className="text-[8px]">كم</span></p>
-                </div>
-                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
                   <Dumbbell className="h-4 w-4 text-white/50 mb-1" />
                   <p className="text-[8px] font-bold text-white/60">ضغط</p>
                   <p className="text-sm font-black">{dailyStats.pushups}</p>
@@ -423,12 +418,12 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   <p className="text-sm font-black">{dailyStats.squats}</p>
                 </div>
                 <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
-                  <Activity className="h-4 w-4 text-white/50 mb-1" />
+                  <Flame className="h-4 w-4 text-white/50 mb-1" />
                   <p className="text-[8px] font-bold text-white/60">بطن</p>
                   <p className="text-sm font-black">{dailyStats.abs}</p>
                 </div>
                 <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
-                  <Zap className="h-4 w-4 text-white/50 mb-1" />
+                  <Activity className="h-4 w-4 text-white/50 mb-1" />
                   <p className="text-[8px] font-bold text-white/60">عقلة</p>
                   <p className="text-sm font-black">{dailyStats.pullups}</p>
                 </div>
@@ -613,10 +608,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                                     </Button>
                                   </AlertDialogTrigger>
                                   <AlertDialogContent dir="rtl" className="font-cairo">
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>حذف السجل؟</AlertDialogTitle>
-                                      <AlertDialogDescription>سيتم إزالة هذا النشاط نهائياً من سجلاتك.</AlertDialogDescription>
-                                    </AlertDialogHeader>
+                                    <AlertDialogTitle>حذف السجل؟</AlertDialogTitle>
+                                    <AlertDialogDescription>سيتم إزالة هذا النشاط نهائياً من سجلاتك.</AlertDialogDescription>
                                     <AlertDialogFooter className="flex-row gap-2">
                                       <AlertDialogCancel>إلغاء</AlertDialogCancel>
                                       <AlertDialogAction onClick={() => handleDeleteRecord(r.id)} className="bg-destructive">حذف</AlertDialogAction>
@@ -736,10 +729,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent dir="rtl" className="font-cairo rounded-[20px]">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>حذف التمرين؟</AlertDialogTitle>
-                                <AlertDialogDescription>سيتم إزالة هذا السجل نهائياً من إحصائياتك.</AlertDialogDescription>
-                              </AlertDialogHeader>
+                              <AlertDialogTitle>حذف التمرين؟</AlertDialogTitle>
+                              <AlertDialogDescription>سيتم إزالة هذا السجل نهائياً من إحصائياتك.</AlertDialogDescription>
                               <AlertDialogFooter className="flex-row gap-2">
                                 <AlertDialogCancel className="rounded-[10px]">إلغاء</AlertDialogCancel>
                                 <AlertDialogAction onClick={() => handleDeleteRecord(r.id)} className="bg-destructive rounded-[10px]">حذف</AlertDialogAction>
