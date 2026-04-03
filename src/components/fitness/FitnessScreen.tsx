@@ -11,7 +11,8 @@ import {
   ChevronDown,
   Calendar,
   Save,
-  CircleCheck
+  CircleCheck,
+  Flame
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
@@ -324,7 +325,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   const getExerciseIcon = (type: string) => {
     switch (type) {
-      case 'run': return <Navigation className="h-6 w-6" />;
+      case 'run': return <Footprints className="h-6 w-6" />;
       case 'pushups': return <Dumbbell className="h-6 w-6" />;
       case 'squats': return <Zap className="h-6 w-6" />;
       case 'abs': return <Activity className="h-6 w-6" />;
@@ -378,32 +379,32 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 <Trophy className="h-8 w-8 text-white/50" />
               </div>
               <div className="grid grid-cols-3 gap-3 relative z-10">
-                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center">
+                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
                   <Footprints className="h-4 w-4 text-white/50 mb-1" />
                   <p className="text-[8px] font-bold text-white/60">خطوات</p>
                   <p className="text-sm font-black">{dailyStats.steps}</p>
                 </div>
-                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center">
+                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
                   <Navigation className="h-4 w-4 text-white/50 mb-1" />
                   <p className="text-[8px] font-bold text-white/60">مسافة</p>
                   <p className="text-sm font-black">{dailyStats.distance.toFixed(1)} <span className="text-[8px]">كم</span></p>
                 </div>
-                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center">
+                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
                   <Dumbbell className="h-4 w-4 text-white/50 mb-1" />
                   <p className="text-[8px] font-bold text-white/60">ضغط</p>
                   <p className="text-sm font-black">{dailyStats.pushups}</p>
                 </div>
-                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center">
+                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
                   <TimerReset className="h-4 w-4 text-white/50 mb-1" />
                   <p className="text-[8px] font-bold text-white/60">نط حبل</p>
                   <p className="text-sm font-black">{dailyStats.jumprope}</p>
                 </div>
-                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center">
+                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
                   <Zap className="h-4 w-4 text-white/50 mb-1" />
                   <p className="text-[8px] font-bold text-white/60">سكوات</p>
                   <p className="text-sm font-black">{dailyStats.squats}</p>
                 </div>
-                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center">
+                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
                   <Activity className="h-4 w-4 text-white/50 mb-1" />
                   <p className="text-[8px] font-bold text-white/60">بطن</p>
                   <p className="text-sm font-black">{dailyStats.abs}</p>
@@ -427,7 +428,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     onClick={() => { setActiveExercise(ex.id as ExerciseType); setView(ex.view); }} 
                     className="bg-white p-5 rounded-[12px] premium-shadow border border-border/40 space-y-4 active:scale-95 transition-all cursor-pointer group"
                   >
-                    <div className={`h-12 w-12 rounded-[10px] ${getExerciseColor(ex.id)} flex items-center justify-center text-white shadow-lg`}>
+                    <div className={`h-12 w-12 rounded-[10px] ${getExerciseColor(ex.id)} flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-110 group-hover:rotate-3`}>
                       {getExerciseIcon(ex.id)}
                     </div>
                     <div>
@@ -445,9 +446,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               <h3 className="text-lg font-bold text-foreground/90 font-cairo">سجل النشاطات</h3>
               <div className="space-y-3">
                 {records?.slice(0, 5).map((r) => (
-                  <div key={r.id} onClick={() => handleRecordClick(r)} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between active:scale-[0.98] transition-transform cursor-pointer">
+                  <div key={r.id} onClick={() => handleRecordClick(r)} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between active:scale-[0.98] transition-transform cursor-pointer group">
                     <div className="flex items-center gap-4">
-                      <div className={`h-10 w-10 rounded-[8px] flex items-center justify-center bg-slate-50 text-muted-foreground`}>
+                      <div className={`h-10 w-10 rounded-[8px] flex items-center justify-center bg-slate-50 text-muted-foreground transition-colors group-hover:bg-primary/5 group-hover:text-primary`}>
                         {getExerciseIcon(r.type)}
                       </div>
                       <div>
@@ -470,6 +471,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           </div>
         )}
 
+        {/* بقية الشاشات (سواء الجري أو العد اليدوي أو الإحصائيات) تبقى كما هي مع تحديث الأيقونات فيها أيضاً */}
         {/* شاشة الجري والمشي */}
         {view === 'running' && (
           <div className={`animate-in slide-in-from-bottom-4 duration-500 pb-32 ${isMapExpanded ? 'fixed inset-0 z-[60] bg-background' : ''}`}>
@@ -558,7 +560,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                             >
                               <div className="flex items-center gap-3">
                                 <div className="h-9 w-9 rounded-[8px] bg-primary/5 text-primary flex items-center justify-center">
-                                  <Navigation className="h-4.5 w-4.5" />
+                                  <Footprints className="h-4.5 w-4.5" />
                                 </div>
                                 <div>
                                   <h4 className="text-xs font-bold text-foreground">ركض/مشي</h4>
@@ -609,7 +611,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           </div>
         )}
 
-        {/* شاشة العدّ اليدوي (تمارين الضغط، القرفصاء، نط الحبل، البطن) */}
+        {/* بقية الكود لشاشات التمارين اليدوية كما هي... */}
         {view === 'rep_counter' && (
           <div className="px-6 py-6 space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-32">
              <div className={`rounded-[20px] p-5 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
