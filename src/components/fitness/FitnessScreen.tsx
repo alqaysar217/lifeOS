@@ -9,7 +9,8 @@ import {
   CheckCircle2, Trash2, Calendar as CalendarIcon,
   PlusCircle, Flag, TimerReset, AlertCircle, Maximize2, Minimize2, X,
   ChevronDown,
-  Calendar
+  Calendar,
+  Save
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, serverTimestamp, query, orderBy, doc } from "firebase/firestore";
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
@@ -62,8 +71,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const [path, setPath] = useState<{lat: number, lng: number}[]>([]);
   const [historyPath, setHistoryPath] = useState<[number, number][] | null>(null);
   
-  // Rep counter stats
+  // Rep counter states
   const [reps, setReps] = useState(0);
+  const [showRepDialog, setShowRepDialog] = useState(false);
+  const [inputReps, setInputReps] = useState("");
 
   const db = useFirestore();
   const { user } = useUser();
@@ -104,6 +115,12 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     });
     return groups;
   }, [records]);
+
+  // Filtering records for specific rep exercise history
+  const exerciseHistory = useMemo(() => {
+    if (!records) return [];
+    return records.filter(r => r.type === activeExercise);
+  }, [records, activeExercise]);
 
   const statsData = useMemo(() => {
     if (!records) return [];
@@ -195,7 +212,13 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         setReps(0);
       }
     } else {
-      stopAndSave();
+      if (activeExercise === 'run') {
+        stopAndSave();
+      } else {
+        setIsTracking(false);
+        releaseWakeLock();
+        setShowRepDialog(true);
+      }
     }
   };
 
@@ -220,18 +243,23 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         });
       }
       toast({ title: "تم الحفظ", description: "تم تسجيل النشاط بنجاح." });
-    } else {
-      if (db && user) {
-        addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), {
-          type: activeExercise,
-          date: serverTimestamp(),
-          reps: reps,
-          durationSeconds: elapsedTime,
-          userId: user.uid
-        });
-      }
-      setView('hub');
     }
+  };
+
+  const handleFinalRepSave = () => {
+    const finalReps = parseInt(inputReps) || 0;
+    if (db && user) {
+      addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), {
+        type: activeExercise,
+        date: serverTimestamp(),
+        reps: finalReps,
+        durationSeconds: elapsedTime,
+        userId: user.uid
+      });
+    }
+    setShowRepDialog(false);
+    setInputReps("");
+    toast({ title: "تم الحفظ", description: "تم تسجيل التمرين بنجاح." });
   };
 
   const handleRecordClick = (record: any) => {
@@ -240,7 +268,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         setHistoryPath(record.path.map((p: any) => [p.lat, p.lng]));
         setActiveExercise('run');
         setView('running');
-        // Scroll to top to see map
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         toast({ variant: "destructive", title: "بيانات ناقصة", description: "لم يتم العثور على مسار لهذه الجلسة." });
@@ -329,7 +356,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 </div>
                 <div onClick={() => { setActiveExercise('pushups'); setView('rep_counter'); }} className="bg-white p-5 rounded-[12px] premium-shadow border border-border/40 space-y-4 active:scale-95 transition-all cursor-pointer group">
                   <div className="h-12 w-12 rounded-[10px] bg-orange-500 flex items-center justify-center text-white shadow-lg"><Dumbbell className="h-6 w-6" /></div>
-                  <div><h4 className="text-xs font-bold text-foreground">تمارين الضغط</h4><p className="text-[9px] text-muted-foreground font-bold uppercase">عدّ يدوي</p></div>
+                  <div><h4 className="text-xs font-bold text-foreground">تمارين الضغط</h4><p className="text-[9px] text-muted-foreground font-bold uppercase">سجل عدّاتك</p></div>
                 </div>
               </div>
             </div>
@@ -427,7 +454,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   </div>
                 </div>
 
-                {/* سجل الركض المبوب أسفل الخارطة */}
                 <div className="space-y-6 pt-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-foreground/90 font-cairo">سجل الركض</h3>
@@ -503,16 +529,129 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           </div>
         )}
 
-        {/* شاشة العدّ اليدوي */}
+        {/* شاشة العدّ اليدوي المحسنة */}
         {view === 'rep_counter' && (
-          <div className="px-6 py-6 space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-             <div className={`rounded-[15px] p-8 text-white premium-shadow text-center relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
+          <div className="px-6 py-6 space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-32">
+             <div className={`rounded-[20px] p-8 text-white premium-shadow text-center relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
                 <div className="relative z-10 space-y-6">
-                  <Dumbbell className="h-16 w-16 mx-auto opacity-30" />
-                  <div><h3 className="text-xl font-black">{getExerciseName(activeExercise)}</h3><p className="text-white/70 text-[10px] font-bold uppercase">حافظ على وتيرتك</p></div>
-                  <div className="flex justify-center gap-12"><div className="text-center"><p className="text-[10px] opacity-60">الوقت</p><p className="text-2xl font-black">{formatTime(elapsedTime)}</p></div><div className="text-center"><p className="text-[10px] opacity-60">العدّات</p><p className="text-2xl font-black">{reps}</p></div></div>
-                  {!isTracking ? <Button onClick={toggleTracking} className="w-full h-12 rounded-[12px] bg-white text-primary font-black">ابدأ التمرين</Button> : <div className="space-y-4"><div className="flex gap-4"><Button onClick={() => setReps(r => Math.max(0, r-1))} className="w-12 h-12 bg-white/20">-</Button><Button onClick={() => setReps(r => r+1)} className="flex-1 h-12 bg-white text-green-600">+</Button></div><Button onClick={stopAndSave} className="w-full h-12 bg-red-500 text-white font-black">إنهاء وحفظ</Button></div>}
+                  <div className="h-16 w-16 rounded-[15px] bg-white/20 backdrop-blur-md flex items-center justify-center mx-auto border border-white/30">
+                    <Dumbbell className="h-8 w-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black">{getExerciseName(activeExercise)}</h3>
+                    <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mt-1">
+                      {isTracking ? "حافظ على وتيرتك" : "اضغط للبدء"}
+                    </p>
+                  </div>
+                  
+                  <div className="flex justify-center items-center gap-12 py-4">
+                    <div className="text-center space-y-1">
+                      <p className="text-[10px] font-bold opacity-60 uppercase">الوقت</p>
+                      <p className="text-3xl font-black tabular-nums">{formatTime(elapsedTime)}</p>
+                    </div>
+                  </div>
+
+                  {!isTracking ? (
+                    <Button onClick={toggleTracking} className="w-full h-14 rounded-[15px] bg-white text-primary font-black text-lg shadow-xl active:scale-95 transition-all">
+                      <Play className="h-5 w-5 ml-2 fill-current" />
+                      ابدأ التمرين
+                    </Button>
+                  ) : (
+                    <Button onClick={toggleTracking} className="w-full h-14 rounded-[15px] bg-white text-red-600 font-black text-lg shadow-xl active:scale-95 transition-all animate-pulse">
+                      <Square className="h-5 w-5 ml-2 fill-current" />
+                      إنهاء التمرين
+                    </Button>
+                  )}
                 </div>
+                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+             </div>
+
+             <Dialog open={showRepDialog} onOpenChange={setShowRepDialog}>
+                <DialogContent className="font-cairo sm:max-w-md rounded-[20px]">
+                  <DialogHeader className="text-center space-y-4">
+                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                      <CheckCircle2 className="h-8 w-8 text-primary" />
+                    </div>
+                    <DialogTitle className="text-2xl font-black">أحسنت يا بطل!</DialogTitle>
+                    <DialogDescription className="text-sm font-bold text-muted-foreground leading-relaxed">
+                      لقد تمرنت لمدة <span className="text-primary">{formatTime(elapsedTime)}</span>. 
+                      كم عدد العدّات التي قمت بها؟
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-6">
+                    <Label htmlFor="reps" className="text-xs font-black text-muted-foreground uppercase mb-2 block">عدد العدّات</Label>
+                    <Input 
+                      id="reps"
+                      type="number" 
+                      placeholder="مثلاً: 25" 
+                      value={inputReps}
+                      onChange={(e) => setInputReps(e.target.value)}
+                      className="h-14 text-center text-2xl font-black rounded-[15px] border-primary/20 premium-shadow focus:border-primary"
+                      autoFocus
+                    />
+                  </div>
+                  <DialogFooter className="flex-row gap-3">
+                    <Button variant="outline" onClick={() => setShowRepDialog(false)} className="flex-1 h-12 rounded-[12px] font-bold">إلغاء</Button>
+                    <Button onClick={handleFinalRepSave} disabled={!inputReps} className="flex-1 h-12 rounded-[12px] primary-gradient text-white font-black">حفظ النتيجة</Button>
+                  </DialogFooter>
+                </DialogContent>
+             </Dialog>
+
+             {/* سجل التمارين الخاص بهذا النوع */}
+             <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-foreground/90 font-cairo">سجل التمارين</h3>
+                  <div className="h-8 w-8 rounded-[8px] bg-primary/5 text-primary flex items-center justify-center">
+                    <History className="h-4 w-4" />
+                  </div>
+                </div>
+
+                {exerciseHistory.length > 0 ? (
+                  <div className="space-y-3">
+                    {exerciseHistory.map((r) => (
+                      <div key={r.id} className="bg-white p-4 rounded-[15px] premium-shadow border border-border/40 flex items-center justify-between animate-in fade-in slide-in-from-right-4">
+                        <div className="flex items-center gap-4">
+                          <div className="h-11 w-11 rounded-[12px] bg-orange-50 text-orange-500 flex items-center justify-center">
+                            <Zap className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-black text-foreground">{r.reps} عدة</h4>
+                            <p className="text-[10px] text-muted-foreground font-bold">
+                              {r.date?.seconds ? new Date(r.date.seconds * 1000).toLocaleString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '؟'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-left">
+                          <p className="text-xs font-black text-primary">{formatTime(r.durationSeconds || 0)}</p>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/20 hover:text-destructive transition-colors mt-1">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent dir="rtl" className="font-cairo rounded-[20px]">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>حذف التمرين؟</AlertDialogTitle>
+                                <AlertDialogDescription>سيتم إزالة هذا السجل نهائياً من إحصائياتك.</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter className="flex-row gap-2">
+                                <AlertDialogCancel className="rounded-[10px]">إلغاء</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteRecord(r.id)} className="bg-destructive rounded-[10px]">حذف</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center space-y-4">
+                    <div className="h-16 w-16 rounded-full soft-purple-bg flex items-center justify-center mx-auto opacity-30">
+                      <History className="h-8 w-8 text-primary" />
+                    </div>
+                    <p className="text-xs font-bold text-muted-foreground">لا يوجد تاريخ تمارين مسبق لهذا النشاط</p>
+                  </div>
+                )}
              </div>
           </div>
         )}
