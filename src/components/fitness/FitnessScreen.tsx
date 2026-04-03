@@ -12,7 +12,8 @@ import {
   Calendar,
   Save,
   CircleCheck,
-  Flame
+  Flame,
+  ChevronLeft
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -427,20 +428,20 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-foreground/90 font-cairo">ابدأ نشاطك</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 {[
-                  { id: 'run', view: 'running' as const, hint: 'running person' },
-                  { id: 'pushups', view: 'rep_counter' as const, hint: 'pushups exercise' },
-                  { id: 'jumprope', view: 'rep_counter' as const, hint: 'skipping rope' },
-                  { id: 'squats', view: 'rep_counter' as const, hint: 'squats exercise' },
-                  { id: 'abs', view: 'rep_counter' as const, hint: 'abs workout' },
+                  { id: 'run', view: 'running' as const, hint: 'running person', desc: 'تتبع مسارك عبر GPS واحسب خطواتك بدقة' },
+                  { id: 'pushups', view: 'rep_counter' as const, hint: 'pushups exercise', desc: 'سجل عدد عدات تمارين الضغط وراقب تقدمك' },
+                  { id: 'jumprope', view: 'rep_counter' as const, hint: 'skipping rope', desc: 'تمرين ممتاز لحرق الدهون وتحسين اللياقة' },
+                  { id: 'squats', view: 'rep_counter' as const, hint: 'squats exercise', desc: 'قوي عضلات الساقين والارداف بسهولة' },
+                  { id: 'abs', view: 'rep_counter' as const, hint: 'abs workout', desc: 'ركز على عضلات البطن للحصول على قوام متناسق' },
                 ].map((ex) => (
                   <div 
                     key={ex.id}
                     onClick={() => { setActiveExercise(ex.id as ExerciseType); setView(ex.view); }} 
-                    className="bg-white p-5 rounded-[12px] premium-shadow border border-border/40 flex items-center gap-4 active:scale-95 transition-all cursor-pointer group"
+                    className="bg-white p-4 rounded-[12px] premium-shadow border border-border/40 flex items-center gap-4 active:scale-[0.98] transition-all cursor-pointer group"
                   >
-                    <div className="h-12 w-12 rounded-[10px] overflow-hidden relative shadow-lg transition-transform group-hover:scale-110">
+                    <div className="h-16 w-16 rounded-[12px] overflow-hidden relative shrink-0 shadow-md group-hover:scale-105 transition-transform">
                       <Image 
                         src={getExerciseImage(ex.id) || "https://picsum.photos/seed/exercise/200/200"} 
                         alt={ex.id} 
@@ -449,11 +450,14 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                         data-ai-hint={ex.hint}
                       />
                     </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-foreground">{getExerciseName(ex.id)}</h4>
-                      <p className="text-[9px] text-muted-foreground font-bold uppercase">
-                        {ex.id === 'run' ? 'تتبع GPS' : 'سجل عدّاتك'}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-bold text-foreground mb-0.5">{getExerciseName(ex.id)}</h4>
+                      <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+                        {ex.desc}
                       </p>
+                    </div>
+                    <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center shrink-0">
+                       <ChevronLeft className="h-4 w-4 text-slate-300" />
                     </div>
                   </div>
                 ))}
@@ -762,4 +766,3 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     </div>
   );
 }
-
