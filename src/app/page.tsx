@@ -101,15 +101,13 @@ const baseCategories = [
   }
 ];
 
-interface DashboardPageProps {
+export default function DashboardPage(props: {
   params: Promise<any>;
   searchParams: Promise<any>;
-}
-
-export default function DashboardPage(props: DashboardPageProps) {
-  // فك المعاملات باستخدام use() من React لتجنب خطأ التعداد في Next.js 15
-  const _params = use(props.params);
-  const _searchParams = use(props.searchParams);
+}) {
+  // فك الوعود بشكل صريح دون تعداد الخصائصsync
+  const params = use(props.params);
+  const searchParams = use(props.searchParams);
 
   const [activeTab, setActiveTab] = React.useState<TabId>('home');
   const [searchTerm, setSearchTerm] = useState("");
