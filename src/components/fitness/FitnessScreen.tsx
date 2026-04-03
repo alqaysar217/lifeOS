@@ -119,22 +119,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     return groups;
   }, [records]);
 
-  // Filtering records for specific rep exercise history
-  const exerciseHistory = useMemo(() => {
-    if (!records) return [];
-    return records.filter(r => r.type === activeExercise);
-  }, [records, activeExercise]);
-
-  const statsData = useMemo(() => {
-    if (!records) return [];
-    return [...records].reverse().slice(-7).map(r => ({
-      name: r.date?.seconds ? new Date(r.date.seconds * 1000).toLocaleDateString('ar-EG', { weekday: 'short' }) : '؟',
-      distance: r.distance || 0,
-      steps: r.steps || 0,
-      reps: r.reps || 0
-    }));
-  }, [records]);
-
   // Daily Stats Calculation
   const dailyStats = useMemo(() => {
     if (!records) return { steps: 0, distance: 0, pushups: 0, squats: 0, abs: 0, jumprope: 0 };
@@ -156,6 +140,21 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       return acc;
     }, { steps: 0, distance: 0, pushups: 0, squats: 0, abs: 0, jumprope: 0 });
   }, [records]);
+
+  const statsData = useMemo(() => {
+    if (!records) return [];
+    return [...records].reverse().slice(-7).map(r => ({
+      name: r.date?.seconds ? new Date(r.date.seconds * 1000).toLocaleDateString('ar-EG', { weekday: 'short' }) : '؟',
+      distance: r.distance || 0,
+      steps: r.steps || 0,
+      reps: r.reps || 0
+    }));
+  }, [records]);
+
+  const exerciseHistory = useMemo(() => {
+    if (!records) return [];
+    return records.filter(r => r.type === activeExercise);
+  }, [records, activeExercise]);
 
   const requestWakeLock = async () => {
     if ('wakeLock' in navigator) {
@@ -439,9 +438,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   <div 
                     key={ex.id}
                     onClick={() => { setActiveExercise(ex.id as ExerciseType); setView(ex.view); }} 
-                    className="bg-white p-5 rounded-[12px] premium-shadow border border-border/40 space-y-4 active:scale-95 transition-all cursor-pointer group"
+                    className="bg-white p-5 rounded-[12px] premium-shadow border border-border/40 flex items-center gap-4 active:scale-95 transition-all cursor-pointer group"
                   >
-                    <div className={`h-16 w-full rounded-[10px] relative overflow-hidden transition-transform group-hover:scale-105`}>
+                    <div className="h-12 w-12 rounded-[10px] overflow-hidden relative shadow-lg transition-transform group-hover:scale-110">
                       <Image 
                         src={getExerciseImage(ex.id) || "https://picsum.photos/seed/exercise/200/200"} 
                         alt={ex.id} 
@@ -566,7 +565,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     Object.entries(groupedRecords).map(([day, items]) => (
                       <div key={day} className="space-y-3">
                         <div className="flex items-center gap-2 px-1">
-                          <Calendar className="h-3 w-3 text-muted-foreground" />
+                          <CalendarIcon className="h-3 w-3 text-muted-foreground" />
                           <span className="text-xs font-bold text-muted-foreground">{day}</span>
                         </div>
                         <div className="space-y-2">
@@ -763,3 +762,4 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     </div>
   );
 }
+
