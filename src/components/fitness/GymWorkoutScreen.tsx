@@ -265,6 +265,7 @@ export function GymWorkoutScreen({ onBack }: GymWorkoutScreenProps) {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+                        <ChevronLeft className="h-5 w-5 text-slate-300 group-hover:text-primary" />
                       </div>
                     ))}
                   </div>
@@ -403,19 +404,19 @@ function GymTableView({ gymDays, db, user, onSelectDay }: { gymDays: any[] | nul
       </div>
 
       {selectedDayId ? (
-        <div className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 space-y-6 animate-in slide-in-from-bottom-2">
-          <div className="flex items-center justify-between border-b pb-4">
-            <h3 className="text-lg font-black text-foreground">جدول {gymDays?.find(d => d.id === selectedDayId)?.dayName}</h3>
-            <Button variant="ghost" size="sm" onClick={() => onSelectDay(selectedDayId)} className="text-xs font-bold text-primary">إدارة التمارين</Button>
+        <div className="bg-white p-3 rounded-[10px] premium-shadow border border-border/40 space-y-4 animate-in slide-in-from-bottom-2">
+          <div className="flex items-center justify-between border-b pb-3">
+            <h3 className="text-base font-black text-foreground">جدول {gymDays?.find(d => d.id === selectedDayId)?.dayName}</h3>
+            <Button variant="ghost" size="sm" onClick={() => onSelectDay(selectedDayId)} className="text-[10px] font-bold text-primary px-2 h-7">إدارة</Button>
           </div>
           
-          <div className="overflow-hidden border rounded-[10px]">
-            <Table>
+          <div className="overflow-hidden border rounded-[8px]">
+            <Table className="w-full">
               <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead className="text-right font-bold text-foreground">اسم التمرين</TableHead>
-                  <TableHead className="text-center font-bold text-foreground">المجموعات</TableHead>
-                  <TableHead className="text-center font-bold text-foreground">التكرارات</TableHead>
+                <TableRow className="h-8">
+                  <TableHead className="text-right font-bold text-foreground text-[10px] px-2 py-1 w-1/2">الاسم</TableHead>
+                  <TableHead className="text-center font-bold text-foreground text-[10px] px-1 py-1">مجموعات</TableHead>
+                  <TableHead className="text-center font-bold text-foreground text-[10px] px-1 py-1">تكرار</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -446,8 +447,8 @@ function MuscleTableView({ dayId, db, user }: { dayId: string, db: any, user: an
     <>
       {muscles?.map(muscle => (
         <React.Fragment key={muscle.id}>
-          <TableRow className="bg-primary/5 hover:bg-primary/10 transition-colors">
-            <TableCell colSpan={3} className="text-center font-black py-2.5 text-primary text-base">
+          <TableRow className="bg-primary/5 hover:bg-primary/10 transition-colors h-7">
+            <TableCell colSpan={3} className="text-center font-black py-1 text-primary text-[11px]">
               {muscle.name}
             </TableCell>
           </TableRow>
@@ -469,10 +470,10 @@ function ExerciseTableView({ dayId, muscleId, db, user }: { dayId: string, muscl
   return (
     <>
       {exercises?.map(ex => (
-        <TableRow key={ex.id} className="hover:bg-slate-50 transition-colors">
-          <TableCell className="font-bold text-foreground/80">{ex.name}</TableCell>
-          <TableCell className="text-center font-medium">{ex.sets}</TableCell>
-          <TableCell className="text-center font-black text-primary">{ex.reps}</TableCell>
+        <TableRow key={ex.id} className="hover:bg-slate-50 transition-colors h-8">
+          <TableCell className="font-bold text-foreground/80 text-[11px] px-2 py-1 leading-tight">{ex.name}</TableCell>
+          <TableCell className="text-center font-medium text-[11px] px-1 py-1">{ex.sets}</TableCell>
+          <TableCell className="text-center font-black text-primary text-[11px] px-1 py-1">{ex.reps}</TableCell>
         </TableRow>
       ))}
     </>
