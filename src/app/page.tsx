@@ -106,10 +106,10 @@ interface DashboardPageProps {
   searchParams: Promise<any>;
 }
 
-export default function DashboardPage({ params: paramsPromise, searchParams: searchParamsPromise }: DashboardPageProps) {
-  // فك المعاملات لتجنب خطأ التعداد في Next.js 15
-  const _params = use(paramsPromise);
-  const _searchParams = use(searchParamsPromise);
+export default function DashboardPage(props: DashboardPageProps) {
+  // فك المعاملات باستخدام use() من React لتجنب خطأ التعداد في Next.js 15
+  const _params = use(props.params);
+  const _searchParams = use(props.searchParams);
 
   const [activeTab, setActiveTab] = React.useState<TabId>('home');
   const [searchTerm, setSearchTerm] = useState("");
@@ -227,7 +227,7 @@ export default function DashboardPage({ params: paramsPromise, searchParams: sea
             }, { merge: true });
             toast({ title: "بداية موفقة", description: "تم حفظ بياناتك بنجاح." });
           }
-          setIsLinking(false);
+          setIsLinking(false)
         })
         .catch(async (error) => {
           const permissionError = new FirestorePermissionError({

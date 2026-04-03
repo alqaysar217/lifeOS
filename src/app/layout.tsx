@@ -21,7 +21,8 @@ export default async function RootLayout(props: {
   children: React.ReactNode;
   params: Promise<any>;
 }) {
-  // فك المعاملات لضمان التوافق مع Next.js 15
+  // فك المعاملات باستخدام await لضمان التوافق مع Next.js 15
+  // الوصول المباشر لـ props.params في الخادم يعتبر تعداداً غير آمن في بعض البيئات
   const params = await props.params;
 
   return (
