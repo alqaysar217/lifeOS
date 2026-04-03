@@ -139,7 +139,8 @@ export function GymWorkoutScreen({ onBack }: GymWorkoutScreenProps) {
     if (!db || !user || !selectedDayId || !newMuscleName) return;
     const musclesRef = collection(db, 'users', user.uid, 'gymDays', selectedDayId, 'muscles');
     addDocumentNonBlocking(musclesRef, {
-      name: newMuscleName
+      name: newMuscleName,
+      createdAt: serverTimestamp()
     });
     setIsAddingMuscle(false);
     setNewMuscleName("");
@@ -151,7 +152,8 @@ export function GymWorkoutScreen({ onBack }: GymWorkoutScreenProps) {
     addDocumentNonBlocking(exRef, {
       name: newExName,
       sets: parseInt(newExSets) || 0,
-      reps: newExReps
+      reps: newExReps,
+      createdAt: serverTimestamp()
     });
     setIsAddingExercise(false);
     setNewExName("");
@@ -435,7 +437,7 @@ function GymTableView({ gymDays, db, user, onSelectDay }: { gymDays: any[] | nul
 function MuscleTableView({ dayId, db, user }: { dayId: string, db: any, user: any }) {
   const musclesQuery = useMemoFirebase(() => {
     if (!db || !user || !dayId) return null;
-    return collection(db, 'users', user.uid, 'gymDays', dayId, 'muscles');
+    return query(collection(db, 'users', user.uid, 'gymDays', dayId, 'muscles'), orderBy('createdAt', 'asc'));
   }, [db, user, dayId]);
 
   const { data: muscles } = useCollection(musclesQuery);
@@ -459,7 +461,7 @@ function MuscleTableView({ dayId, db, user }: { dayId: string, db: any, user: an
 function ExerciseTableView({ dayId, muscleId, db, user }: { dayId: string, muscleId: string, db: any, user: any }) {
   const exQuery = useMemoFirebase(() => {
     if (!db || !user || !dayId || !muscleId) return null;
-    return collection(db, 'users', user.uid, 'gymDays', dayId, 'muscles', muscleId, 'exercises');
+    return query(collection(db, 'users', user.uid, 'gymDays', dayId, 'muscles', muscleId, 'exercises'), orderBy('createdAt', 'asc'));
   }, [db, user, dayId, muscleId]);
 
   const { data: exercises } = useCollection(exQuery);
@@ -480,7 +482,7 @@ function ExerciseTableView({ dayId, muscleId, db, user }: { dayId: string, muscl
 function MuscleList({ dayId, db, user, onAddExercise }: { dayId: string, db: any, user: any, onAddExercise: (mId: string) => void }) {
   const musclesQuery = useMemoFirebase(() => {
     if (!db || !user || !dayId) return null;
-    return collection(db, 'users', user.uid, 'gymDays', dayId, 'muscles');
+    return query(collection(db, 'users', user.uid, 'gymDays', dayId, 'muscles'), orderBy('createdAt', 'asc'));
   }, [db, user, dayId]);
 
   const { data: muscles } = useCollection(musclesQuery);
@@ -556,7 +558,7 @@ function MuscleList({ dayId, db, user, onAddExercise }: { dayId: string, db: any
 function ExerciseList({ dayId, muscleId, db, user }: { dayId: string, muscleId: string, db: any, user: any }) {
   const exQuery = useMemoFirebase(() => {
     if (!db || !user || !dayId || !muscleId) return null;
-    return collection(db, 'users', user.uid, 'gymDays', dayId, 'muscles', muscleId, 'exercises');
+    return query(collection(db, 'users', user.uid, 'gymDays', dayId, 'muscles', muscleId, 'exercises'), orderBy('createdAt', 'asc'));
   }, [db, user, dayId, muscleId]);
 
   const { data: exercises } = useCollection(exQuery);
