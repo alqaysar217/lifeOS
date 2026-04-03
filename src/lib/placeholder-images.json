@@ -47,6 +47,12 @@
       "description": "صورة تمرين نط الحبل",
       "imageUrl": "https://picsum.photos/seed/jumprope-exercise/200/200",
       "imageHint": "skipping rope"
+    },
+    {
+      "id": "exercise-pullups",
+      "description": "صورة تمرين العقلة",
+      "imageUrl": "https://picsum.photos/seed/pullups-exercise/200/200",
+      "imageHint": "pull-up exercise"
     }
   ]
 }

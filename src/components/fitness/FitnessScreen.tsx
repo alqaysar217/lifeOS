@@ -57,7 +57,7 @@ const MapComponent = dynamic(() => import("./MapComponent"), {
 });
 
 type FitnessView = 'hub' | 'running' | 'rep_counter' | 'stats';
-type ExerciseType = 'run' | 'pushups' | 'squats' | 'abs' | 'jumprope' | 'challenge';
+type ExerciseType = 'run' | 'pushups' | 'squats' | 'abs' | 'jumprope' | 'pullups' | 'challenge';
 
 interface FitnessScreenProps {
   onBack: () => void;
@@ -122,7 +122,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   // Daily Stats Calculation
   const dailyStats = useMemo(() => {
-    if (!records) return { steps: 0, distance: 0, pushups: 0, squats: 0, abs: 0, jumprope: 0 };
+    if (!records) return { steps: 0, distance: 0, pushups: 0, squats: 0, abs: 0, jumprope: 0, pullups: 0 };
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -137,9 +137,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         if (r.type === 'squats') acc.squats += (r.reps || 0);
         if (r.type === 'abs') acc.abs += (r.reps || 0);
         if (r.type === 'jumprope') acc.jumprope += (r.reps || 0);
+        if (r.type === 'pullups') acc.pullups += (r.reps || 0);
       }
       return acc;
-    }, { steps: 0, distance: 0, pushups: 0, squats: 0, abs: 0, jumprope: 0 });
+    }, { steps: 0, distance: 0, pushups: 0, squats: 0, abs: 0, jumprope: 0, pullups: 0 });
   }, [records]);
 
   const statsData = useMemo(() => {
@@ -320,6 +321,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       case 'squats': return 'تمارين القرفصاء';
       case 'abs': return 'تمارين البطن';
       case 'jumprope': return 'نط الحبل';
+      case 'pullups': return 'تمارين العقلة';
       case 'challenge': return 'تحدي الخطوات';
       default: return 'تمرين رياضي';
     }
@@ -332,6 +334,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       case 'squats': return <Zap className="h-6 w-6" />;
       case 'abs': return <Activity className="h-6 w-6" />;
       case 'jumprope': return <TimerReset className="h-6 w-6" />;
+      case 'pullups': return <Activity className="h-6 w-6" />;
       default: return <Activity className="h-6 w-6" />;
     }
   };
@@ -343,6 +346,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       case 'squats': return PlaceHolderImages.find(img => img.id === 'exercise-squats')?.imageUrl;
       case 'abs': return PlaceHolderImages.find(img => img.id === 'exercise-abs')?.imageUrl;
       case 'jumprope': return PlaceHolderImages.find(img => img.id === 'exercise-jumprope')?.imageUrl;
+      case 'pullups': return PlaceHolderImages.find(img => img.id === 'exercise-pullups')?.imageUrl;
       default: return null;
     }
   };
@@ -354,6 +358,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       case 'squats': return 'bg-green-600';
       case 'abs': return 'bg-red-500';
       case 'jumprope': return 'bg-purple-600';
+      case 'pullups': return 'bg-cyan-600';
       default: return 'bg-primary';
     }
   };
@@ -422,6 +427,11 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   <p className="text-[8px] font-bold text-white/60">بطن</p>
                   <p className="text-sm font-black">{dailyStats.abs}</p>
                 </div>
+                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
+                  <Zap className="h-4 w-4 text-white/50 mb-1" />
+                  <p className="text-[8px] font-bold text-white/60">عقلة</p>
+                  <p className="text-sm font-black">{dailyStats.pullups}</p>
+                </div>
               </div>
               <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
             </div>
@@ -435,6 +445,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   { id: 'jumprope', view: 'rep_counter' as const, hint: 'skipping rope', desc: 'تمرين ممتاز لحرق الدهون وتحسين اللياقة' },
                   { id: 'squats', view: 'rep_counter' as const, hint: 'squats exercise', desc: 'قوي عضلات الساقين والارداف بسهولة' },
                   { id: 'abs', view: 'rep_counter' as const, hint: 'abs workout', desc: 'ركز على عضلات البطن للحصول على قوام متناسق' },
+                  { id: 'pullups', view: 'rep_counter' as const, hint: 'pull-up exercise', desc: 'تمرين العقلة لتقوية عضلات الظهر والذراعين' },
                 ].map((ex) => (
                   <div 
                     key={ex.id}
