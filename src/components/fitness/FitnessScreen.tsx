@@ -7,7 +7,7 @@ import {
   Navigation, Activity, Square, Loader2, Footprints, 
   ChevronLeft, History, BarChart3, Plus, Trophy, Timer,
   Tally5, CheckCircle2, Trash2, AlertTriangle, Calendar as CalendarIcon,
-  PlusCircle
+  PlusCircle, Flag, TimerReset, AlertCircle
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
@@ -48,8 +48,8 @@ const MapComponent = dynamic(() => import("./MapComponent"), {
   loading: () => <div className="h-full w-full bg-slate-100 flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
 });
 
-type FitnessView = 'hub' | 'running' | 'rep_counter' | 'stats';
-type ExerciseType = 'run' | 'pushups' | 'squats' | 'abs' | 'jumprope';
+type FitnessView = 'hub' | 'running' | 'rep_counter' | 'stats' | 'challenge';
+type ExerciseType = 'run' | 'pushups' | 'squats' | 'abs' | 'jumprope' | 'challenge';
 
 interface FitnessScreenProps {
   onBack: () => void;
@@ -69,6 +69,13 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   // Rep counter stats
   const [reps, setReps] = useState(0);
 
+  // Challenge states
+  const [challengeTargetSteps, setChallengeTargetSteps] = useState<string>("500");
+  const [challengeTargetMinutes, setChallengeTargetMinutes] = useState<string>("5");
+  const [challengeTimeRemaining, setChallengeTimeRemaining] = useState(0);
+  const [challengeSteps, setChallengeSteps] = useState(0);
+  const [challengeResult, setChallengeResult] = useState<'win' | 'lose' | null>(null);
+
   // Manual entry state
   const [isManualDialogOpen, setIsManualDialogOpen] = useState(false);
   const [manualDistance, setManualDistance] = useState("");
@@ -83,6 +90,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const lastCoord = useRef<GeolocationCoordinates | null>(null);
   const lastStepTime = useRef<number>(0);
   const wakeLock = useRef<any>(null);
+  const challengeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const fitnessQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -121,7 +129,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (isTracking) {
+    if (isTracking && view !== 'challenge') {
       timer = setInterval(() => {
         setElapsedTime(prev => prev + 1);
       }, 1000);
@@ -133,7 +141,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       clearInterval(timer);
       releaseWakeLock();
     };
-  }, [isTracking]);
+  }, [isTracking, view]);
 
   const handleMotion = (event: DeviceMotionEvent) => {
     const acc = event.accelerationIncludingGravity;
@@ -141,9 +149,13 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     const magnitude = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2);
     const now = Date.now();
     if (magnitude > 12 && now - lastStepTime.current > 250) {
-      setSteps(prev => prev + 1);
+      if (view === 'challenge' && isTracking) {
+        setChallengeSteps(prev => prev + 1);
+      } else {
+        setSteps(prev => prev + 1);
+        if (!lastCoord.current) setDistance(prev => prev + (0.75 / 1000));
+      }
       lastStepTime.current = now;
-      if (!lastCoord.current) setDistance(prev => prev + (0.75 / 1000));
     }
   };
 
@@ -155,7 +167,65 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
   };
 
+  const startChallenge = () => {
+    const targetStepsNum = parseInt(challengeTargetSteps);
+    const targetTimeSec = parseInt(challengeTargetMinutes) * 60;
+
+    if (isNaN(targetStepsNum) || isNaN(targetTimeSec) || targetStepsNum <= 0 || targetTimeSec <= 0) {
+      toast({ variant: "destructive", title: "بيانات خاطئة", description: "يرجى إدخال أرقام صحيحة للأهداف." });
+      return;
+    }
+
+    setChallengeSteps(0);
+    setChallengeTimeRemaining(targetTimeSec);
+    setChallengeResult(null);
+    setIsTracking(true);
+    window.addEventListener('devicemotion', handleMotion);
+
+    challengeTimerRef.current = setInterval(() => {
+      setChallengeTimeRemaining(prev => {
+        if (prev <= 1) {
+          stopChallenge();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const stopChallenge = () => {
+    if (challengeTimerRef.current) clearInterval(challengeTimerRef.current);
+    setIsTracking(false);
+    window.removeEventListener('devicemotion', handleMotion);
+
+    setChallengeSteps(currentSteps => {
+      const target = parseInt(challengeTargetSteps);
+      const isWin = currentSteps >= target;
+      setChallengeResult(isWin ? 'win' : 'lose');
+      
+      if (db && user) {
+        addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), {
+          type: 'challenge',
+          date: serverTimestamp(),
+          steps: currentSteps,
+          targetSteps: target,
+          result: isWin ? 'win' : 'lose',
+          durationSeconds: parseInt(challengeTargetMinutes) * 60,
+          userId: user.uid
+        });
+      }
+      
+      return currentSteps;
+    });
+  };
+
   const toggleTracking = async () => {
+    if (view === 'challenge') {
+      if (!isTracking) startChallenge();
+      else stopChallenge();
+      return;
+    }
+
     if (!isTracking) {
       if (activeExercise === 'run') {
         if (!navigator.geolocation) return toast({ variant: "destructive", title: "خطأ", description: "GPS غير مدعوم." });
@@ -253,6 +323,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       case 'squats': return 'تمارين القرفصاء';
       case 'abs': return 'تمارين البطن';
       case 'jumprope': return 'نط الحبل';
+      case 'challenge': return 'تحدي الخطوات';
       default: return 'تمرين رياضي';
     }
   };
@@ -297,10 +368,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         </div>
         <div className="grid grid-cols-2 gap-4">
           <ExerciseCard icon={Navigation} label="الجري / المشي" sub="تتبع GPS" color="bg-blue-500" onClick={() => { setActiveExercise('run'); setView('running'); }} />
+          <ExerciseCard icon={Flag} label="تحدي الخطوات" sub="عد تنازلي" color="bg-red-500" onClick={() => { setActiveExercise('challenge'); setView('challenge'); }} />
           <ExerciseCard icon={Dumbbell} label="تمارين الضغط" sub="عدّ يدوي" color="bg-orange-500" onClick={() => { setActiveExercise('pushups'); setView('rep_counter'); }} />
           <ExerciseCard icon={Zap} label="نط الحبل" sub="عدّ يدوي" color="bg-yellow-500" onClick={() => { setActiveExercise('jumprope'); setView('rep_counter'); }} />
           <ExerciseCard icon={Activity} label="تمارين البطن" sub="عدّ يدوي" color="bg-purple-500" onClick={() => { setActiveExercise('abs'); setView('rep_counter'); }} />
-          <ExerciseCard icon={Tally5} label="سكوات" sub="عدّ يدوي" color="bg-green-500" onClick={() => { setActiveExercise('squats'); setView('rep_counter'); }} />
           <ExerciseCard icon={BarChart3} label="الإحصائيات" sub="عرض التقدم" color="bg-slate-800" onClick={() => setView('stats')} />
         </div>
       </div>
@@ -317,21 +388,21 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             records.slice(0, 10).map((r) => (
               <div key={r.id} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className={`h-10 w-10 rounded-[8px] flex items-center justify-center ${r.type === 'run' ? 'bg-blue-50' : 'bg-orange-50'}`}>
-                    {r.type === 'run' ? <Navigation className="h-5 w-5 text-blue-500" /> : <Dumbbell className="h-5 w-5 text-orange-500" />}
+                  <div className={`h-10 w-10 rounded-[8px] flex items-center justify-center ${r.type === 'run' ? 'bg-blue-50' : r.type === 'challenge' ? 'bg-red-50' : 'bg-orange-50'}`}>
+                    {r.type === 'run' ? <Navigation className="h-5 w-5 text-blue-500" /> : r.type === 'challenge' ? <Flag className="h-5 w-5 text-red-500" /> : <Dumbbell className="h-5 w-5 text-orange-500" />}
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-foreground">{getExerciseName(r.type)}</h4>
                     <p className="text-[10px] text-muted-foreground font-medium">
                       {r.date?.seconds ? new Date(r.date.seconds * 1000).toLocaleString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'قيد الحفظ'}
-                      {r.isManual && " (إدخال يدوي)"}
+                      {r.type === 'challenge' && ` (${r.result === 'win' ? 'فوز' : 'خسارة'})`}
                     </p>
                   </div>
                 </div>
                 <div className="text-left flex items-center gap-3">
                   <div className="text-left">
                     <p className="text-sm font-black text-primary">
-                      {r.type === 'run' ? `${r.distance} كم` : `${r.reps} عدة`}
+                      {r.type === 'run' ? `${r.distance} كم` : `${r.steps} عدة`}
                     </p>
                     <p className="text-[8px] font-bold text-muted-foreground uppercase">{r.isManual ? `${r.steps} خطوة` : formatTime(r.durationSeconds || 0)}</p>
                   </div>
@@ -372,6 +443,101 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+
+  const renderChallenge = () => (
+    <div className="px-6 py-6 space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-32">
+      <div className={`rounded-[10px] p-6 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-red-600' : 'bg-slate-900'}`}>
+        <div className="relative z-10 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="h-12 w-12 rounded-[12px] bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+              <Flag className="h-6 w-6 text-white" />
+            </div>
+            {isTracking && (
+              <div className="flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-full animate-pulse">
+                <TimerReset className="h-4 w-4" />
+                <span className="text-xs font-bold tabular-nums">{formatTime(challengeTimeRemaining)}</span>
+              </div>
+            )}
+          </div>
+
+          {!isTracking && !challengeResult && (
+            <div className="space-y-4">
+              <h3 className="text-xl font-black">إعداد التحدي</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold text-white/70">هدف الخطوات</Label>
+                  <Input 
+                    type="number" 
+                    value={challengeTargetSteps} 
+                    onChange={(e) => setChallengeTargetSteps(e.target.value)}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/30 h-10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold text-white/70">الوقت (دقائق)</Label>
+                  <Input 
+                    type="number" 
+                    value={challengeTargetMinutes} 
+                    onChange={(e) => setChallengeTargetMinutes(e.target.value)}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/30 h-10"
+                  />
+                </div>
+              </div>
+              <Button onClick={startChallenge} className="w-full h-12 bg-white text-slate-900 font-black text-base rounded-[10px] shadow-xl active:scale-95">
+                ابدأ التحدي الآن
+              </Button>
+            </div>
+          )}
+
+          {isTracking && (
+            <div className="text-center space-y-8 py-4">
+              <div className="space-y-1">
+                <p className="text-white/70 text-[10px] font-bold uppercase">الخطوات الحالية</p>
+                <h4 className="text-6xl font-black tabular-nums">{challengeSteps}</h4>
+                <p className="text-white/50 text-xs">الهدف: {challengeTargetSteps} خطوة</p>
+              </div>
+              
+              <div className="px-8">
+                <Progress value={Math.min((challengeSteps / parseInt(challengeTargetSteps)) * 100, 100)} className="h-3 bg-white/20" />
+              </div>
+
+              <Button onClick={stopChallenge} className="w-full h-12 bg-white text-red-600 font-black text-base rounded-[10px] shadow-xl active:scale-95">
+                إيقاف التحدي
+              </Button>
+            </div>
+          )}
+
+          {challengeResult && (
+            <div className="text-center space-y-6 py-8 animate-in zoom-in-95 duration-500">
+              <div className={`h-24 w-24 rounded-full mx-auto flex items-center justify-center ${challengeResult === 'win' ? 'bg-green-500 shadow-[0_0_30px_rgba(34,197,94,0.6)]' : 'bg-red-500 shadow-[0_0_30px_rgba(239,68,68,0.6)]'}`}>
+                {challengeResult === 'win' ? <Trophy className="h-12 w-12 text-white" /> : <AlertCircle className="h-12 w-12 text-white" />}
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-3xl font-black">{challengeResult === 'win' ? 'مبارك! نجحت' : 'للأسف! لم تنجح'}</h3>
+                <p className="text-white/70 text-sm font-bold">لقد حققت {challengeSteps} خطوة من أصل {challengeTargetSteps}</p>
+              </div>
+              <Button onClick={() => setChallengeResult(null)} className="w-full h-12 bg-white text-slate-900 font-black text-base rounded-[10px] active:scale-95">
+                تحدي جديد
+              </Button>
+            </div>
+          )}
+        </div>
+        <div className="absolute -right-20 -bottom-20 w-60 h-60 bg-white/5 rounded-full blur-3xl" />
+      </div>
+
+      <div className="bg-white p-6 rounded-[10px] premium-shadow border border-border/40 flex items-start gap-4">
+        <div className="h-10 w-10 rounded-[10px] bg-red-50 flex items-center justify-center shrink-0">
+          <AlertCircle className="h-5 w-5 text-red-500" />
+        </div>
+        <div className="space-y-1">
+          <h4 className="text-sm font-bold text-foreground">قواعد التحدي</h4>
+          <p className="text-[11px] text-muted-foreground leading-relaxed font-medium">
+            يجب عليك الوصول لعدد الخطوات المطلوبة قبل انتهاء الوقت. تأكد من أن هاتفك في جيبك أو بيدك أثناء الحركة ليتمكن المستشعر من حساب خطواتك بدقة.
+          </p>
+        </div>
+      </div>
     </div>
   );
 
@@ -594,6 +760,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         {view === 'hub' && renderHub()}
         {view === 'running' && renderRunning()}
         {view === 'rep_counter' && renderRepCounter()}
+        {view === 'challenge' && renderChallenge()}
         {view === 'stats' && renderStats()}
       </div>
     </div>
