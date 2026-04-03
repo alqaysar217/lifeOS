@@ -132,6 +132,28 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     }));
   }, [records]);
 
+  // Daily Stats Calculation
+  const dailyStats = useMemo(() => {
+    if (!records) return { steps: 0, distance: 0, pushups: 0, squats: 0, abs: 0, jumprope: 0 };
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todaySeconds = today.getTime() / 1000;
+
+    return records.reduce((acc, r) => {
+      const recordDate = r.date?.seconds || 0;
+      if (recordDate >= todaySeconds) {
+        acc.steps += (r.steps || 0);
+        acc.distance += (r.distance || 0);
+        if (r.type === 'pushups') acc.pushups += (r.reps || 0);
+        if (r.type === 'squats') acc.squats += (r.reps || 0);
+        if (r.type === 'abs') acc.abs += (r.reps || 0);
+        if (r.type === 'jumprope') acc.jumprope += (r.reps || 0);
+      }
+      return acc;
+    }, { steps: 0, distance: 0, pushups: 0, squats: 0, abs: 0, jumprope: 0 });
+  }, [records]);
+
   const requestWakeLock = async () => {
     if ('wakeLock' in navigator) {
       try {
@@ -348,25 +370,46 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         {view === 'hub' && (
           <div className="px-6 py-6 space-y-8 animate-in fade-in duration-500 pb-32">
             <div className="primary-gradient rounded-[10px] p-6 text-white premium-shadow relative overflow-hidden">
-              <div className="relative z-10 flex items-center justify-between">
+              <div className="relative z-10 flex items-center justify-between mb-6">
                 <div className="space-y-1">
-                  <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest">نشاط اليوم</p>
+                  <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest">إحصائيات اليوم</p>
                   <h3 className="text-xl font-black">أداء رائع يا بطل!</h3>
                 </div>
-                <Trophy className="h-10 w-10 text-white/50" />
+                <Trophy className="h-8 w-8 text-white/50" />
               </div>
-              <div className="mt-6 flex gap-4">
-                <div className="flex-1 bg-white/10 p-3 rounded-[10px] backdrop-blur-sm border border-white/10">
+              <div className="grid grid-cols-3 gap-3 relative z-10">
+                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center">
                   <Footprints className="h-4 w-4 text-white/50 mb-1" />
-                  <p className="text-[9px] font-bold text-white/60">الخطوات اليوم</p>
-                  <p className="text-lg font-black">{records?.filter(r => r.date?.seconds > (Date.now() / 1000 - 86400)).reduce((acc, r) => acc + (r.steps || 0), 0) || 0}</p>
+                  <p className="text-[8px] font-bold text-white/60">خطوات</p>
+                  <p className="text-sm font-black">{dailyStats.steps}</p>
                 </div>
-                <div className="flex-1 bg-white/10 p-3 rounded-[10px] backdrop-blur-sm border border-white/10">
+                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center">
+                  <Navigation className="h-4 w-4 text-white/50 mb-1" />
+                  <p className="text-[8px] font-bold text-white/60">مسافة</p>
+                  <p className="text-sm font-black">{dailyStats.distance.toFixed(1)} <span className="text-[8px]">كم</span></p>
+                </div>
+                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center">
+                  <Dumbbell className="h-4 w-4 text-white/50 mb-1" />
+                  <p className="text-[8px] font-bold text-white/60">ضغط</p>
+                  <p className="text-sm font-black">{dailyStats.pushups}</p>
+                </div>
+                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center">
+                  <TimerReset className="h-4 w-4 text-white/50 mb-1" />
+                  <p className="text-[8px] font-bold text-white/60">نط حبل</p>
+                  <p className="text-sm font-black">{dailyStats.jumprope}</p>
+                </div>
+                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center">
+                  <Zap className="h-4 w-4 text-white/50 mb-1" />
+                  <p className="text-[8px] font-bold text-white/60">سكوات</p>
+                  <p className="text-sm font-black">{dailyStats.squats}</p>
+                </div>
+                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10 flex flex-col items-center justify-center text-center">
                   <Activity className="h-4 w-4 text-white/50 mb-1" />
-                  <p className="text-[9px] font-bold text-white/60">المسافة اليوم</p>
-                  <p className="text-lg font-black">{(records?.filter(r => r.date?.seconds > (Date.now() / 1000 - 86400)).reduce((acc, r) => acc + (r.distance || 0), 0) || 0).toFixed(1)} <span className="text-[8px]">كم</span></p>
+                  <p className="text-[8px] font-bold text-white/60">بطن</p>
+                  <p className="text-sm font-black">{dailyStats.abs}</p>
                 </div>
               </div>
+              <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
             </div>
 
             <div className="space-y-4">
@@ -701,4 +744,3 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     </div>
   );
 }
-
