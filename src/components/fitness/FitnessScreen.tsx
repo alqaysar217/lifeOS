@@ -532,25 +532,28 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         {/* شاشة العدّ اليدوي المحسنة والمركزة */}
         {view === 'rep_counter' && (
           <div className="px-6 py-6 space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-32">
-             <div className={`rounded-[20px] p-5 text-white premium-shadow text-center relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
-                <div className="relative z-10 space-y-3">
-                  <div className="h-14 w-14 rounded-[12px] bg-white/20 backdrop-blur-md flex items-center justify-center mx-auto border border-white/20">
-                    <Dumbbell className="h-7 w-7 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black">{getExerciseName(activeExercise)}</h3>
-                    <p className="text-white/70 text-[9px] font-bold uppercase tracking-widest">
-                      {isTracking ? "حافظ على وتيرتك" : "اضغط للبدء"}
-                    </p>
-                  </div>
-                  
-                  <div className="py-2">
-                    <p className="text-[9px] font-bold opacity-60 uppercase mb-0.5">وقت الجلسة</p>
-                    <p className="text-4xl font-black tabular-nums tracking-tight">{formatTime(elapsedTime)}</p>
+             <div className={`rounded-[20px] p-5 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
+                <div className="relative z-10 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-[12px] bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
+                        <Dumbbell className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black">{getExerciseName(activeExercise)}</h3>
+                        <p className="text-white/70 text-[8px] font-bold uppercase tracking-widest leading-none">
+                          {isTracking ? "حافظ على وتيرتك" : "اضغط للبدء"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[8px] font-bold opacity-60 uppercase mb-0">وقت الجلسة</p>
+                      <p className="text-2xl font-black tabular-nums tracking-tight">{formatTime(elapsedTime)}</p>
+                    </div>
                   </div>
 
-                  <Button onClick={toggleTracking} className={`w-full h-12 rounded-[12px] font-black text-base shadow-xl active:scale-95 transition-all ${isTracking ? 'bg-white text-red-600 animate-pulse' : 'bg-white text-primary'}`}>
-                    {isTracking ? <><Square className="h-5 w-5 ml-2 fill-current" /> إنهاء التمرين</> : <><Play className="h-5 w-5 ml-2 fill-current" /> ابدأ الآن</>}
+                  <Button onClick={toggleTracking} className={`w-full h-11 rounded-[12px] font-black text-sm shadow-xl active:scale-95 transition-all ${isTracking ? 'bg-white text-red-600' : 'bg-white text-primary'}`}>
+                    {isTracking ? <><Square className="h-4 w-4 ml-2 fill-current" /> إنهاء التمرين</> : <><Play className="h-4 w-4 ml-2 fill-current" /> ابدأ الآن</>}
                   </Button>
                 </div>
                 <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
