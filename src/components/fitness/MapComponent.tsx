@@ -1,95 +1,94 @@
 
 "use client"
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from "react-leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 interface MapComponentProps {
   path: [number, number][];
+  isStatic?: boolean;
 }
 
-// مكون فرعي للتحكم في واجهة الخريطة ومتابعة المستخدم مع زويم عالي
-function ChangeView({ center }: { center: [number, number] }) {
+// مكون ذكي للتحكم في الكاميرا دون إفساد تجربة المستخدم في الزويم
+function MapController({ path, isStatic }: { path: [number, number][], isStatic?: boolean }) {
   const map = useMap();
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
-    // التحرك بسلاسة لموقع المستخدم الجديد مع الحفاظ على مستوى زويم عالٍ جداً (18)
-    map.setView(center, 18, { animate: true });
-  }, [center, map]);
+    if (path.length === 0) return;
+
+    if (isStatic) {
+      // إذا كان مساراً تاريخياً، نقوم بضبط الخريطة لتشمل المسار بالكامل فوراً
+      const bounds = L.latLngBounds(path);
+      map.fitBounds(bounds, { padding: [50, 50], animate: true });
+    } else {
+      // في حالة التتبع المباشر
+      const currentPos = path[path.length - 1];
+      if (isFirstRender.current) {
+        map.setView(currentPos, 17);
+        isFirstRender.current = false;
+      } else {
+        // نكتفي بالتحرك للموقع الجديد دون تغيير مستوى الزويم الذي اختاره المستخدم
+        map.panTo(currentPos, { animate: true });
+      }
+    }
+  }, [path, map, isStatic]);
+
   return null;
 }
 
-export default function MapComponent({ path }: MapComponentProps) {
-  // الموقع الافتراضي: مدينة المكلا، اليمن
+export default function MapComponent({ path, isStatic = false }: MapComponentProps) {
+  // الموقع الافتراضي في حال عدم وجود مسار
   const defaultCenter: [number, number] = [14.536, 49.126]; 
   const currentPosition = path.length > 0 ? path[path.length - 1] : defaultCenter;
 
   return (
     <MapContainer 
       center={currentPosition} 
-      zoom={18} // زويم عالٍ جداً لرؤية تفاصيل الشوارع
-      scrollWheelZoom={false}
+      zoom={16} 
+      scrollWheelZoom={true}
+      zoomControl={true}
       style={{ height: "100%", width: "100%" }}
       className="z-0"
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        // استخدام نمط ملون وواضح من OpenStreetMap
+        attribution='&copy; OpenStreetMap'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       
-      {/* رسم المسار بخط أرجواني متوهج وواضح */}
+      <MapController path={path} isStatic={isStatic} />
+
       {path.length > 1 && (
         <Polyline 
           positions={path} 
           pathOptions={{ 
             color: '#8b5cf6', 
-            weight: 8, // زيادة سمك الخط ليكون واضحاً مع الزويم العالي
-            opacity: 0.9,
+            weight: 6, 
+            opacity: 0.8,
             lineJoin: 'round'
           }} 
         />
       )}
       
-      {/* إظهار موقع المستخدم الحالي كنقطة متوهجة */}
-      {path.length > 0 ? (
+      {path.length > 0 && (
         <>
-          <ChangeView center={currentPosition} />
-          {/* نقطة البداية بلون أخضر */}
+          {/* نقطة البداية */}
           <CircleMarker 
             center={path[0]} 
-            radius={7} 
-            pathOptions={{ 
-              fillColor: '#22c55e', 
-              color: 'white', 
-              weight: 2, 
-              fillOpacity: 1 
-            }} 
+            radius={6} 
+            pathOptions={{ fillColor: '#22c55e', color: 'white', weight: 2, fillOpacity: 1 }} 
           />
-          {/* الموقع الحالي بلون أرجواني كبير */}
-          <CircleMarker 
-            center={currentPosition} 
-            radius={12} 
-            pathOptions={{ 
-              fillColor: '#8b5cf6', 
-              color: 'white', 
-              weight: 3, 
-              fillOpacity: 1 
-            }} 
-          />
+          {/* النقطة الحالية (فقط إذا كان التتبع نشطاً) */}
+          {!isStatic && (
+            <CircleMarker 
+              center={currentPosition} 
+              radius={10} 
+              pathOptions={{ fillColor: '#8b5cf6', color: 'white', weight: 3, fillOpacity: 1 }} 
+            />
+          )}
         </>
-      ) : (
-        // إذا لم يبدأ التتبع بعد، نظهر نقطة ثابتة في المكلا للتمثيل
-        <CircleMarker 
-          center={defaultCenter} 
-          radius={8} 
-          pathOptions={{ 
-            fillColor: '#8b5cf6', 
-            color: 'white', 
-            weight: 2, 
-            fillOpacity: 0.5 
-          }} 
-        />
       )}
     </MapContainer>
   );
