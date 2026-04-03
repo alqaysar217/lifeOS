@@ -16,7 +16,7 @@ import { AIScreen } from "@/components/ai/AIScreen";
 import { AnalyticsScreen } from "@/components/analytics/AnalyticsScreen";
 import { NotificationsScreen } from "@/components/notifications/NotificationsScreen";
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, errorEmitter, FirestorePermissionError } from "@/firebase";
-import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
 import { doc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
 import { signOut } from "firebase/auth";
@@ -46,7 +46,8 @@ import {
   LogOut,
   RefreshCcw,
   Smartphone,
-  Loader2
+  Loader2,
+  Save
 } from "lucide-react";
 
 const baseCategories = [
@@ -105,17 +106,19 @@ export default function DashboardPage(props: {
   params: Promise<any>;
   searchParams: Promise<any>;
 }) {
-  // فك الوعود بشكل صريح دون تعداد الخصائصsync
   const params = use(props.params);
   const searchParams = use(props.searchParams);
 
   const [activeTab, setActiveTab] = React.useState<TabId>('home');
   const [searchTerm, setSearchTerm] = useState("");
   const [currentTime, setCurrentTime] = useState<number>(new Date().getHours());
-  const [copied, setCopied] = useState(false);
   const [onboardingName, setOnboardingName] = useState("");
   const [onboardingPhone, setOnboardingPhone] = useState("");
   const [isLinking, setIsLinking] = useState(false);
+  
+  // State for editing profile
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
   
   const auth = useAuth();
   const db = useFirestore();
@@ -141,6 +144,14 @@ export default function DashboardPage(props: {
       }, { merge: true });
     }
   }, [user, db, isProfileLoading, profile]);
+
+  // Sync edit states when profile loads
+  useEffect(() => {
+    if (profile) {
+      setEditName(profile.name || "");
+      setEditPhone(profile.phoneNumber || "");
+    }
+  }, [profile]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -192,12 +203,16 @@ export default function DashboardPage(props: {
 
   const handleBack = () => setActiveTab('home');
 
-  const copyUID = () => {
-    if (user) {
-      navigator.clipboard.writeText(user.uid);
-      setCopied(true);
-      toast({ title: "تم النسخ", description: "تم نسخ معرف المستخدم بنجاح." });
-      setTimeout(() => setCopied(false), 2000);
+  const handleUpdateProfile = () => {
+    if (user && db && editName.trim() && editPhone.trim()) {
+      const userRef = doc(db, 'users', user.uid);
+      updateDocumentNonBlocking(userRef, {
+        name: editName.trim(),
+        phoneNumber: editPhone.trim()
+      });
+      toast({ title: "تم التحديث", description: "تم حفظ بياناتك الشخصية بنجاح." });
+    } else {
+      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى التأكد من إدخال الاسم ورقم الهاتف." });
     }
   };
 
@@ -237,12 +252,6 @@ export default function DashboardPage(props: {
           toast({ variant: "destructive", title: "خطأ", description: "حدث خطأ أثناء البحث عن البيانات." });
         });
     }
-  };
-
-  const handleSignOut = () => {
-    signOut(auth).then(() => {
-      window.location.reload(); 
-    });
   };
 
   const renderContent = () => {
@@ -305,7 +314,7 @@ export default function DashboardPage(props: {
                 disabled={!onboardingName.trim() || !onboardingPhone.trim() || isLinking}
                 className="w-full h-12 primary-gradient text-white text-base font-black rounded-[12px] shadow-xl active:scale-95 transition-all disabled:opacity-50"
               >
-                {isLinking ? <Loader2 className="h-5 w-5 animate-spin" /> : "ابدأ رحلتي الآن"}
+                {isLinking ? <><Loader2 className="h-5 w-5 animate-spin ml-2" /> جاري الربط...</> : "ابدأ رحلتي الآن"}
               </Button>
             </div>
             
@@ -398,70 +407,82 @@ export default function DashboardPage(props: {
         return <NotificationsScreen onBack={handleBack} />;
       case 'profile':
         return (
-          <div className="flex flex-col items-center justify-center min-h-[80vh] px-6 animate-in fade-in duration-500 pb-32 pt-10">
+          <div className="flex flex-col items-center px-6 animate-in fade-in duration-500 pb-32 pt-16">
             <div className="h-24 w-24 rounded-full primary-gradient flex items-center justify-center mb-6 shadow-2xl relative">
               <User className="h-12 w-12 text-white" />
               <div className="absolute -bottom-1 -right-1 h-8 w-8 bg-green-500 border-4 border-background rounded-full" />
             </div>
-            <h3 className="text-2xl font-black text-foreground mb-1">{profile?.name || "حسابي"}</h3>
-            <p className="text-[10px] font-bold text-primary bg-primary/5 px-3 py-1 rounded-full mb-8">{profile?.phoneNumber || "لم يتم ربط هاتف"}</p>
             
-            <div className="w-full space-y-4">
-              <div className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 space-y-2">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase">معرف المستخدم (UID)</p>
-                <div className="flex items-center justify-between bg-slate-50 p-3 rounded-[10px] border border-border/20">
-                  <code className="text-xs font-mono text-primary break-all">{user?.uid}</code>
-                  <button 
-                    onClick={copyUID}
-                    className="h-8 w-8 flex items-center justify-center bg-white rounded-full shadow-sm text-primary active:scale-90 transition-transform"
-                  >
-                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  </button>
+            <div className="w-full space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-muted-foreground mr-2 uppercase tracking-wider">الاسم الكريم</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                      <User className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    </div>
+                    <Input 
+                      placeholder="أدخل اسمك..."
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow bg-white/50 focus:bg-white transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-muted-foreground mr-2 uppercase tracking-wider">رقم الهاتف</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                      <Smartphone className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    </div>
+                    <Input 
+                      type="tel"
+                      placeholder="أدخل رقم هاتفك..."
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow bg-white/50 focus:bg-white transition-all"
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={handleUpdateProfile}
+                  className="w-full h-12 primary-gradient text-white text-base font-black rounded-[12px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <Save className="h-5 w-5" />
+                  حفظ التغييرات
+                </Button>
+              </div>
+
+              <div className="pt-4 space-y-3">
+                <div 
+                  onClick={() => setActiveTab('finance')}
+                  className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center">
+                      <Wallet className="h-5 w-5 text-primary" />
+                    </div>
+                    <span className="text-sm font-bold">المصاريف والمالية</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
+                </div>
+
+                <div 
+                  onClick={() => setActiveTab('notifications')}
+                  className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center">
+                      <Bell className="h-5 w-5 text-primary" />
+                    </div>
+                    <span className="text-sm font-bold">الإشعارات</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
                 </div>
               </div>
 
-              <div 
-                onClick={handleSignOut}
-                className="bg-red-50 p-5 rounded-[15px] border border-red-100 flex items-center justify-between cursor-pointer group active:scale-[0.98] transition-all"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-[10px] bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
-                    <RefreshCcw className="h-5 w-5 text-red-600" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-bold text-red-700">بدء رحلة جديدة</span>
-                    <p className="text-[9px] text-red-500 font-bold">سيتم تسجيل الخروج ومسح الجلسة</p>
-                  </div>
-                </div>
-                <LogOut className="h-4 w-4 text-red-400" />
-              </div>
-
-              <div 
-                onClick={() => setActiveTab('finance')}
-                className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex items-center justify-between cursor-pointer"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center">
-                    <Wallet className="h-5 w-5 text-primary" />
-                  </div>
-                  <span className="text-sm font-bold">المصاريف والمالية</span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
-              </div>
-
-              <div 
-                onClick={() => setActiveTab('notifications')}
-                className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex items-center justify-between cursor-pointer"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center">
-                    <Bell className="h-5 w-5 text-primary" />
-                  </div>
-                  <span className="text-sm font-bold">الإشعارات</span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
-              </div>
-              
               <div className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex flex-col items-center justify-center gap-2 border-dashed">
                 <p className="text-xs font-bold text-muted-foreground">نظام تشغيل حياتك المتكامل</p>
                 <button onClick={handleBack} className="text-primary font-bold text-sm">العودة للرئيسية</button>
@@ -481,3 +502,4 @@ export default function DashboardPage(props: {
     </main>
   );
 }
+
