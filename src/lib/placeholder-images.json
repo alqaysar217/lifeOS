@@ -11,6 +11,12 @@
       "description": "رسم توضيحي للمهام الفارغة",
       "imageUrl": "https://picsum.photos/seed/empty-tasks/400/400",
       "imageHint": "minimalist illustration check"
+    },
+    {
+      "id": "user-profile",
+      "description": "صورة الملف الشخصي للمستخدم",
+      "imageUrl": "https://picsum.photos/seed/user-avatar/400/400",
+      "imageHint": "person portrait"
     }
   ]
 }

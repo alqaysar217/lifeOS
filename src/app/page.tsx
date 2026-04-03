@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useMemo, use } from "react";
@@ -19,11 +18,11 @@ import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, errorEmitter, 
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
 import { doc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
-import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { 
   Activity, 
   CheckCircle2, 
@@ -31,24 +30,17 @@ import {
   Wallet2, 
   Zap, 
   Trophy, 
-  Lock, 
   Search, 
   BarChart3, 
   Bot,
   ChevronRight,
   User,
-  Settings,
   Wallet,
   Bell,
-  Copy,
-  Check,
-  Sparkles,
-  LogOut,
-  RefreshCcw,
-  Smartphone,
-  Loader2,
   Save,
-  Pencil
+  Pencil,
+  Loader2,
+  Smartphone
 } from "lucide-react";
 
 const baseCategories = [
@@ -117,7 +109,6 @@ export default function DashboardPage(props: {
   const [onboardingPhone, setOnboardingPhone] = useState("");
   const [isLinking, setIsLinking] = useState(false);
   
-  // State for editing profile
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [isEditingName, setIsEditingName] = useState(false);
@@ -148,7 +139,6 @@ export default function DashboardPage(props: {
     }
   }, [user, db, isProfileLoading, profile]);
 
-  // Sync edit states when profile loads
   useEffect(() => {
     if (profile) {
       setEditName(profile.name || "");
@@ -413,14 +403,19 @@ export default function DashboardPage(props: {
       case 'profile':
         return (
           <div className="flex flex-col items-center px-6 animate-in fade-in duration-500 pb-32 pt-16">
-            <div className="h-24 w-24 rounded-full primary-gradient flex items-center justify-center mb-6 shadow-2xl relative">
-              <User className="h-12 w-12 text-white" />
-              <div className="absolute -bottom-1 -right-1 h-8 w-8 bg-green-500 border-4 border-background rounded-full" />
+            <div className="h-24 w-24 rounded-full primary-gradient flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden">
+              <Image 
+                src={PlaceHolderImages.find(img => img.id === 'user-profile')?.imageUrl || "https://picsum.photos/seed/user-avatar/400/400"} 
+                alt="Profile" 
+                fill 
+                className="object-cover"
+                data-ai-hint="person portrait"
+              />
+              <div className="absolute -bottom-1 -right-1 h-8 w-8 bg-green-500 border-4 border-background rounded-full z-10" />
             </div>
             
             <div className="w-full space-y-6">
               <div className="space-y-4">
-                {/* Name Field */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between px-2">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">الاسم الكريم</label>
@@ -452,7 +447,6 @@ export default function DashboardPage(props: {
                   )}
                 </div>
 
-                {/* Phone Field */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between px-2">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">رقم الهاتف</label>
@@ -543,4 +537,3 @@ export default function DashboardPage(props: {
     </main>
   );
 }
-
