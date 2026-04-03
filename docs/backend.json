@@ -5,272 +5,128 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a unique device-based user of the LifeOS application. This entity stores user-specific settings and metadata without requiring login credentials.",
+      "description": "Represents a unique device-based user of the LifeOS application.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the User entity, typically corresponding to a device ID."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name provided by the user during onboarding."
-        },
-        "phoneNumber": {
-          "type": "string",
-          "description": "The phone number used for identity verification and data recovery."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the user's record was first created.",
-          "format": "date-time"
-        },
-        "passcodeEnabled": {
-          "type": "boolean",
-          "description": "A flag indicating whether the app's passcode lock feature is enabled for this user."
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "passcodeEnabled": { "type": "boolean" }
       },
-      "required": [
-        "id",
-        "createdAt",
-        "passcodeEnabled"
-      ]
+      "required": ["id", "createdAt", "passcodeEnabled"]
     },
     "Habit": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Habit",
       "type": "object",
-      "description": "Manages individual habits a user tracks, including their current streak and completion status.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Habit entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the User who owns this habit. (Relationship: User 1:N Habit)"
-        },
-        "title": {
-          "type": "string",
-          "description": "The name or description of the habit."
-        },
-        "streak": {
-          "type": "number",
-          "description": "The current number of consecutive days the habit has been maintained."
-        },
-        "lastCompleted": {
-          "type": "string",
-          "description": "The date and time when the habit was last marked as completed.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the habit (e.g., 'active', 'paused', 'completed')."
-        }
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "streak": { "type": "number" },
+        "lastCompleted": { "type": "string", "format": "date-time" },
+        "status": { "type": "string" }
       },
-      "required": [
-        "id",
-        "userId",
-        "title",
-        "streak",
-        "lastCompleted",
-        "status"
-      ]
+      "required": ["id", "userId", "title", "streak", "lastCompleted", "status"]
     },
     "Task": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Task",
       "type": "object",
-      "description": "Stores individual tasks and their associated details, allowing users to manage their to-do list.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Task entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the User who owns this task. (Relationship: User 1:N Task)"
-        },
-        "title": {
-          "type": "string",
-          "description": "The name or description of the task."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current completion status of the task (e.g., 'pending', 'in-progress', 'completed')."
-        },
-        "project": {
-          "type": "string",
-          "description": "The project or category this task belongs to. (Note: treated as a simple string as per schema, not a foreign key to a 'Project' entity)."
-        },
-        "dueDate": {
-          "type": "string",
-          "description": "The deadline for completing the task.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string" },
+        "project": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "userId",
-        "title",
-        "status",
-        "project"
-      ]
+      "required": ["id", "userId", "title", "status", "project"]
     },
     "Challenge": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Challenge",
       "type": "object",
-      "description": "Represents a gamified challenge a user is participating in, tracking their progress over a defined period.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Challenge entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the User who is undertaking this challenge. (Relationship: User 1:N Challenge)"
-        },
-        "title": {
-          "type": "string",
-          "description": "The name or description of the challenge."
-        },
-        "currentDay": {
-          "type": "number",
-          "description": "The current day of progress within the challenge."
-        },
-        "totalDays": {
-          "type": "number",
-          "description": "The total number of days planned for the challenge."
-        }
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "currentDay": { "type": "number" },
+        "totalDays": { "type": "number" }
       },
-      "required": [
-        "id",
-        "userId",
-        "title",
-        "currentDay",
-        "totalDays"
-      ]
+      "required": ["id", "userId", "title", "currentDay", "totalDays"]
     },
     "FitnessRecord": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "FitnessRecord",
       "type": "object",
-      "description": "Captures daily or session-based fitness activity data for a user.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the FitnessRecord entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the User whose fitness activity is being recorded. (Relationship: User 1:N FitnessRecord)"
-        },
-        "type": {
-          "type": "string",
-          "description": "The type of fitness activity (e.g., 'run', 'pushups', 'squats', 'abs', 'jumprope')."
-        },
-        "date": {
-          "type": "string",
-          "description": "The date when the fitness activity occurred.",
-          "format": "date"
-        },
-        "steps": {
-          "type": "number",
-          "description": "The number of steps taken during the activity."
-        },
-        "distance": {
-          "type": "number",
-          "description": "The distance covered during the activity, typically in kilometers or miles."
-        },
-        "reps": {
-          "type": "number",
-          "description": "The number of repetitions for stationary exercises."
-        },
-        "durationSeconds": {
-          "type": "number",
-          "description": "The duration of the fitness activity in seconds."
-        }
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "steps": { "type": "number" },
+        "distance": { "type": "number" },
+        "reps": { "type": "number" },
+        "durationSeconds": { "type": "number" }
       },
-      "required": [
-        "id",
-        "userId",
-        "type",
-        "date",
-        "durationSeconds"
-      ]
+      "required": ["id", "userId", "type", "date", "durationSeconds"]
+    },
+    "GymDay": {
+      "title": "GymDay",
+      "type": "object",
+      "properties": {
+        "dayName": { "type": "string", "enum": ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["dayName"]
+    },
+    "GymMuscle": {
+      "title": "GymMuscle",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "GymExercise": {
+      "title": "GymExercise",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "sets": { "type": "number" },
+        "reps": { "type": "string" }
+      },
+      "required": ["name", "sets", "reps"]
     },
     "FinanceTransaction": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "FinanceTransaction",
       "type": "object",
-      "description": "Records individual financial transactions (expenses or income) for a user.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the FinanceTransaction entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the User who made this transaction. (Relationship: User 1:N FinanceTransaction)"
-        },
-        "amount": {
-          "type": "number",
-          "description": "The monetary amount of the transaction."
-        },
-        "category": {
-          "type": "string",
-          "description": "The category the transaction belongs to (e.g., 'food', 'transport', 'bills')."
-        },
-        "date": {
-          "type": "string",
-          "description": "The date when the transaction occurred.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "userId",
-        "amount",
-        "category",
-        "date"
-      ]
+      "required": ["id", "userId", "amount", "category", "date"]
     },
     "StudyProgress": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "StudyProgress",
       "type": "object",
-      "description": "Tracks a user's progress in various study subjects or courses.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the StudyProgress entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the User whose study progress is being tracked. (Relationship: User 1:N StudyProgress)"
-        },
-        "subject": {
-          "type": "string",
-          "description": "The name of the study subject or topic."
-        },
-        "progress": {
-          "type": "number",
-          "description": "The current progress percentage or level in the subject."
-        }
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "subject": { "type": "string" },
+        "progress": { "type": "number" }
       },
-      "required": [
-        "id",
-        "userId",
-        "subject",
-        "progress"
-      ]
+      "required": ["id", "userId", "subject", "progress"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
     "structure": [
@@ -278,136 +134,32 @@
         "path": "/users/{userId}",
         "definition": {
           "entityName": "user",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores core user data and settings.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/User" },
+          "description": "Stores core user data."
         }
       },
       {
-        "path": "/users/{userId}/habits/{habitId}",
+        "path": "/users/{userId}/gymDays/{dayId}",
         "definition": {
-          "entityName": "habit",
-          "schema": {
-            "$ref": "#/backend/entities/Habit"
-          },
-          "description": "Manages individual habits for a specific user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "habitId",
-              "description": "The unique identifier for the habit."
-            }
-          ]
+          "entityName": "gymDay",
+          "schema": { "$ref": "#/backend/entities/GymDay" },
+          "description": "Days in the workout plan."
         }
       },
       {
-        "path": "/users/{userId}/tasks/{taskId}",
+        "path": "/users/{userId}/gymDays/{dayId}/muscles/{muscleId}",
         "definition": {
-          "entityName": "task",
-          "schema": {
-            "$ref": "#/backend/entities/Task"
-          },
-          "description": "Stores individual tasks for a specific user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "taskId",
-              "description": "The unique identifier for the task."
-            }
-          ]
+          "entityName": "gymMuscle",
+          "schema": { "$ref": "#/backend/entities/GymMuscle" },
+          "description": "Muscle groups per day."
         }
       },
       {
-        "path": "/users/{userId}/challenges/{challengeId}",
+        "path": "/users/{userId}/gymDays/{dayId}/muscles/{muscleId}/exercises/{exerciseId}",
         "definition": {
-          "entityName": "challenge",
-          "schema": {
-            "$ref": "#/backend/entities/Challenge"
-          },
-          "description": "Tracks challenges a specific user is undertaking.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "challengeId",
-              "description": "The unique identifier for the challenge."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/fitnessRecords/{fitnessRecordId}",
-        "definition": {
-          "entityName": "fitnessRecord",
-          "schema": {
-            "$ref": "#/backend/entities/FitnessRecord"
-          },
-          "description": "Captures fitness activity records.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "fitnessRecordId",
-              "description": "The unique identifier for the record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/financeTransactions/{financeTransactionId}",
-        "definition": {
-          "entityName": "financeTransaction",
-          "schema": {
-            "$ref": "#/backend/entities/FinanceTransaction"
-          },
-          "description": "Records individual financial transactions.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "financeTransactionId",
-              "description": "The unique identifier for the transaction."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/studyProgress/{studyProgressId}",
-        "definition": {
-          "entityName": "studyProgress",
-          "schema": {
-            "$ref": "#/backend/entities/StudyProgress"
-          },
-          "description": "Tracks a user's study progress.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "studyProgressId",
-              "description": "The unique identifier for the progress entry."
-            }
-          ]
+          "entityName": "gymExercise",
+          "schema": { "$ref": "#/backend/entities/GymExercise" },
+          "description": "Exercises per muscle group."
         }
       }
     ]
