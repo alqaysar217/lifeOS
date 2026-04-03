@@ -367,12 +367,12 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               <div className="space-y-4">
                 {[
                   { id: 'run', view: 'running' as const, hint: 'running person', desc: 'تتبع مسارك عبر GPS واحسب خطواتك بدقة' },
-                  { id: 'gym', view: 'gym' as const, hint: 'gym weightlifting', desc: 'نظام مرن لجدولة تمارين الحديد والعضلات' },
                   { id: 'pushups', view: 'rep_counter' as const, hint: 'pushups exercise', desc: 'سجل عدد عدات تمارين الضغط وراقب تقدمك' },
                   { id: 'jumprope', view: 'rep_counter' as const, hint: 'skipping rope', desc: 'تمرين ممتاز لحرق الدهون وتحسين اللياقة' },
                   { id: 'squats', view: 'rep_counter' as const, hint: 'squats exercise', desc: 'قوي عضلات الساقين والارداف بسهولة' },
                   { id: 'abs', view: 'rep_counter' as const, hint: 'abs workout', desc: 'ركز على عضلات البطن للحصول على قوام متناسق' },
-                  { id: 'pullups', view: 'rep_counter' as const, hint: 'pull-up exercise', desc: 'تقوية عضلات الظهر والذراعين' }
+                  { id: 'pullups', view: 'rep_counter' as const, hint: 'pull-up exercise', desc: 'تقوية عضلات الظهر والذراعين' },
+                  { id: 'gym', view: 'gym' as const, hint: 'gym weightlifting', desc: 'نظام مرن لجدولة تمارين الحديد والعضلات' }
                 ].map((ex) => (
                   <div key={ex.id} onClick={() => { setActiveExercise(ex.id as ExerciseType); setView(ex.view); }} className="bg-white p-4 rounded-[12px] premium-shadow border border-border/40 flex items-center gap-4 active:scale-[0.98] transition-all cursor-pointer group">
                     <div className="h-16 w-16 rounded-[12px] overflow-hidden relative shrink-0 shadow-md">
