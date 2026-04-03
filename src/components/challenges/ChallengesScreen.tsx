@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { 
   Zap, 
   Star, 
@@ -60,6 +60,8 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [achievedVal, setAchievedVal] = useState("");
 
+  const wakeLock = useRef<any>(null);
+
   const challengesQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, 'users', user.uid, 'challenges'), orderBy('startDate', 'desc'));
@@ -79,14 +81,50 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
 
   const levelProgress = ((totalPoints % 1000) / 1000) * 100;
 
+  const requestWakeLock = async () => {
+    if (typeof window !== 'undefined' && 'wakeLock' in navigator) {
+      try {
+        wakeLock.current = await (navigator as any).wakeLock.request('screen');
+      } catch (err) {
+        console.warn("WakeLock Error", err);
+      }
+    }
+  };
+
+  const releaseWakeLock = async () => {
+    if (wakeLock.current) {
+      await wakeLock.current.release();
+      wakeLock.current = null;
+    }
+  };
+
+  // حماية البيانات عند الخروج المفاجئ أو إغلاق الهاتف أثناء التحدي
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && isExecuting) {
+        // إذا خرج المستخدم، يمكننا حفظ التقدم الحالي كفشل أو محاولة حفظ النتيجة
+        // بناءً على رغبة المستخدم سنترك وضع السكون يمنع الإغلاق أولاً
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isExecuting, activeExecChallenge]);
+
   useEffect(() => {
     let interval: any;
     if (isExecuting) {
       interval = setInterval(() => {
         setTimerSeconds(prev => prev + 1);
       }, 1000);
+      requestWakeLock();
+    } else {
+      releaseWakeLock();
     }
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+      releaseWakeLock();
+    };
   }, [isExecuting]);
 
   const handleCreateChallenge = () => {
@@ -168,7 +206,7 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
     return (
       <div className="min-h-screen bg-background p-6 animate-in slide-in-from-left duration-300">
         <div className="flex items-center gap-3 mb-8">
-          <Button variant="ghost" size="icon" onClick={() => setView('list')} className="rounded-[10px] bg-white premium-shadow">
+          <Button variant="ghost" size="icon" onClick={() => setView('list')} className="rounded-[10px] bg-white premium-shadow hover:bg-white">
             <ChevronRight className="h-5 w-5" />
           </Button>
           <h2 className="text-xl font-black">بدء تحدي جديد</h2>
@@ -180,7 +218,7 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
               <div 
                 key={t.id} 
                 onClick={() => setSelectedTemplate(t)}
-                className={`p-4 rounded-[15px] border-2 transition-all cursor-pointer flex flex-col items-center gap-2 text-center ${selectedTemplate?.id === t.id ? 'border-primary bg-primary/5' : 'border-border/40 bg-white'}`}
+                className={`p-4 rounded-[10px] border-2 transition-all cursor-pointer flex flex-col items-center gap-2 text-center ${selectedTemplate?.id === t.id ? 'border-primary bg-primary/5' : 'border-border/40 bg-white'}`}
               >
                 <t.icon className={`h-6 w-6 ${selectedTemplate?.id === t.id ? 'text-primary' : 'text-muted-foreground'}`} />
                 <span className="text-xs font-bold">{t.title}</span>
@@ -197,7 +235,7 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
                   placeholder={`أدخل عدد الـ ${selectedTemplate.goal}...`}
                   value={targetVal}
                   onChange={(e) => setTargetVal(e.target.value)}
-                  className="h-12 rounded-[12px] font-bold"
+                  className="h-12 rounded-[10px] font-bold"
                 />
               </div>
               <div className="space-y-2">
@@ -207,13 +245,13 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
                   placeholder="30 يوم"
                   value={durationVal}
                   onChange={(e) => setDurationVal(e.target.value)}
-                  className="h-12 rounded-[12px] font-bold"
+                  className="h-12 rounded-[10px] font-bold"
                 />
               </div>
               <Button 
                 onClick={handleCreateChallenge}
                 disabled={!targetVal}
-                className="w-full h-12 primary-gradient text-white font-black rounded-[12px] shadow-xl"
+                className="w-full h-12 primary-gradient text-white font-black rounded-[10px] shadow-xl hover:opacity-90"
               >
                 تأكيد وبدء التحدي
               </Button>
@@ -246,13 +284,13 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
               placeholder="أدخل الرقم المحقق..."
               value={achievedVal}
               onChange={(e) => setAchievedVal(e.target.value)}
-              className="h-14 text-center text-2xl font-black rounded-[15px] border-primary/20"
+              className="h-14 text-center text-2xl font-black rounded-[10px] border-primary/20"
             />
           </div>
-          <Button onClick={finishExecution} className="w-full h-14 primary-gradient text-white font-black rounded-[15px] shadow-2xl active:scale-95 transition-all">
+          <Button onClick={finishExecution} className="w-full h-14 primary-gradient text-white font-black rounded-[10px] shadow-2xl active:scale-95 transition-all hover:opacity-90">
             إنهاء وحفظ النتيجة
           </Button>
-          <Button variant="ghost" onClick={() => setView('list')} className="w-full text-muted-foreground font-bold">إلغاء التحدي</Button>
+          <Button variant="ghost" onClick={() => setView('list')} className="w-full text-muted-foreground font-bold hover:bg-transparent">إلغاء التحدي</Button>
         </div>
       </div>
     );
@@ -263,7 +301,7 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow">
+            <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow hover:bg-white">
               <ChevronRight className="h-5 w-5 text-foreground" />
             </Button>
             <h2 className="text-2xl font-extrabold text-foreground font-cairo">التحديات</h2>
@@ -276,8 +314,8 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
       </div>
 
       <div className="px-6 py-6 space-y-8">
-        <div className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex items-center gap-5 relative overflow-hidden">
-          <div className="h-16 w-16 rounded-[12px] primary-gradient flex items-center justify-center shadow-lg shadow-primary/20 relative z-10">
+        <div className="bg-white p-5 rounded-[10px] premium-shadow border border-border/40 flex items-center gap-5 relative overflow-hidden">
+          <div className="h-16 w-16 rounded-[10px] primary-gradient flex items-center justify-center shadow-lg shadow-primary/20 relative z-10">
             <Crown className="h-8 w-8 text-white" />
           </div>
           <div className="flex-1 space-y-2 relative z-10">
@@ -306,11 +344,11 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
               {challenges.filter(c => c.status === 'active').map((ch) => (
                 <div 
                   key={ch.id} 
-                  className="bg-white p-5 rounded-[20px] premium-shadow border border-border/40 space-y-4 relative group"
+                  className="bg-white p-5 rounded-[10px] premium-shadow border border-border/40 space-y-4 relative group"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-[12px] soft-purple-bg flex items-center justify-center">
+                      <div className="h-10 w-10 rounded-[10px] soft-purple-bg flex items-center justify-center">
                         <Zap className="h-5 w-5 text-primary" />
                       </div>
                       <div>
@@ -318,7 +356,7 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
                         <p className="text-[10px] text-muted-foreground font-bold">الهدف: {ch.targetValue}</p>
                       </div>
                     </div>
-                    <Button onClick={() => startExecution(ch)} className="h-10 px-6 rounded-[10px] primary-gradient text-white text-xs font-bold shadow-lg shadow-primary/20">
+                    <Button onClick={() => startExecution(ch)} className="h-10 px-6 rounded-[10px] primary-gradient text-white text-xs font-bold shadow-lg shadow-primary/20 hover:opacity-90">
                       ابدأ الآن
                     </Button>
                   </div>
@@ -333,13 +371,13 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
               ))}
             </div>
           ) : (
-            <div className="py-12 text-center bg-white rounded-[20px] border border-dashed border-border/60 space-y-4">
+            <div className="py-12 text-center bg-white rounded-[10px] border border-dashed border-border/60 space-y-4">
               <Trophy className="h-12 w-12 text-muted-foreground/10 mx-auto" />
               <div className="space-y-1">
                 <p className="text-sm font-bold text-muted-foreground">لا توجد تحديات نشطة حالياً</p>
                 <p className="text-[10px] text-muted-foreground">ابدأ تحديك الأول لجمع النقاط ورفع مستواك</p>
               </div>
-              <Button onClick={() => setView('create')} variant="outline" className="rounded-[10px] font-bold text-xs">استعراض التحديات</Button>
+              <Button onClick={() => setView('create')} variant="outline" className="rounded-[10px] font-bold text-xs hover:bg-transparent">استعراض التحديات</Button>
             </div>
           )}
         </div>
@@ -349,7 +387,7 @@ export function ChallengesScreen({ onBack }: ChallengesScreenProps) {
           {challenges && challenges.filter(c => c.status !== 'active').length > 0 ? (
             <div className="space-y-3">
               {challenges.filter(c => c.status !== 'active').map((ch) => (
-                <div key={ch.id} className="bg-white/50 p-4 rounded-[15px] border border-border/20 flex items-center justify-between opacity-70">
+                <div key={ch.id} className="bg-white/50 p-4 rounded-[10px] border border-border/20 flex items-center justify-between opacity-70">
                   <div className="flex items-center gap-3">
                     {ch.status === 'completed' ? (
                       <CheckCircle2 className="h-5 w-5 text-green-500" />
