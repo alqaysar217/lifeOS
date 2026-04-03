@@ -402,7 +402,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                  <MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} />
               </div>
             ) : (
-              <div className="px-6 py-6 space-y-6">
+              <div className="px-6 py-6 space-y-8">
                 <div className={`rounded-[15px] py-4 px-5 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-red-600' : 'primary-gradient'}`}>
                   <div className="relative z-10">
                     <h3 className="text-lg font-black mb-4">{isTracking ? 'جاري التتبع...' : 'جلسة جديدة'}</h3>
@@ -420,12 +420,46 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     {!historyPath && (
                       <Button onClick={toggleTracking} className="w-full h-11 bg-white text-primary rounded-[12px] font-black">{isTracking ? 'إنهاء الجلسة' : 'ابدأ الآن'}</Button>
                     )}
-                    {historyPath && <Button onClick={() => setHistoryPath(null)} className="w-full h-11 bg-white/20 text-white rounded-[12px]">العودة</Button>}
+                    {historyPath && <Button onClick={() => setHistoryPath(null)} className="w-full h-11 bg-white/20 text-white rounded-[12px]">العودة للتتبع المباشر</Button>}
                   </div>
                 </div>
                 <div className="h-80 w-full rounded-[15px] overflow-hidden bg-slate-50 border relative">
                   <Button variant="ghost" size="icon" onClick={() => setIsMapExpanded(true)} className="absolute top-2 right-2 z-10 bg-white shadow-md"><Maximize2 className="h-4 w-4" /></Button>
                   <MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} />
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold text-foreground/90 font-cairo">سجل الجري والمشي</h3>
+                  {exerciseHistory.length > 0 ? (
+                    <div className="space-y-3">
+                      {exerciseHistory.map((rec) => (
+                        <div key={rec.id} onClick={() => handleRecordClick(rec)} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between active:scale-[0.98] transition-all cursor-pointer group">
+                          <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center text-primary">
+                              <MapPin className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold">{rec.distance} كم</p>
+                              <p className="text-[10px] text-muted-foreground">{rec.date?.seconds ? new Date(rec.date.seconds * 1000).toLocaleDateString('ar-EG') : 'تاريخ غير معروف'}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                             <span className="text-[10px] font-bold text-muted-foreground">{formatTime(rec.durationSeconds || 0)}</span>
+                             <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => { e.stopPropagation(); handleDeleteRecord(rec.id); }}
+                            >
+                               <Trash2 className="h-4 w-4" />
+                             </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-10 text-center text-xs text-muted-foreground">لا يوجد سجلات لهذه الرياضة حتى الآن.</div>
+                  )}
                 </div>
               </div>
             )}
@@ -433,7 +467,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         )}
 
         {view === 'rep_counter' && (
-          <div className="px-6 py-6 space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-32">
+          <div className="px-6 py-6 space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-32">
              <div className={`rounded-[20px] p-5 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
                 <div className="relative z-10 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -442,13 +476,48 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   </div>
                   <div className="text-left"><p className="text-[8px] font-bold opacity-60">وقت الجلسة</p><p className="text-2xl font-black tabular-nums">{formatTime(elapsedTime)}</p></div>
                 </div>
-                <Button onClick={toggleTracking} className="w-full h-11 bg-white text-primary rounded-[12px] font-black mt-4">{isTracking ? 'إنهاء التمرين' : 'ابدأ الآن'}</Button>
+                <Button onClick={toggleTracking} className="w-full h-11 bg-white text-primary rounded-[12px] font-black mt-4">{isTracking ? 'إنهاء التمرين وحفظ النتائج' : 'ابدأ التمرين الآن'}</Button>
              </div>
+
+             <div className="space-y-4">
+               <h3 className="text-lg font-bold text-foreground/90 font-cairo">سجل الأداء التاريخي</h3>
+               {exerciseHistory.length > 0 ? (
+                 <div className="space-y-3">
+                   {exerciseHistory.map((rec) => (
+                     <div key={rec.id} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between group">
+                       <div className="flex items-center gap-4">
+                         <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center text-primary">
+                           {getExerciseIcon(activeExercise)}
+                         </div>
+                         <div>
+                           <p className="text-sm font-bold">{rec.reps} عدّة</p>
+                           <p className="text-[10px] text-muted-foreground">{rec.date?.seconds ? new Date(rec.date.seconds * 1000).toLocaleDateString('ar-EG') : 'تاريخ غير معروف'}</p>
+                         </div>
+                       </div>
+                       <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-muted-foreground">{formatTime(rec.durationSeconds || 0)}</span>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleDeleteRecord(rec.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               ) : (
+                 <div className="py-10 text-center text-xs text-muted-foreground">ابدأ تمرينك الأول اليوم لبناء سجلك الخاص!</div>
+               )}
+             </div>
+
              <Dialog open={showRepDialog} onOpenChange={setShowRepDialog}>
                 <DialogContent className="font-cairo sm:max-w-md">
-                  <DialogHeader className="text-center"><DialogTitle className="text-2xl font-black">أحسنت!</DialogTitle><DialogDescription>كم عدد العدّات التي قمت بها؟</DialogDescription></DialogHeader>
-                  <Input type="number" placeholder="مثلاً: 25" value={inputReps} onChange={(e) => setInputReps(e.target.value)} className="h-14 text-center text-2xl font-black" />
-                  <DialogFooter className="flex-row gap-3"><Button onClick={handleFinalRepSave} className="flex-1 h-12 primary-gradient text-white font-black">حفظ</Button></DialogFooter>
+                  <DialogHeader className="text-center"><DialogTitle className="text-2xl font-black">أحسنت يا بطل!</DialogTitle><DialogDescription>كم عدد العدّات الإجمالي التي قمت بها في هذه الجلسة؟</DialogDescription></DialogHeader>
+                  <Input type="number" placeholder="مثلاً: 25" value={inputReps} onChange={(e) => setInputReps(e.target.value)} className="h-14 text-center text-2xl font-black rounded-[10px]" />
+                  <DialogFooter className="flex-row gap-3"><Button onClick={handleFinalRepSave} className="flex-1 h-12 primary-gradient text-white font-black rounded-[10px]">حفظ التكرارات</Button></DialogFooter>
                 </DialogContent>
              </Dialog>
           </div>
@@ -456,8 +525,11 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
         {view === 'stats' && (
            <div className="px-6 py-6 space-y-8 animate-in slide-in-from-bottom-4 pb-32">
-              <h3 className="text-lg font-bold">تقدمك في الجري (كم)</h3>
+              <h3 className="text-lg font-bold">تحليل التقدم في المسافة (كم)</h3>
               <div className="h-60 w-full bg-white p-4 rounded-[15px] premium-shadow border"><ResponsiveContainer width="100%" height="100%"><AreaChart data={statsData}><XAxis dataKey="name" /><YAxis hide /><Tooltip /><Area type="monotone" dataKey="distance" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.2} /></AreaChart></ResponsiveContainer></div>
+              
+              <h3 className="text-lg font-bold">تحليل التكرارات (آخر 7 جلسات)</h3>
+              <div className="h-60 w-full bg-white p-4 rounded-[15px] premium-shadow border"><ResponsiveContainer width="100%" height="100%"><LineChart data={statsData}><XAxis dataKey="name" /><YAxis hide /><Tooltip /><Line type="monotone" dataKey="reps" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 6, fill: '#8b5cf6' }} /></LineChart></ResponsiveContainer></div>
            </div>
         )}
       </div>
