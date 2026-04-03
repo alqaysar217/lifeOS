@@ -7,7 +7,9 @@ import {
   Navigation, Activity, Square, Loader2, Footprints, 
   History, BarChart3, Trophy, Timer,
   CheckCircle2, Trash2, Calendar as CalendarIcon,
-  PlusCircle, Flag, TimerReset, AlertCircle, Maximize2, Minimize2, X
+  PlusCircle, Flag, TimerReset, AlertCircle, Maximize2, Minimize2, X,
+  ChevronDown,
+  Calendar
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
@@ -53,20 +55,13 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const [isTracking, setIsTracking] = useState(false);
   const [isMapExpanded, setIsMapExpanded] = useState(false);
   
-  // Running & Challenge states
+  // Running states
   const [distance, setDistance] = useState(0); 
   const [steps, setSteps] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [path, setPath] = useState<{lat: number, lng: number}[]>([]);
   const [historyPath, setHistoryPath] = useState<[number, number][] | null>(null);
   
-  // Challenge config
-  const [isChallengeMode, setIsChallengeMode] = useState(false);
-  const [challengeTargetSteps, setChallengeTargetSteps] = useState<string>("500");
-  const [challengeTargetMinutes, setChallengeTargetMinutes] = useState<string>("5");
-  const [challengeTimeRemaining, setChallengeTimeRemaining] = useState(0);
-  const [challengeResult, setChallengeResult] = useState<'win' | 'lose' | null>(null);
-
   // Rep counter stats
   const [reps, setReps] = useState(0);
 
@@ -78,7 +73,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const lastCoord = useRef<GeolocationCoordinates | null>(null);
   const lastStepTime = useRef<number>(0);
   const wakeLock = useRef<any>(null);
-  const challengeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const fitnessQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -86,6 +80,30 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   }, [db, user]);
 
   const { data: records, isLoading: isHistoryLoading } = useCollection(fitnessQuery);
+
+  // Grouping records by day for the running view
+  const groupedRecords = useMemo(() => {
+    if (!records) return {};
+    const groups: Record<string, any[]> = {};
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    records.forEach(r => {
+      // Show only running/walking related records in the running view logs
+      if (r.type !== 'run' && r.type !== 'challenge') return;
+
+      const date = r.date?.seconds ? new Date(r.date.seconds * 1000) : new Date();
+      let key = date.toLocaleDateString('ar-EG', { month: 'long', day: 'numeric', year: 'numeric' });
+      
+      if (date.toDateString() === today.toDateString()) key = "اليوم";
+      else if (date.toDateString() === yesterday.toDateString()) key = "أمس";
+
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(r);
+    });
+    return groups;
+  }, [records]);
 
   const statsData = useMemo(() => {
     if (!records) return [];
@@ -116,7 +134,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (isTracking && !isChallengeMode) {
+    if (isTracking) {
       timer = setInterval(() => {
         setElapsedTime(prev => prev + 1);
       }, 1000);
@@ -124,7 +142,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [isTracking, isChallengeMode]);
+  }, [isTracking]);
 
   const handleMotion = (event: DeviceMotionEvent) => {
     const acc = event.accelerationIncludingGravity;
@@ -151,7 +169,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         if (!navigator.geolocation) return toast({ variant: "destructive", title: "خطأ", description: "GPS غير مدعوم." });
         
         setDistance(0); setSteps(0); setElapsedTime(0); setPath([]); lastCoord.current = null;
-        setChallengeResult(null); setHistoryPath(null);
+        setHistoryPath(null);
         
         setIsTracking(true);
         await requestWakeLock();
@@ -170,20 +188,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           (err) => console.error(err),
           { enableHighAccuracy: true }
         );
-
-        if (isChallengeMode) {
-          const targetTimeSec = parseInt(challengeTargetMinutes) * 60;
-          setChallengeTimeRemaining(targetTimeSec);
-          challengeTimerRef.current = setInterval(() => {
-            setChallengeTimeRemaining(prev => {
-              if (prev <= 1) {
-                stopAndSave();
-                return 0;
-              }
-              return prev - 1;
-            });
-          }, 1000);
-        }
       } else {
         setIsTracking(true);
         await requestWakeLock();
@@ -199,36 +203,23 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     setIsTracking(false);
     releaseWakeLock();
     
-    if (challengeTimerRef.current) clearInterval(challengeTimerRef.current);
-    
     if (activeExercise === 'run') {
       window.removeEventListener('devicemotion', handleMotion);
       if (watchId.current) navigator.geolocation.clearWatch(watchId.current);
       
-      let finalResult: 'win' | 'lose' | null = null;
-      if (isChallengeMode) {
-        finalResult = steps >= parseInt(challengeTargetSteps) ? 'win' : 'lose';
-        setChallengeResult(finalResult);
-      }
-
       if (db && user) {
         addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), {
-          type: isChallengeMode ? 'challenge' : 'run',
+          type: 'run',
           date: serverTimestamp(),
           steps: steps,
           distance: Number(distance.toFixed(3)),
           reps: 0,
-          durationSeconds: isChallengeMode ? (parseInt(challengeTargetMinutes) * 60 - challengeTimeRemaining) : elapsedTime,
+          durationSeconds: elapsedTime,
           userId: user.uid,
-          path: path, // حفظ المسار بالكامل
-          result: finalResult,
-          targetSteps: isChallengeMode ? parseInt(challengeTargetSteps) : null
+          path: path,
         });
       }
-      
-      if (!isChallengeMode) {
-        toast({ title: "تم الحفظ", description: "تم تسجيل النشاط بنجاح." });
-      }
+      toast({ title: "تم الحفظ", description: "تم تسجيل النشاط بنجاح." });
     } else {
       if (db && user) {
         addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), {
@@ -249,7 +240,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         setHistoryPath(record.path.map((p: any) => [p.lat, p.lng]));
         setActiveExercise('run');
         setView('running');
-        toast({ title: "عرض المسار", description: "يتم الآن عرض مسار الجلسة المختارة." });
+        // Scroll to top to see map
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         toast({ variant: "destructive", title: "بيانات ناقصة", description: "لم يتم العثور على مسار لهذه الجلسة." });
       }
@@ -345,7 +337,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-foreground/90 font-cairo">سجل النشاطات</h3>
               <div className="space-y-3">
-                {records?.slice(0, 15).map((r) => (
+                {records?.slice(0, 5).map((r) => (
                   <div key={r.id} onClick={() => handleRecordClick(r)} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between active:scale-[0.98] transition-transform cursor-pointer">
                     <div className="flex items-center gap-4">
                       <div className={`h-10 w-10 rounded-[8px] flex items-center justify-center ${r.type === 'run' ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500'}`}>
@@ -358,22 +350,11 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                         </p>
                       </div>
                     </div>
-                    <div className="text-left flex items-center gap-2">
-                       <div className="text-left">
-                        <p className="text-sm font-black text-primary">
-                          {r.type === 'run' || r.type === 'challenge' ? `${r.distance || 0} كم` : `${r.reps || 0} عدة`}
-                        </p>
-                        <p className="text-[8px] font-bold text-muted-foreground">{r.steps ? `${r.steps} خطوة` : formatTime(r.durationSeconds || 0)}</p>
-                      </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/30 hover:text-destructive"><X className="h-4 w-4" /></Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent dir="rtl" className="font-cairo">
-                          <AlertDialogHeader><AlertDialogTitle>حذف السجل؟</AlertDialogTitle><AlertDialogDescription>سيتم إزالة هذا النشاط نهائياً من سجلاتك.</AlertDialogDescription></AlertDialogHeader>
-                          <AlertDialogFooter className="flex-row gap-2"><AlertDialogCancel>إلغاء</AlertDialogCancel><AlertDialogAction onClick={() => handleDeleteRecord(r.id)} className="bg-destructive">حذف</AlertDialogAction></AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                    <div className="text-left">
+                      <p className="text-sm font-black text-primary">
+                        {r.type === 'run' || r.type === 'challenge' ? `${r.distance || 0} كم` : `${r.reps || 0} عدة`}
+                      </p>
+                      <p className="text-[8px] font-bold text-muted-foreground">{r.steps ? `${r.steps} خطوة` : formatTime(r.durationSeconds || 0)}</p>
                     </div>
                   </div>
                 ))}
@@ -382,7 +363,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           </div>
         )}
 
-        {/* شاشة الجري */}
+        {/* شاشة الجري والمشي */}
         {view === 'running' && (
           <div className={`animate-in slide-in-from-bottom-4 duration-500 pb-32 ${isMapExpanded ? 'fixed inset-0 z-[60] bg-background' : ''}`}>
             {isMapExpanded ? (
@@ -398,37 +379,14 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               </div>
             ) : (
               <div className="px-6 py-6 space-y-6">
-                {!isTracking && !challengeResult && !historyPath && (
-                  <div className="bg-white p-6 rounded-[15px] premium-shadow border border-border/40 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Flag className="h-5 w-5 text-primary" />
-                        <h3 className="text-sm font-bold">بدء تحدي جديد</h3>
-                      </div>
-                      <Switch checked={isChallengeMode} onCheckedChange={setIsChallengeMode} />
-                    </div>
-                    {isChallengeMode && (
-                      <div className="grid grid-cols-2 gap-4 animate-in fade-in">
-                        <div className="space-y-1"><Label className="text-[10px] font-bold">هدف الخطوات</Label><Input type="number" value={challengeTargetSteps} onChange={(e) => setChallengeTargetSteps(e.target.value)} className="h-10" /></div>
-                        <div className="space-y-1"><Label className="text-[10px] font-bold">الوقت (دقائق)</Label><Input type="number" value={challengeTargetMinutes} onChange={(e) => setChallengeTargetMinutes(e.target.value)} className="h-10" /></div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 <div className={`rounded-[15px] p-6 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-red-600' : historyPath ? 'bg-slate-800' : 'primary-gradient'}`}>
                   <div className="relative z-10">
                     <div className="flex justify-between items-start mb-6">
                       <h3 className="text-xl font-black">{isTracking ? 'جاري التتبع...' : historyPath ? 'استعراض المسار' : 'جلسة جديدة'}</h3>
-                      {isTracking && isChallengeMode && (
-                        <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20">
-                          <TimerReset className="h-4 w-4" /><span className="text-xs font-black tabular-nums">{formatTime(challengeTimeRemaining)}</span>
-                        </div>
-                      )}
                     </div>
                     
                     <div className="grid grid-cols-3 gap-3 mb-8">
-                      <div className="text-center bg-white/10 p-2 rounded-lg"><Clock className="h-4 w-4 mx-auto mb-1 opacity-50"/><p className="text-[9px] font-bold opacity-70">الوقت</p><p className="text-sm font-black tabular-nums">{formatTime(isTracking && isChallengeMode ? parseInt(challengeTargetMinutes) * 60 - challengeTimeRemaining : elapsedTime)}</p></div>
+                      <div className="text-center bg-white/10 p-2 rounded-lg"><Clock className="h-4 w-4 mx-auto mb-1 opacity-50"/><p className="text-[9px] font-bold opacity-70">الوقت</p><p className="text-sm font-black tabular-nums">{formatTime(elapsedTime)}</p></div>
                       <div className="text-center bg-white/10 p-2 rounded-lg"><Footprints className="h-4 w-4 mx-auto mb-1 opacity-50"/><p className="text-[9px] font-bold opacity-70">الخطوات</p><p className="text-sm font-black tabular-nums">{steps}</p></div>
                       <div className="text-center bg-white/10 p-2 rounded-lg"><Navigation className="h-4 w-4 mx-auto mb-1 opacity-50"/><p className="text-[9px] font-bold opacity-70">المسافة</p><p className="text-sm font-black tabular-nums">{distance.toFixed(2)} كم</p></div>
                     </div>
@@ -453,6 +411,78 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   <div className="h-80 w-full rounded-[15px] overflow-hidden bg-slate-50 border border-border/40 shadow-inner relative">
                     <MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} />
                   </div>
+                </div>
+
+                {/* سجل الركض المبوب أسفل الخارطة */}
+                <div className="space-y-6 pt-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-foreground/90 font-cairo">سجل الركض</h3>
+                    <div className="h-8 w-8 rounded-[8px] bg-primary/5 text-primary flex items-center justify-center">
+                      <History className="h-4 w-4" />
+                    </div>
+                  </div>
+
+                  {Object.keys(groupedRecords).length > 0 ? (
+                    Object.entries(groupedRecords).map(([day, items]) => (
+                      <div key={day} className="space-y-3">
+                        <div className="flex items-center gap-2 px-1">
+                          <Calendar className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs font-bold text-muted-foreground">{day}</span>
+                        </div>
+                        <div className="space-y-2">
+                          {items.map((r) => (
+                            <div 
+                              key={r.id} 
+                              onClick={() => handleRecordClick(r)}
+                              className="bg-white p-4 rounded-[12px] premium-shadow border border-border/40 flex items-center justify-between active:scale-[0.98] transition-transform cursor-pointer"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="h-9 w-9 rounded-[8px] bg-primary/5 text-primary flex items-center justify-center">
+                                  <Navigation className="h-4.5 w-4.5" />
+                                </div>
+                                <div>
+                                  <h4 className="text-xs font-bold text-foreground">ركض/مشي</h4>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {r.date?.seconds ? new Date(r.date.seconds * 1000).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '؟'}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-left flex items-center gap-3">
+                                <div className="text-left">
+                                  <p className="text-sm font-black text-foreground">{r.distance?.toFixed(2)} كم</p>
+                                  <p className="text-[9px] font-bold text-muted-foreground">{formatTime(r.durationSeconds || 0)}</p>
+                                </div>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/30 hover:text-destructive" onClick={(e) => e.stopPropagation()}>
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent dir="rtl" className="font-cairo">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>حذف السجل؟</AlertDialogTitle>
+                                      <AlertDialogDescription>سيتم إزالة هذا النشاط نهائياً من سجلاتك.</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter className="flex-row gap-2">
+                                      <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDeleteRecord(r.id)} className="bg-destructive">حذف</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-20 text-center space-y-4">
+                      <div className="h-16 w-16 rounded-full soft-purple-bg flex items-center justify-center mx-auto opacity-30">
+                        <Navigation className="h-8 w-8 text-primary" />
+                      </div>
+                      <p className="text-xs font-bold text-muted-foreground">لا توجد سجلات ركض بعد</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -488,3 +518,4 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     </div>
   );
 }
+
