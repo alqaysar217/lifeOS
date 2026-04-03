@@ -10,7 +10,8 @@ import {
   PlusCircle, Flag, TimerReset, AlertCircle, Maximize2, Minimize2, X,
   ChevronDown,
   Calendar,
-  Save
+  Save,
+  CircleCheck
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
@@ -101,7 +102,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     yesterday.setDate(today.getDate() - 1);
 
     records.forEach(r => {
-      // Show only running/walking related records in the running view logs
       if (r.type !== 'run' && r.type !== 'challenge') return;
 
       const date = r.date?.seconds ? new Date(r.date.seconds * 1000) : new Date();
@@ -300,6 +300,28 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     }
   };
 
+  const getExerciseIcon = (type: string) => {
+    switch (type) {
+      case 'run': return <Navigation className="h-6 w-6" />;
+      case 'pushups': return <Dumbbell className="h-6 w-6" />;
+      case 'squats': return <Zap className="h-6 w-6" />;
+      case 'abs': return <Activity className="h-6 w-6" />;
+      case 'jumprope': return <TimerReset className="h-6 w-6" />;
+      default: return <Activity className="h-6 w-6" />;
+    }
+  };
+
+  const getExerciseColor = (type: string) => {
+    switch (type) {
+      case 'run': return 'bg-blue-500';
+      case 'pushups': return 'bg-orange-500';
+      case 'squats': return 'bg-green-600';
+      case 'abs': return 'bg-red-500';
+      case 'jumprope': return 'bg-purple-600';
+      default: return 'bg-primary';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* الترويسة */}
@@ -350,14 +372,29 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-foreground/90 font-cairo">ابدأ نشاطك</h3>
               <div className="grid grid-cols-2 gap-4">
-                <div onClick={() => { setActiveExercise('run'); setView('running'); }} className="bg-white p-5 rounded-[12px] premium-shadow border border-border/40 space-y-4 active:scale-95 transition-all cursor-pointer group">
-                  <div className="h-12 w-12 rounded-[10px] bg-blue-500 flex items-center justify-center text-white shadow-lg"><Navigation className="h-6 w-6" /></div>
-                  <div><h4 className="text-xs font-bold text-foreground">الجري والمشي</h4><p className="text-[9px] text-muted-foreground font-bold uppercase">تتبع GPS وتحدي</p></div>
-                </div>
-                <div onClick={() => { setActiveExercise('pushups'); setView('rep_counter'); }} className="bg-white p-5 rounded-[12px] premium-shadow border border-border/40 space-y-4 active:scale-95 transition-all cursor-pointer group">
-                  <div className="h-12 w-12 rounded-[10px] bg-orange-500 flex items-center justify-center text-white shadow-lg"><Dumbbell className="h-6 w-6" /></div>
-                  <div><h4 className="text-xs font-bold text-foreground">تمارين الضغط</h4><p className="text-[9px] text-muted-foreground font-bold uppercase">سجل عدّاتك</p></div>
-                </div>
+                {[
+                  { id: 'run', view: 'running' as const },
+                  { id: 'pushups', view: 'rep_counter' as const },
+                  { id: 'jumprope', view: 'rep_counter' as const },
+                  { id: 'squats', view: 'rep_counter' as const },
+                  { id: 'abs', view: 'rep_counter' as const },
+                ].map((ex) => (
+                  <div 
+                    key={ex.id}
+                    onClick={() => { setActiveExercise(ex.id as ExerciseType); setView(ex.view); }} 
+                    className="bg-white p-5 rounded-[12px] premium-shadow border border-border/40 space-y-4 active:scale-95 transition-all cursor-pointer group"
+                  >
+                    <div className={`h-12 w-12 rounded-[10px] ${getExerciseColor(ex.id)} flex items-center justify-center text-white shadow-lg`}>
+                      {getExerciseIcon(ex.id)}
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-foreground">{getExerciseName(ex.id)}</h4>
+                      <p className="text-[9px] text-muted-foreground font-bold uppercase">
+                        {ex.id === 'run' ? 'تتبع GPS' : 'سجل عدّاتك'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -367,8 +404,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 {records?.slice(0, 5).map((r) => (
                   <div key={r.id} onClick={() => handleRecordClick(r)} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between active:scale-[0.98] transition-transform cursor-pointer">
                     <div className="flex items-center gap-4">
-                      <div className={`h-10 w-10 rounded-[8px] flex items-center justify-center ${r.type === 'run' ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500'}`}>
-                        {r.type === 'run' ? <Navigation className="h-5 w-5" /> : <Dumbbell className="h-5 w-5" />}
+                      <div className={`h-10 w-10 rounded-[8px] flex items-center justify-center bg-slate-50 text-muted-foreground`}>
+                        {getExerciseIcon(r.type)}
                       </div>
                       <div>
                         <h4 className="text-sm font-bold text-foreground">{getExerciseName(r.type)}</h4>
@@ -529,7 +566,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           </div>
         )}
 
-        {/* شاشة العدّ اليدوي المحسنة والمركزة */}
+        {/* شاشة العدّ اليدوي (تمارين الضغط، القرفصاء، نط الحبل، البطن) */}
         {view === 'rep_counter' && (
           <div className="px-6 py-6 space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-32">
              <div className={`rounded-[20px] p-5 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
@@ -537,7 +574,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="h-12 w-12 rounded-[12px] bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/20">
-                        <Dumbbell className="h-6 w-6 text-white" />
+                        {getExerciseIcon(activeExercise)}
                       </div>
                       <div>
                         <h3 className="text-sm font-black">{getExerciseName(activeExercise)}</h3>
@@ -604,8 +641,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     {exerciseHistory.map((r) => (
                       <div key={r.id} className="bg-white p-4 rounded-[15px] premium-shadow border border-border/40 flex items-center justify-between animate-in fade-in slide-in-from-right-4">
                         <div className="flex items-center gap-4">
-                          <div className="h-11 w-11 rounded-[12px] bg-orange-50 text-orange-500 flex items-center justify-center">
-                            <Zap className="h-5 w-5" />
+                          <div className={`h-11 w-11 rounded-[12px] flex items-center justify-center bg-slate-50`}>
+                            {getExerciseIcon(r.type)}
                           </div>
                           <div>
                             <h4 className="text-sm font-black text-foreground">{r.reps} عدة</h4>
@@ -664,3 +701,4 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     </div>
   );
 }
+
