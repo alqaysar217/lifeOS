@@ -222,7 +222,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const toggleTracking = async () => {
     if (!isTracking) {
       if (activeExercise === 'run') {
-        if (!navigator.geolocation) return toast({ variant: "destructive", title: "خطأ", description: "GPS غير مدعوم." });
+        if (!navigator.geolocation) return toast({ variant: "destructive", title: "Error", description: "GPS not supported." });
         setDistance(0); setElevationGain(0); setSteps(0); setElapsedTime(0); setPath([]); lastCoord.current = null;
         setHistoryPath(null);
         setIsTracking(true);
@@ -234,7 +234,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             setPath(prev => [...prev, current]);
             
             if (lastCoord.current) {
-              // Calculate Distance
               const R = 6371;
               const lat1 = lastCoord.current.latitude;
               const lon1 = lastCoord.current.longitude;
@@ -246,10 +245,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               const d = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
               if (d > 0.001) setDistance(prev => prev + d);
 
-              // Calculate Elevation Gain
               if (pos.coords.altitude !== null && lastCoord.current.altitude !== null) {
                 const altDiff = pos.coords.altitude - lastCoord.current.altitude;
-                if (altDiff > 1) { // 1 meter threshold to avoid GPS noise
+                if (altDiff > 1) {
                   setElevationGain(prev => prev + altDiff);
                 }
               }
@@ -272,7 +270,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         window.removeEventListener('devicemotion', handleMotion);
         if (watchId.current) navigator.geolocation.clearWatch(watchId.current);
         saveRunRecord();
-        toast({ title: "تم الحفظ", description: "تم تسجيل النشاط بنجاح." });
+        toast({ title: "Saved", description: "Activity recorded successfully." });
       } else {
         setShowRepDialog(true);
       }
@@ -292,7 +290,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     }
     setShowRepDialog(false);
     setInputReps("");
-    toast({ title: "تم الحفظ", description: "تم تسجيل التمرين بنجاح." });
+    toast({ title: "Saved", description: "Workout recorded successfully." });
   };
 
   const handleRecordClick = (record: any) => {
@@ -307,7 +305,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const handleDeleteRecord = (recordId: string) => {
     if (!db || !user) return;
     deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'fitnessRecords', recordId));
-    toast({ title: "تم الحذف", description: "تمت إزالة السجل بنجاح." });
+    toast({ title: "Deleted", description: "Record removed successfully." });
   };
 
   const formatTime = (s: number) => {
@@ -361,55 +359,46 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     if (!ctx) return;
 
     canvas.width = 1080;
-    canvas.height = 1080;
+    canvas.height = 1440; // Increased height for 5-row vertical layout
 
     // Background Gradient
-    const gradient = ctx.createLinearGradient(0, 0, 1080, 1080);
+    const gradient = ctx.createLinearGradient(0, 0, 0, 1440);
     gradient.addColorStop(0, '#8b5cf6');
     gradient.addColorStop(1, '#6366f1');
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 1080, 1080);
+    ctx.fillRect(0, 0, 1080, 1440);
 
-    // Card Overlay
+    // Overlay
     ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
-    ctx.roundRect(50, 50, 980, 980, 50);
+    ctx.roundRect(40, 40, 1000, 1360, 40);
     ctx.fill();
 
-    // Text Config
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
-    ctx.direction = "rtl";
+    ctx.textBaseline = "middle";
 
-    // User Name
-    ctx.font = "bold 60px Cairo";
-    ctx.fillText(profile?.name || "بطل حياتي", 540, 150);
+    // Row 1: Distance (English)
+    ctx.font = "bold 40px Arial";
+    ctx.fillText("DISTANCE", 540, 150);
+    ctx.font = "bold 180px Arial";
+    ctx.fillText(`${distance.toFixed(2)} km`, 540, 260);
 
-    // Title
-    ctx.font = "bold 40px Cairo";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-    ctx.fillText("إنجاز جديد في الجري", 540, 210);
+    // Row 2: Elevation (English)
+    ctx.font = "bold 40px Arial";
+    ctx.fillText("ELEVATION GAIN", 540, 420);
+    ctx.font = "bold 140px Arial";
+    ctx.fillText(`${Math.round(elevationGain)} m`, 540, 520);
 
-    // Stats
-    const stats = [
-      { label: "المسافة", value: `${distance.toFixed(2)} كم` },
-      { label: "الارتفاع", value: `${Math.round(elevationGain)} م` },
-      { label: "الوقت", value: formatTime(elapsedTime) }
-    ];
+    // Row 3: Time (English)
+    ctx.font = "bold 40px Arial";
+    ctx.fillText("DURATION", 540, 680);
+    ctx.font = "bold 140px Arial";
+    ctx.fillText(formatTime(elapsedTime), 540, 780);
 
-    stats.forEach((s, i) => {
-      const x = 270 + (i * 270);
-      ctx.fillStyle = "white";
-      ctx.font = "bold 80px Cairo";
-      ctx.fillText(s.value, x, 400);
-      ctx.font = "bold 30px Cairo";
-      ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-      ctx.fillText(s.label, x, 450);
-    });
-
-    // Path Drawing (Simplified)
+    // Row 4: Path Visualization
     if (path.length > 1) {
-      ctx.strokeStyle = "white";
-      ctx.lineWidth = 15;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+      ctx.lineWidth = 12;
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
       ctx.beginPath();
@@ -421,30 +410,37 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       const minLng = Math.min(...lngs);
       const maxLng = Math.max(...lngs);
       
-      const scale = 400;
-      const offsetX = 540;
-      const offsetY = 750;
+      const drawWidth = 600;
+      const drawHeight = 300;
+      const centerX = 540;
+      const centerY = 1050;
+
+      const latRange = maxLat - minLat || 0.0001;
+      const lngRange = maxLng - minLng || 0.0001;
+      const scale = Math.min(drawWidth / lngRange, drawHeight / latRange) * 0.8;
 
       path.forEach((p, i) => {
-        const x = offsetX + ((p.lng - (minLng + maxLng) / 2) * scale * 50);
-        const y = offsetY - ((p.lat - (minLat + maxLat) / 2) * scale * 50);
+        const x = centerX + (p.lng - (minLng + maxLng) / 2) * scale;
+        const y = centerY - (p.lat - (minLat + maxLat) / 2) * scale;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       });
       ctx.stroke();
     }
 
-    // Logo Placeholder Text
-    ctx.font = "bold 40px Cairo";
-    ctx.fillStyle = "white";
-    ctx.fillText("تطبيق حياتي - LifeOS", 540, 1000);
+    // Row 5: Branding (English)
+    ctx.font = "bold 60px Arial";
+    ctx.fillText("LifeOS - My Life Assistant", 540, 1300);
+    ctx.font = "normal 30px Arial";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+    ctx.fillText("Powered by Hayati", 540, 1360);
 
     // Download
     const link = document.createElement("a");
-    link.download = `workout-${new Date().getTime()}.png`;
-    link.href = canvas.toDataURL();
+    link.download = `Hayati-Workout-${new Date().getTime()}.png`;
+    link.href = canvas.toDataURL("image/png");
     link.click();
-    toast({ title: "تم التصدير", description: "تم حفظ صورة الإنجاز في جهازك." });
+    toast({ title: "Success", description: "Achievement card downloaded!" });
   };
 
   return (
@@ -537,31 +533,30 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               </div>
             ) : (
               <div className="px-6 py-6 space-y-8">
-                {/* Strava Style Stats Panel */}
                 <div className={`rounded-[20px] py-6 px-6 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-orange-600' : 'primary-gradient'}`}>
                   <div className="relative z-10">
                     <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-lg font-black">{isTracking ? 'جاري التتبع (Strava Style)' : 'جلسة جري جديدة'}</h3>
+                      <h3 className="text-lg font-black">{isTracking ? 'Tracking Session' : 'New Run'}</h3>
                       {isTracking && <div className="h-2 w-2 rounded-full bg-white animate-ping" />}
                     </div>
 
                     <div className="grid grid-cols-3 gap-4 mb-8">
                       <div className="text-center space-y-1">
-                        <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest">المسافة</p>
+                        <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest">Distance</p>
                         <div className="flex items-baseline justify-center gap-1">
                           <span className="text-3xl font-black tabular-nums">{distance.toFixed(2)}</span>
-                          <span className="text-[10px] font-bold">كم</span>
+                          <span className="text-[10px] font-bold">km</span>
                         </div>
                       </div>
                       <div className="text-center space-y-1 border-x border-white/10">
-                        <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest">الارتفاع</p>
+                        <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest">Elevation</p>
                         <div className="flex items-baseline justify-center gap-1">
                           <span className="text-3xl font-black tabular-nums">{Math.round(elevationGain)}</span>
-                          <span className="text-[10px] font-bold">م</span>
+                          <span className="text-[10px] font-bold">m</span>
                         </div>
                       </div>
                       <div className="text-center space-y-1">
-                        <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest">الوقت</p>
+                        <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest">Time</p>
                         <div className="flex items-baseline justify-center gap-1">
                           <span className="text-3xl font-black tabular-nums">{formatTime(elapsedTime)}</span>
                         </div>
@@ -570,17 +565,16 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
                     {!historyPath && (
                       <Button onClick={toggleTracking} className="w-full h-14 bg-white text-primary rounded-[15px] font-black shadow-xl hover:bg-white transition-none active:scale-95">
-                        {isTracking ? 'إيقاف وحفظ الإنجاز' : 'ابدأ الآن'}
+                        {isTracking ? 'Stop & Save' : 'Start Running'}
                       </Button>
                     )}
                     {historyPath && (
                       <div className="flex gap-2">
-                        <Button onClick={() => setHistoryPath(null)} className="flex-1 h-12 bg-white/20 text-white rounded-[15px] hover:bg-white/30 transition-none">العودة للتتبع</Button>
+                        <Button onClick={() => setHistoryPath(null)} className="flex-1 h-12 bg-white/20 text-white rounded-[15px] hover:bg-white/30 transition-none">Resume Tracking</Button>
                         <Button onClick={() => setShowShareModal(true)} className="h-12 w-12 bg-white text-primary rounded-[15px] flex items-center justify-center hover:bg-white transition-none"><Share2 className="h-5 w-5" /></Button>
                       </div>
                     )}
                   </div>
-                  {/* Decorative Elements */}
                   <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
                 </div>
 
@@ -644,10 +638,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     <div className="h-12 w-12 rounded-[12px] bg-white/20 flex items-center justify-center">{getExerciseIcon(activeExercise)}</div>
                     <div><h3 className="text-sm font-black">{getExerciseName(activeExercise)}</h3><p className="text-white/70 text-[8px] font-bold uppercase">{isTracking ? "حافظ على وتيرتك" : "اضغط للبدء"}</p></div>
                   </div>
-                  <div className="text-left"><p className="text-[8px] font-bold opacity-60">وقت الجلسة</p><p className="text-2xl font-black tabular-nums">{formatTime(elapsedTime)}</p></div>
+                  <div className="text-left"><p className="text-[8px] font-bold opacity-60">Session Time</p><p className="text-2xl font-black tabular-nums">{formatTime(elapsedTime)}</p></div>
                 </div>
                 <Button onClick={toggleTracking} className="w-full h-11 bg-white text-primary rounded-[12px] font-black mt-4 hover:bg-white transition-none">
-                  {isTracking ? 'إنهاء وحفظ الإنجاز' : 'ابدأ الآن'}
+                  {isTracking ? 'Finish' : 'Start Now'}
                 </Button>
              </div>
 
@@ -688,11 +682,11 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
              <Dialog open={showRepDialog} onOpenChange={setShowRepDialog}>
                 <DialogContent className="font-cairo rounded-[10px] sm:max-w-md">
                   <DialogHeader className="text-center">
-                    <DialogTitle className="text-2xl font-black">أحسنت يا بطل!</DialogTitle>
-                    <DialogDescription>كم عدد العدّات الإجمالي التي قمت بها في هذه الجلسة؟</DialogDescription>
+                    <DialogTitle className="text-2xl font-black">Well done!</DialogTitle>
+                    <DialogDescription>How many reps did you achieve in this session?</DialogDescription>
                   </DialogHeader>
-                  <Input type="number" placeholder="مثلاً: 25" value={inputReps} onChange={(e) => setInputReps(e.target.value)} className="h-14 text-center text-2xl font-black rounded-[10px]" />
-                  <DialogFooter className="flex-row gap-3"><Button onClick={handleFinalRepSave} className="flex-1 h-12 primary-gradient text-white font-black rounded-[10px] hover:opacity-90 transition-none">حفظ التكرارات</Button></DialogFooter>
+                  <Input type="number" placeholder="e.g. 25" value={inputReps} onChange={(e) => setInputReps(e.target.value)} className="h-14 text-center text-2xl font-black rounded-[10px]" />
+                  <DialogFooter className="flex-row gap-3"><Button onClick={handleFinalRepSave} className="flex-1 h-12 primary-gradient text-white font-black rounded-[10px] hover:opacity-90 transition-none">Save Reps</Button></DialogFooter>
                 </DialogContent>
              </Dialog>
           </div>
@@ -709,52 +703,58 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         )}
       </div>
 
-      {/* Strava Share Modal */}
       <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
         <DialogContent className="p-0 border-none bg-transparent shadow-none max-w-sm sm:max-w-md overflow-hidden">
           <DialogHeader className="sr-only">
-            <DialogTitle>إنجاز رياضي جديد</DialogTitle>
+            <DialogTitle>Workout Achievement</DialogTitle>
           </DialogHeader>
-          <div className="primary-gradient p-8 rounded-[30px] text-white space-y-8 relative overflow-hidden">
-            <div className="relative z-10 flex flex-col items-center text-center space-y-6">
-              <div className="h-16 w-16 rounded-full bg-white/20 flex items-center justify-center border border-white/30 backdrop-blur-md">
-                <Trophy className="h-8 w-8 text-white" />
-              </div>
+          <div className="primary-gradient p-8 rounded-[30px] text-white space-y-10 relative overflow-hidden flex flex-col items-center">
+            <div className="relative z-10 w-full space-y-8">
               
-              <div>
-                <h3 className="text-2xl font-black mb-1">إنجاز رائع يا {profile?.name?.split(' ')[0]}!</h3>
-                <p className="text-white/60 text-xs font-bold uppercase tracking-widest">لقد حطمت أرقامك السابقة</p>
-              </div>
-
-              <div className="grid grid-cols-3 gap-6 w-full py-6 border-y border-white/10">
-                <div className="space-y-1">
-                  <p className="text-3xl font-black tabular-nums">{(lastWorkoutData?.distance || distance).toFixed(2)}</p>
-                  <p className="text-[10px] font-bold opacity-60">كم</p>
-                </div>
-                <div className="space-y-1 border-x border-white/10">
-                  <p className="text-3xl font-black tabular-nums">{Math.round(lastWorkoutData?.elevationGain || elevationGain)}</p>
-                  <p className="text-[10px] font-bold opacity-60">م صعود</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-3xl font-black tabular-nums">{formatTime(lastWorkoutData?.durationSeconds || elapsedTime)}</p>
-                  <p className="text-[10px] font-bold opacity-60">وقت</p>
+              {/* Row 1: Distance */}
+              <div className="text-center space-y-1">
+                <p className="text-white/60 text-xs font-bold uppercase tracking-widest">DISTANCE</p>
+                <div className="flex items-baseline justify-center gap-2">
+                  <p className="text-6xl font-black tabular-nums">{(lastWorkoutData?.distance || distance).toFixed(2)}</p>
+                  <p className="text-xl font-bold opacity-80">KM</p>
                 </div>
               </div>
 
-              {/* Simplified SVG Path Preview */}
-              <div className="w-full h-40 bg-white/10 rounded-[20px] relative overflow-hidden flex items-center justify-center">
-                <svg viewBox="0 0 100 100" className="w-full h-full opacity-50 stroke-white fill-none" strokeWidth="2">
-                  <path d={path.length > 1 ? `M ${path.map((p, i) => `${50 + (p.lng - path[0].lng) * 1000},${50 - (p.lat - path[0].lat) * 1000}`).join(' L ')}` : ''} />
+              {/* Row 2: Elevation */}
+              <div className="text-center space-y-1">
+                <p className="text-white/60 text-xs font-bold uppercase tracking-widest">ELEVATION GAIN</p>
+                <div className="flex items-baseline justify-center gap-2">
+                  <p className="text-5xl font-black tabular-nums">{Math.round(lastWorkoutData?.elevationGain || elevationGain)}</p>
+                  <p className="text-lg font-bold opacity-80">M</p>
+                </div>
+              </div>
+
+              {/* Row 3: Time */}
+              <div className="text-center space-y-1">
+                <p className="text-white/60 text-xs font-bold uppercase tracking-widest">DURATION</p>
+                <p className="text-5xl font-black tabular-nums">{formatTime(lastWorkoutData?.durationSeconds || elapsedTime)}</p>
+              </div>
+
+              {/* Row 4: Path Preview */}
+              <div className="w-full h-44 bg-white/10 rounded-[25px] relative overflow-hidden flex items-center justify-center border border-white/10 backdrop-blur-sm">
+                <svg viewBox="0 0 100 100" className="w-full h-full opacity-60 stroke-white fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d={path.length > 1 ? `M ${path.map((p, i) => `${50 + (p.lng - path[0].lng) * 1200},${50 - (p.lat - path[0].lat) * 1200}`).join(' L ')}` : ''} />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <Navigation className="h-8 w-8 text-white/20 rotate-45" />
+                  <Navigation className="h-10 w-10 text-white/10 rotate-45" />
                 </div>
+              </div>
+
+              {/* Row 5: App Branding */}
+              <div className="text-center pt-2">
+                <p className="text-lg font-black tracking-tight">LifeOS - My Personal Assistant</p>
+                <p className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em]">Powered by Hayati</p>
               </div>
 
               <div className="flex gap-4 w-full pt-4">
                 <Button onClick={exportShareCard} className="flex-1 h-14 bg-white text-primary rounded-[20px] font-black shadow-xl hover:bg-white transition-none flex items-center justify-center gap-2">
                   <Download className="h-5 w-5" />
-                  تحميل الصورة
+                  Download Card
                 </Button>
                 <Button variant="ghost" onClick={() => setShowShareModal(false)} className="h-14 w-14 rounded-[20px] bg-white/10 text-white hover:bg-white/20 transition-none">
                   <X className="h-6 w-6" />
@@ -762,9 +762,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               </div>
             </div>
             
-            {/* Decorative BG */}
-            <div className="absolute -left-20 -top-20 w-60 h-60 bg-white/5 rounded-full blur-3xl" />
-            <div className="absolute -right-20 -bottom-20 w-60 h-60 bg-white/5 rounded-full blur-3xl" />
+            <div className="absolute -left-20 -top-20 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
+            <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
           </div>
         </DialogContent>
       </Dialog>
