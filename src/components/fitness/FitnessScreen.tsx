@@ -359,46 +359,41 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     if (!ctx) return;
 
     canvas.width = 1080;
-    canvas.height = 1440; // Increased height for 5-row vertical layout
+    canvas.height = 1440;
 
-    // Background Gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, 1440);
-    gradient.addColorStop(0, '#8b5cf6');
-    gradient.addColorStop(1, '#6366f1');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 1080, 1440);
-
-    // Overlay
-    ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
-    ctx.roundRect(40, 40, 1000, 1360, 40);
-    ctx.fill();
+    // IMPORTANT: No background fill. Canvas remains transparent (muffaragha)
 
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    // Row 1: Distance (English)
-    ctx.font = "bold 40px Arial";
+    // Typography Setup
+    const dataDistance = (lastWorkoutData?.distance || distance).toFixed(2);
+    const dataElevation = Math.round(lastWorkoutData?.elevationGain || elevationGain);
+    const dataTime = formatTime(lastWorkoutData?.durationSeconds || elapsedTime);
+
+    // Row 1: Distance
+    ctx.font = "bold 44px Arial";
     ctx.fillText("DISTANCE", 540, 150);
-    ctx.font = "bold 180px Arial";
-    ctx.fillText(`${distance.toFixed(2)} km`, 540, 260);
+    ctx.font = "black 160px Arial";
+    ctx.fillText(`${dataDistance} KM`, 540, 260);
 
-    // Row 2: Elevation (English)
-    ctx.font = "bold 40px Arial";
+    // Row 2: Elevation
+    ctx.font = "bold 44px Arial";
     ctx.fillText("ELEVATION GAIN", 540, 420);
-    ctx.font = "bold 140px Arial";
-    ctx.fillText(`${Math.round(elevationGain)} m`, 540, 520);
+    ctx.font = "bold 130px Arial";
+    ctx.fillText(`${dataElevation} M`, 540, 520);
 
-    // Row 3: Time (English)
-    ctx.font = "bold 40px Arial";
+    // Row 3: Time
+    ctx.font = "bold 44px Arial";
     ctx.fillText("DURATION", 540, 680);
-    ctx.font = "bold 140px Arial";
-    ctx.fillText(formatTime(elapsedTime), 540, 780);
+    ctx.font = "bold 130px Arial";
+    ctx.fillText(dataTime, 540, 780);
 
-    // Row 4: Path Visualization
+    // Row 4: Path Visualization (Professional constrained scale)
     if (path.length > 1) {
       ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
-      ctx.lineWidth = 12;
+      ctx.lineWidth = 14;
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
       ctx.beginPath();
@@ -410,14 +405,14 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       const minLng = Math.min(...lngs);
       const maxLng = Math.max(...lngs);
       
-      const drawWidth = 600;
-      const drawHeight = 300;
+      const drawWidth = 500;
+      const drawHeight = 250;
       const centerX = 540;
-      const centerY = 1050;
+      const centerY = 1040;
 
-      const latRange = maxLat - minLat || 0.0001;
-      const lngRange = maxLng - minLng || 0.0001;
-      const scale = Math.min(drawWidth / lngRange, drawHeight / latRange) * 0.8;
+      const latRange = maxLat - minLat || 0.00001;
+      const lngRange = maxLng - minLng || 0.00001;
+      const scale = Math.min(drawWidth / lngRange, drawHeight / latRange) * 0.9;
 
       path.forEach((p, i) => {
         const x = centerX + (p.lng - (minLng + maxLng) / 2) * scale;
@@ -428,19 +423,19 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       ctx.stroke();
     }
 
-    // Row 5: Branding (English)
-    ctx.font = "bold 60px Arial";
-    ctx.fillText("LifeOS - My Life Assistant", 540, 1300);
-    ctx.font = "normal 30px Arial";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-    ctx.fillText("Powered by Hayati", 540, 1360);
+    // Row 5: Branding
+    ctx.font = "bold 56px Arial";
+    ctx.fillText("LifeOS - My Personal Assistant", 540, 1280);
+    ctx.font = "bold 28px Arial";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+    ctx.fillText("POWERED BY HAYATI", 540, 1340);
 
-    // Download
+    // Download PNG
     const link = document.createElement("a");
-    link.download = `Hayati-Workout-${new Date().getTime()}.png`;
+    link.download = `Hayati-Transparent-${new Date().getTime()}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
-    toast({ title: "Success", description: "Achievement card downloaded!" });
+    toast({ title: "Success", description: "Transparent achievement card saved!" });
   };
 
   return (
@@ -448,7 +443,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={view === 'hub' ? onBack : () => setView('hub')} className="h-10 w-10 rounded-[12px] bg-white border border-border/40 premium-shadow hover:bg-white transition-none">
+            <Button variant="ghost" size="icon" onClick={view === 'hub' ? onBack : () => setView('hub')} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow transition-none">
               <ChevronRight className="h-5 w-5 text-foreground" />
             </Button>
             <h2 className="text-2xl font-extrabold text-foreground font-cairo">
@@ -456,7 +451,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             </h2>
           </div>
           {view === 'hub' && (
-             <Button variant="ghost" size="icon" onClick={() => setView('stats')} className="h-10 w-10 rounded-[12px] bg-white border border-border/40 premium-shadow text-primary hover:bg-white transition-none">
+             <Button variant="ghost" size="icon" onClick={() => setView('stats')} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow text-primary transition-none">
               <BarChart3 className="h-5 w-5" />
             </Button>
           )}
@@ -504,8 +499,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   { id: 'pullups', view: 'rep_counter' as const, hint: 'pull-up exercise', desc: 'تقوية عضلات الظهر والذراعين' },
                   { id: 'gym', view: 'gym' as const, hint: 'gym weightlifting', desc: 'نظام مرن لجدولة تمارين الحديد والعضلات' }
                 ].map((ex) => (
-                  <div key={ex.id} onClick={() => { setActiveExercise(ex.id as ExerciseType); setView(ex.view); }} className={`bg-white p-4 rounded-[12px] premium-shadow border border-border/40 flex items-center gap-4 active:scale-[0.98] transition-all cursor-pointer group ${ex.id === 'gym' ? 'order-last' : ''}`}>
-                    <div className="h-16 w-16 rounded-[12px] overflow-hidden relative shrink-0 shadow-md">
+                  <div key={ex.id} onClick={() => { setActiveExercise(ex.id as ExerciseType); setView(ex.view); }} className={`bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center gap-4 active:scale-[0.98] transition-all cursor-pointer group ${ex.id === 'gym' ? 'order-last' : ''}`}>
+                    <div className="h-16 w-16 rounded-[10px] overflow-hidden relative shrink-0 shadow-md">
                       <Image src={getExerciseImage(ex.id) || "https://picsum.photos/seed/exercise/200/200"} alt={ex.id} fill className="object-cover" data-ai-hint={ex.hint} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -527,13 +522,13 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             {isMapExpanded ? (
               <div className="h-full w-full flex flex-col">
                  <div className="absolute top-10 right-6 z-[70]">
-                   <Button onClick={() => setIsMapExpanded(false)} size="icon" className="rounded-full h-12 w-12 bg-white shadow-xl text-foreground hover:bg-white transition-none"><Minimize2 className="h-6 w-6" /></Button>
+                   <Button onClick={() => setIsMapExpanded(false)} size="icon" className="rounded-full h-12 w-12 bg-white shadow-xl text-foreground transition-none"><Minimize2 className="h-6 w-6" /></Button>
                  </div>
                  <MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} />
               </div>
             ) : (
               <div className="px-6 py-6 space-y-8">
-                <div className={`rounded-[20px] py-6 px-6 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-orange-600' : 'primary-gradient'}`}>
+                <div className={`rounded-[10px] py-6 px-6 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-orange-600' : 'primary-gradient'}`}>
                   <div className="relative z-10">
                     <div className="flex justify-between items-center mb-6">
                       <h3 className="text-lg font-black">{isTracking ? 'Tracking Session' : 'New Run'}</h3>
@@ -564,22 +559,22 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     </div>
 
                     {!historyPath && (
-                      <Button onClick={toggleTracking} className="w-full h-14 bg-white text-primary rounded-[15px] font-black shadow-xl hover:bg-white transition-none active:scale-95">
+                      <Button onClick={toggleTracking} className="w-full h-14 bg-white text-primary rounded-[10px] font-black shadow-xl transition-none active:scale-95">
                         {isTracking ? 'Stop & Save' : 'Start Running'}
                       </Button>
                     )}
                     {historyPath && (
                       <div className="flex gap-2">
-                        <Button onClick={() => setHistoryPath(null)} className="flex-1 h-12 bg-white/20 text-white rounded-[15px] hover:bg-white/30 transition-none">Resume Tracking</Button>
-                        <Button onClick={() => setShowShareModal(true)} className="h-12 w-12 bg-white text-primary rounded-[15px] flex items-center justify-center hover:bg-white transition-none"><Share2 className="h-5 w-5" /></Button>
+                        <Button onClick={() => setHistoryPath(null)} className="flex-1 h-12 bg-white/20 text-white rounded-[10px] transition-none">Resume Tracking</Button>
+                        <Button onClick={() => setShowShareModal(true)} className="h-12 w-12 bg-white text-primary rounded-[10px] flex items-center justify-center transition-none"><Share2 className="h-5 w-5" /></Button>
                       </div>
                     )}
                   </div>
                   <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
                 </div>
 
-                <div className="h-80 w-full rounded-[20px] overflow-hidden bg-slate-50 border-4 border-white premium-shadow relative">
-                  <Button variant="ghost" size="icon" onClick={() => setIsMapExpanded(true)} className="absolute top-4 right-4 z-10 bg-white/80 backdrop-blur-md shadow-md hover:bg-white transition-none"><Maximize2 className="h-4 w-4" /></Button>
+                <div className="h-80 w-full rounded-[10px] overflow-hidden bg-slate-50 border border-border/40 premium-shadow relative">
+                  <Button variant="ghost" size="icon" onClick={() => setIsMapExpanded(true)} className="absolute top-4 right-4 z-10 bg-white/80 backdrop-blur-md shadow-md transition-none"><Maximize2 className="h-4 w-4" /></Button>
                   <MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} />
                 </div>
 
@@ -588,9 +583,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   {exerciseHistory.length > 0 ? (
                     <div className="space-y-3">
                       {exerciseHistory.map((rec) => (
-                        <div key={rec.id} onClick={() => handleRecordClick(rec)} className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex items-center justify-between active:scale-[0.98] transition-all cursor-pointer group">
+                        <div key={rec.id} onClick={() => handleRecordClick(rec)} className="bg-white p-5 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between active:scale-[0.98] transition-all cursor-pointer group">
                           <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-[12px] bg-primary/5 flex items-center justify-center text-primary shadow-sm">
+                            <div className="h-12 w-12 rounded-[10px] bg-primary/5 flex items-center justify-center text-primary shadow-sm">
                               <Mountain className="h-6 w-6" />
                             </div>
                             <div>
@@ -619,7 +614,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                       ))}
                     </div>
                   ) : (
-                    <div className="py-12 text-center bg-white rounded-[20px] border border-dashed border-border/60">
+                    <div className="py-12 text-center bg-white rounded-[10px] border border-dashed border-border/60">
                       <Activity className="h-10 w-10 text-muted-foreground/20 mx-auto mb-2" />
                       <p className="text-xs font-bold text-muted-foreground">لا توجد سجلات بعد. ابدأ رحلتك!</p>
                     </div>
@@ -632,15 +627,15 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
         {view === 'rep_counter' && (
           <div className="px-6 py-6 space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-32">
-             <div className={`rounded-[20px] p-5 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
+             <div className={`rounded-[10px] p-5 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
                 <div className="relative z-10 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-[12px] bg-white/20 flex items-center justify-center">{getExerciseIcon(activeExercise)}</div>
+                    <div className="h-12 w-12 rounded-[10px] bg-white/20 flex items-center justify-center">{getExerciseIcon(activeExercise)}</div>
                     <div><h3 className="text-sm font-black">{getExerciseName(activeExercise)}</h3><p className="text-white/70 text-[8px] font-bold uppercase">{isTracking ? "حافظ على وتيرتك" : "اضغط للبدء"}</p></div>
                   </div>
                   <div className="text-left"><p className="text-[8px] font-bold opacity-60">Session Time</p><p className="text-2xl font-black tabular-nums">{formatTime(elapsedTime)}</p></div>
                 </div>
-                <Button onClick={toggleTracking} className="w-full h-11 bg-white text-primary rounded-[12px] font-black mt-4 hover:bg-white transition-none">
+                <Button onClick={toggleTracking} className="w-full h-11 bg-white text-primary rounded-[10px] font-black mt-4 transition-none">
                   {isTracking ? 'Finish' : 'Start Now'}
                 </Button>
              </div>
@@ -682,11 +677,11 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
              <Dialog open={showRepDialog} onOpenChange={setShowRepDialog}>
                 <DialogContent className="font-cairo rounded-[10px] sm:max-w-md">
                   <DialogHeader className="text-center">
-                    <DialogTitle className="text-2xl font-black">Well done!</DialogTitle>
-                    <DialogDescription>How many reps did you achieve in this session?</DialogDescription>
+                    <DialogTitle className="text-xl font-black">Well done!</DialogTitle>
+                    <DialogDescription className="text-xs">How many reps did you achieve in this session?</DialogDescription>
                   </DialogHeader>
                   <Input type="number" placeholder="e.g. 25" value={inputReps} onChange={(e) => setInputReps(e.target.value)} className="h-14 text-center text-2xl font-black rounded-[10px]" />
-                  <DialogFooter className="flex-row gap-3"><Button onClick={handleFinalRepSave} className="flex-1 h-12 primary-gradient text-white font-black rounded-[10px] hover:opacity-90 transition-none">Save Reps</Button></DialogFooter>
+                  <DialogFooter className="flex-row gap-3"><Button onClick={handleFinalRepSave} className="flex-1 h-12 primary-gradient text-white font-black rounded-[10px] transition-none">Save Reps</Button></DialogFooter>
                 </DialogContent>
              </Dialog>
           </div>
@@ -695,75 +690,83 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         {view === 'stats' && (
            <div className="px-6 py-6 space-y-8 animate-in slide-in-from-bottom-4 pb-32">
               <h3 className="text-lg font-bold">تحليل التقدم في المسافة (كم)</h3>
-              <div className="h-60 w-full bg-white p-4 rounded-[15px] premium-shadow border"><ResponsiveContainer width="100%" height="100%"><AreaChart data={statsData}><XAxis dataKey="name" /><YAxis hide /><Tooltip /><Area type="monotone" dataKey="distance" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.2} /></AreaChart></ResponsiveContainer></div>
+              <div className="h-60 w-full bg-white p-4 rounded-[10px] premium-shadow border"><ResponsiveContainer width="100%" height="100%"><AreaChart data={statsData}><XAxis dataKey="name" /><YAxis hide /><Tooltip /><Area type="monotone" dataKey="distance" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.2} /></AreaChart></ResponsiveContainer></div>
               
               <h3 className="text-lg font-bold">تحليل التكرارات (آخر 7 جلسات)</h3>
-              <div className="h-60 w-full bg-white p-4 rounded-[15px] premium-shadow border"><ResponsiveContainer width="100%" height="100%"><LineChart data={statsData}><XAxis dataKey="name" /><YAxis hide /><Tooltip /><Line type="monotone" dataKey="reps" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 6, fill: '#8b5cf6' }} /></LineChart></ResponsiveContainer></div>
+              <div className="h-60 w-full bg-white p-4 rounded-[10px] premium-shadow border"><ResponsiveContainer width="100%" height="100%"><LineChart data={statsData}><XAxis dataKey="name" /><YAxis hide /><Tooltip /><Line type="monotone" dataKey="reps" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 6, fill: '#8b5cf6' }} /></LineChart></ResponsiveContainer></div>
            </div>
         )}
       </div>
 
       <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
-        <DialogContent className="p-0 border-none bg-transparent shadow-none max-w-sm sm:max-w-md overflow-hidden">
+        <DialogContent className="p-0 border-none bg-transparent shadow-none max-w-[340px] mx-auto overflow-hidden">
           <DialogHeader className="sr-only">
             <DialogTitle>Workout Achievement</DialogTitle>
           </DialogHeader>
-          <div className="primary-gradient p-8 rounded-[30px] text-white space-y-10 relative overflow-hidden flex flex-col items-center">
-            <div className="relative z-10 w-full space-y-8">
+          <div className="bg-slate-900 p-8 rounded-[24px] text-white space-y-8 relative overflow-hidden flex flex-col items-center shadow-2xl">
+            <div className="relative z-10 w-full space-y-6">
               
-              {/* Row 1: Distance */}
-              <div className="text-center space-y-1">
-                <p className="text-white/60 text-xs font-bold uppercase tracking-widest">DISTANCE</p>
-                <div className="flex items-baseline justify-center gap-2">
-                  <p className="text-6xl font-black tabular-nums">{(lastWorkoutData?.distance || distance).toFixed(2)}</p>
-                  <p className="text-xl font-bold opacity-80">KM</p>
+              {/* Distance Section */}
+              <div className="text-center space-y-0.5">
+                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">DISTANCE</p>
+                <div className="flex items-baseline justify-center gap-1.5">
+                  <p className="text-4xl font-black tabular-nums">{(lastWorkoutData?.distance || distance).toFixed(2)}</p>
+                  <p className="text-sm font-bold opacity-60">KM</p>
                 </div>
               </div>
 
-              {/* Row 2: Elevation */}
-              <div className="text-center space-y-1">
-                <p className="text-white/60 text-xs font-bold uppercase tracking-widest">ELEVATION GAIN</p>
-                <div className="flex items-baseline justify-center gap-2">
-                  <p className="text-5xl font-black tabular-nums">{Math.round(lastWorkoutData?.elevationGain || elevationGain)}</p>
-                  <p className="text-lg font-bold opacity-80">M</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center space-y-0.5 border-r border-white/10">
+                  <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest">ELEVATION</p>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <p className="text-2xl font-black tabular-nums">{Math.round(lastWorkoutData?.elevationGain || elevationGain)}</p>
+                    <p className="text-[10px] font-bold opacity-50">M</p>
+                  </div>
+                </div>
+                <div className="text-center space-y-0.5">
+                  <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest">DURATION</p>
+                  <p className="text-2xl font-black tabular-nums">{formatTime(lastWorkoutData?.durationSeconds || elapsedTime)}</p>
                 </div>
               </div>
 
-              {/* Row 3: Time */}
-              <div className="text-center space-y-1">
-                <p className="text-white/60 text-xs font-bold uppercase tracking-widest">DURATION</p>
-                <p className="text-5xl font-black tabular-nums">{formatTime(lastWorkoutData?.durationSeconds || elapsedTime)}</p>
-              </div>
-
-              {/* Row 4: Path Preview */}
-              <div className="w-full h-44 bg-white/10 rounded-[25px] relative overflow-hidden flex items-center justify-center border border-white/10 backdrop-blur-sm">
-                <svg viewBox="0 0 100 100" className="w-full h-full opacity-60 stroke-white fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d={path.length > 1 ? `M ${path.map((p, i) => `${50 + (p.lng - path[0].lng) * 1200},${50 - (p.lat - path[0].lat) * 1200}`).join(' L ')}` : ''} />
+              {/* Path Visualization Area */}
+              <div className="w-full h-36 bg-white/5 rounded-[16px] relative overflow-hidden flex items-center justify-center border border-white/5">
+                <svg viewBox="0 0 100 100" className="w-full h-full opacity-70 stroke-primary fill-none" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d={path.length > 1 ? `M ${path.map((p, i) => {
+                    const lats = path.map(pt => pt.lat);
+                    const lngs = path.map(pt => pt.lng);
+                    const minLat = Math.min(...lats);
+                    const maxLat = Math.max(...lats);
+                    const minLng = Math.min(...lngs);
+                    const maxLng = Math.max(...lngs);
+                    const latR = maxLat - minLat || 0.00001;
+                    const lngR = maxLng - minLng || 0.00001;
+                    const x = 50 + ((p.lng - (minLng + maxLng) / 2) / lngR) * 80;
+                    const y = 50 - ((p.lat - (minLat + maxLat) / 2) / latR) * 80;
+                    return `${x},${y}`;
+                  }).join(' L ')}` : ''} />
                 </svg>
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <Navigation className="h-10 w-10 text-white/10 rotate-45" />
-                </div>
               </div>
 
-              {/* Row 5: App Branding */}
-              <div className="text-center pt-2">
-                <p className="text-lg font-black tracking-tight">LifeOS - My Personal Assistant</p>
-                <p className="text-[10px] font-bold text-white/50 uppercase tracking-[0.2em]">Powered by Hayati</p>
+              {/* App Branding */}
+              <div className="text-center space-y-1">
+                <p className="text-sm font-black tracking-tight text-white/90">LifeOS - Personal Assistant</p>
+                <p className="text-[8px] font-bold text-white/30 uppercase tracking-[0.2em]">POWERED BY HAYATI</p>
               </div>
 
-              <div className="flex gap-4 w-full pt-4">
-                <Button onClick={exportShareCard} className="flex-1 h-14 bg-white text-primary rounded-[20px] font-black shadow-xl hover:bg-white transition-none flex items-center justify-center gap-2">
-                  <Download className="h-5 w-5" />
-                  Download Card
+              <div className="flex gap-3 w-full pt-4">
+                <Button onClick={exportShareCard} className="flex-1 h-12 bg-white text-slate-900 rounded-[12px] font-black shadow-lg transition-none flex items-center justify-center gap-2 text-sm">
+                  <Download className="h-4 w-4" />
+                  Transparent PNG
                 </Button>
-                <Button variant="ghost" onClick={() => setShowShareModal(false)} className="h-14 w-14 rounded-[20px] bg-white/10 text-white hover:bg-white/20 transition-none">
-                  <X className="h-6 w-6" />
+                <Button variant="ghost" onClick={() => setShowShareModal(false)} className="h-12 w-12 rounded-[12px] bg-white/10 text-white transition-none border-none">
+                  <X className="h-5 w-5" />
                 </Button>
               </div>
             </div>
             
-            <div className="absolute -left-20 -top-20 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
-            <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
+            <div className="absolute -left-16 -top-16 w-60 h-60 bg-primary/10 rounded-full blur-3xl" />
+            <div className="absolute -right-16 -bottom-16 w-60 h-60 bg-primary/10 rounded-full blur-3xl" />
           </div>
         </DialogContent>
       </Dialog>
