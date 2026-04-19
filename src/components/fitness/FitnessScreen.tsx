@@ -46,7 +46,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from "@/firebase";
-import { collection, serverTimestamp, query, orderBy, doc } from "firebase/firestore";
+import { collection, serverTimestamp, doc, query, orderBy } from "firebase/firestore";
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -452,7 +452,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={view === 'hub' ? onBack : () => setView('hub')} className="h-10 w-10 rounded-[12px] bg-white border border-border/40 premium-shadow hover:bg-white">
+            <Button variant="ghost" size="icon" onClick={view === 'hub' ? onBack : () => setView('hub')} className="h-10 w-10 rounded-[12px] bg-white border border-border/40 premium-shadow hover:bg-white transition-none">
               <ChevronRight className="h-5 w-5 text-foreground" />
             </Button>
             <h2 className="text-2xl font-extrabold text-foreground font-cairo">
@@ -460,7 +460,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             </h2>
           </div>
           {view === 'hub' && (
-             <Button variant="ghost" size="icon" onClick={() => setView('stats')} className="h-10 w-10 rounded-[12px] bg-white border border-border/40 premium-shadow text-primary hover:bg-white">
+             <Button variant="ghost" size="icon" onClick={() => setView('stats')} className="h-10 w-10 rounded-[12px] bg-white border border-border/40 premium-shadow text-primary hover:bg-white transition-none">
               <BarChart3 className="h-5 w-5" />
             </Button>
           )}
@@ -508,7 +508,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   { id: 'pullups', view: 'rep_counter' as const, hint: 'pull-up exercise', desc: 'تقوية عضلات الظهر والذراعين' },
                   { id: 'gym', view: 'gym' as const, hint: 'gym weightlifting', desc: 'نظام مرن لجدولة تمارين الحديد والعضلات' }
                 ].map((ex) => (
-                  <div key={ex.id} onClick={() => { setActiveExercise(ex.id as ExerciseType); setView(ex.view); }} className="bg-white p-4 rounded-[12px] premium-shadow border border-border/40 flex items-center gap-4 active:scale-[0.98] transition-all cursor-pointer group">
+                  <div key={ex.id} onClick={() => { setActiveExercise(ex.id as ExerciseType); setView(ex.view); }} className={`bg-white p-4 rounded-[12px] premium-shadow border border-border/40 flex items-center gap-4 active:scale-[0.98] transition-all cursor-pointer group ${ex.id === 'gym' ? 'order-last' : ''}`}>
                     <div className="h-16 w-16 rounded-[12px] overflow-hidden relative shrink-0 shadow-md">
                       <Image src={getExerciseImage(ex.id) || "https://picsum.photos/seed/exercise/200/200"} alt={ex.id} fill className="object-cover" data-ai-hint={ex.hint} />
                     </div>
@@ -531,7 +531,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             {isMapExpanded ? (
               <div className="h-full w-full flex flex-col">
                  <div className="absolute top-10 right-6 z-[70]">
-                   <Button onClick={() => setIsMapExpanded(false)} size="icon" className="rounded-full h-12 w-12 bg-white shadow-xl text-foreground hover:bg-white"><Minimize2 className="h-6 w-6" /></Button>
+                   <Button onClick={() => setIsMapExpanded(false)} size="icon" className="rounded-full h-12 w-12 bg-white shadow-xl text-foreground hover:bg-white transition-none"><Minimize2 className="h-6 w-6" /></Button>
                  </div>
                  <MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} />
               </div>
@@ -569,14 +569,14 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     </div>
 
                     {!historyPath && (
-                      <Button onClick={toggleTracking} className="w-full h-14 bg-white text-primary rounded-[15px] font-black shadow-xl hover:bg-white active:scale-95 transition-all">
-                        {isTracking ? 'إيقاف وحفظ الإنجاز' : 'ابدأ الجري الآن'}
+                      <Button onClick={toggleTracking} className="w-full h-14 bg-white text-primary rounded-[15px] font-black shadow-xl hover:bg-white transition-none active:scale-95">
+                        {isTracking ? 'إيقاف وحفظ الإنجاز' : 'ابدأ الآن'}
                       </Button>
                     )}
                     {historyPath && (
                       <div className="flex gap-2">
-                        <Button onClick={() => setHistoryPath(null)} className="flex-1 h-12 bg-white/20 text-white rounded-[15px] hover:bg-white/30">العودة للتتبع</Button>
-                        <Button onClick={() => setShowShareModal(true)} className="h-12 w-12 bg-white text-primary rounded-[15px] flex items-center justify-center"><Share2 className="h-5 w-5" /></Button>
+                        <Button onClick={() => setHistoryPath(null)} className="flex-1 h-12 bg-white/20 text-white rounded-[15px] hover:bg-white/30 transition-none">العودة للتتبع</Button>
+                        <Button onClick={() => setShowShareModal(true)} className="h-12 w-12 bg-white text-primary rounded-[15px] flex items-center justify-center hover:bg-white transition-none"><Share2 className="h-5 w-5" /></Button>
                       </div>
                     )}
                   </div>
@@ -585,7 +585,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 </div>
 
                 <div className="h-80 w-full rounded-[20px] overflow-hidden bg-slate-50 border-4 border-white premium-shadow relative">
-                  <Button variant="ghost" size="icon" onClick={() => setIsMapExpanded(true)} className="absolute top-4 right-4 z-10 bg-white/80 backdrop-blur-md shadow-md hover:bg-white"><Maximize2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => setIsMapExpanded(true)} className="absolute top-4 right-4 z-10 bg-white/80 backdrop-blur-md shadow-md hover:bg-white transition-none"><Maximize2 className="h-4 w-4" /></Button>
                   <MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} />
                 </div>
 
@@ -646,8 +646,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   </div>
                   <div className="text-left"><p className="text-[8px] font-bold opacity-60">وقت الجلسة</p><p className="text-2xl font-black tabular-nums">{formatTime(elapsedTime)}</p></div>
                 </div>
-                <Button onClick={toggleTracking} className="w-full h-11 bg-white text-primary rounded-[12px] font-black mt-4 hover:bg-white">
-                  {isTracking ? 'إنهاء التمرين وحفظ النتائج' : 'ابدأ التمرين الآن'}
+                <Button onClick={toggleTracking} className="w-full h-11 bg-white text-primary rounded-[12px] font-black mt-4 hover:bg-white transition-none">
+                  {isTracking ? 'إنهاء وحفظ الإنجاز' : 'ابدأ الآن'}
                 </Button>
              </div>
 
@@ -687,9 +687,12 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
              <Dialog open={showRepDialog} onOpenChange={setShowRepDialog}>
                 <DialogContent className="font-cairo rounded-[10px] sm:max-w-md">
-                  <DialogHeader className="text-center"><DialogTitle className="text-2xl font-black">أحسنت يا بطل!</DialogTitle><DialogDescription>كم عدد العدّات الإجمالي التي قمت بها في هذه الجلسة؟</DialogDescription></DialogHeader>
+                  <DialogHeader className="text-center">
+                    <DialogTitle className="text-2xl font-black">أحسنت يا بطل!</DialogTitle>
+                    <DialogDescription>كم عدد العدّات الإجمالي التي قمت بها في هذه الجلسة؟</DialogDescription>
+                  </DialogHeader>
                   <Input type="number" placeholder="مثلاً: 25" value={inputReps} onChange={(e) => setInputReps(e.target.value)} className="h-14 text-center text-2xl font-black rounded-[10px]" />
-                  <DialogFooter className="flex-row gap-3"><Button onClick={handleFinalRepSave} className="flex-1 h-12 primary-gradient text-white font-black rounded-[10px] hover:opacity-90">حفظ التكرارات</Button></DialogFooter>
+                  <DialogFooter className="flex-row gap-3"><Button onClick={handleFinalRepSave} className="flex-1 h-12 primary-gradient text-white font-black rounded-[10px] hover:opacity-90 transition-none">حفظ التكرارات</Button></DialogFooter>
                 </DialogContent>
              </Dialog>
           </div>
@@ -709,6 +712,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       {/* Strava Share Modal */}
       <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
         <DialogContent className="p-0 border-none bg-transparent shadow-none max-w-sm sm:max-w-md overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>إنجاز رياضي جديد</DialogTitle>
+          </DialogHeader>
           <div className="primary-gradient p-8 rounded-[30px] text-white space-y-8 relative overflow-hidden">
             <div className="relative z-10 flex flex-col items-center text-center space-y-6">
               <div className="h-16 w-16 rounded-full bg-white/20 flex items-center justify-center border border-white/30 backdrop-blur-md">
@@ -746,11 +752,11 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               </div>
 
               <div className="flex gap-4 w-full pt-4">
-                <Button onClick={exportShareCard} className="flex-1 h-14 bg-white text-primary rounded-[20px] font-black shadow-xl hover:bg-white flex items-center justify-center gap-2">
+                <Button onClick={exportShareCard} className="flex-1 h-14 bg-white text-primary rounded-[20px] font-black shadow-xl hover:bg-white transition-none flex items-center justify-center gap-2">
                   <Download className="h-5 w-5" />
                   تحميل الصورة
                 </Button>
-                <Button variant="ghost" onClick={() => setShowShareModal(false)} className="h-14 w-14 rounded-[20px] bg-white/10 text-white hover:bg-white/20">
+                <Button variant="ghost" onClick={() => setShowShareModal(false)} className="h-14 w-14 rounded-[20px] bg-white/10 text-white hover:bg-white/20 transition-none">
                   <X className="h-6 w-6" />
                 </Button>
               </div>
