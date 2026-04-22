@@ -1,4 +1,3 @@
-
 import type {Metadata} from 'next';
 import './globals.css';
 import { PWARegister } from '@/components/PWARegister';
@@ -28,6 +27,13 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+        {/* التحميل المباشر لـ Leaflet CSS لضمان الاستقرار على جميع الشبكات */}
+        <link 
+          rel="stylesheet" 
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossOrigin="" 
+        />
         <meta name="theme-color" content="#8b5cf6" />
         <link rel="apple-touch-icon" href="/logo.png" />
       </head>
