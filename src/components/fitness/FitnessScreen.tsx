@@ -521,9 +521,31 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           <div className={`animate-in slide-in-from-bottom-4 duration-500 pb-32 ${isMapExpanded ? 'fixed inset-0 z-[60] bg-background' : ''}`}>
             {isMapExpanded ? (
               <div className="h-full w-full flex flex-col bg-background">
+                 {/* Close Button */}
                  <div className="absolute top-6 right-6 z-[70]">
                    <Button onClick={() => setIsMapExpanded(false)} size="icon" className="rounded-full h-10 w-10 bg-white/90 backdrop-blur-sm shadow-xl text-foreground hover:bg-white transition-none"><X className="h-5 w-5" /></Button>
                  </div>
+
+                 {/* Top Stats Overlay (No Background) */}
+                 {!historyPath && (
+                   <div className="absolute top-8 left-0 right-0 z-[70] flex justify-center pointer-events-none">
+                     <div className="flex gap-8 items-center text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                       <div className="text-center">
+                         <p className="text-[9px] font-bold opacity-70 uppercase tracking-widest">KM</p>
+                         <p className="text-2xl font-black tabular-nums">{distance.toFixed(2)}</p>
+                       </div>
+                       <div className="text-center">
+                         <p className="text-[9px] font-bold opacity-70 uppercase tracking-widest">M</p>
+                         <p className="text-2xl font-black tabular-nums">{Math.round(elevationGain)}</p>
+                       </div>
+                       <div className="text-center">
+                         <p className="text-[9px] font-bold opacity-70 uppercase tracking-widest">TIME</p>
+                         <p className="text-2xl font-black tabular-nums">{formatTime(elapsedTime)}</p>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+
                  <div className="h-full w-full">
                     <MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} />
                  </div>
