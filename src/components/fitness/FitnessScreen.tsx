@@ -81,6 +81,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [path, setPath] = useState<{lat: number, lng: number, alt?: number | null}[]>([]);
   const [historyPath, setHistoryPath] = useState<[number, number][] | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
   
   // Persistence state
   const [hasStoredSession, setHasStoredSession] = useState(false);
@@ -198,8 +199,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && isTracking) {
-        // Just ensure localStorage is synced, don't necessarily terminate
-        // The continuous sync useEffect already handles this.
+        // Syncing handled by useEffect dependency
       }
     };
 
@@ -246,7 +246,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), runData);
       setLastWorkoutData(runData);
       setShowShareModal(true);
-      // Clear session after successful save
       localStorage.removeItem('active_fitness_session');
       setHasStoredSession(false);
     }
@@ -266,15 +265,16 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       }
       setActiveExercise('run');
       setView('running');
+      setSelectedRecord(null);
+      setHistoryPath(null);
       setHasStoredSession(false);
-      // Immediately start tracking again
       startGpsTracking();
     }
   };
 
   const startGpsTracking = async () => {
     if (!navigator.geolocation) {
-      toast({ variant: "destructive", title: "Error", description: "GPS not supported." });
+      toast({ variant: "destructive", title: "GPS Error", description: "GPS not supported." });
       return;
     }
     setIsTracking(true);
@@ -283,41 +283,27 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     watchId.current = navigator.geolocation.watchPosition(
       (pos) => {
         const current = { lat: pos.coords.latitude, lng: pos.coords.longitude, alt: pos.coords.altitude };
-        
-        // Filter noisy GPS data (only add if movement is significant)
         if (lastCoord.current) {
-          const R = 6371; // km
+          const R = 6371;
           const lat1 = lastCoord.current.latitude;
           const lon1 = lastCoord.current.longitude;
           const lat2 = pos.coords.latitude;
           const lon2 = pos.coords.longitude;
-          
           const dLat = (lat2 - lat1) * Math.PI / 180;
           const dLon = (lon2 - lon1) * Math.PI / 180;
-          
-          const a = 
-            Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-            Math.sin(dLon/2) * Math.sin(dLon/2);
+          const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
           const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
           const d = R * c;
 
-          // Accuracy filter: ignore jumps > 0.05km in a single update (unlikely unless car/glitch)
-          // and ignore tiny tremors < 0.002km (drift)
           if (d > 0.002 && d < 0.05) {
             setDistance(prev => prev + d);
             setPath(prev => [...prev, current]);
-
-            // Elevation filtering: only count upward moves > 1.5m to avoid signal noise
             if (pos.coords.altitude !== null && lastCoord.current.altitude !== null) {
               const altDiff = pos.coords.altitude - lastCoord.current.altitude;
-              if (altDiff > 1.5) {
-                setElevationGain(prev => prev + altDiff);
-              }
+              if (altDiff > 1.5) setElevationGain(prev => prev + altDiff);
             }
           }
         } else {
-          // First point
           setPath([current]);
         }
         lastCoord.current = pos.coords;
@@ -335,6 +321,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       if (activeExercise === 'run') {
         setDistance(0); setElevationGain(0); setSteps(0); setElapsedTime(0); setPath([]); lastCoord.current = null;
         setHistoryPath(null);
+        setSelectedRecord(null);
         startGpsTracking();
       } else {
         setIsTracking(true);
@@ -373,9 +360,11 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   const handleRecordClick = (record: any) => {
     if ((record.type === 'run' || record.type === 'challenge') && record.path) {
+      setSelectedRecord(record);
       setHistoryPath(record.path.map((p: any) => [p.lat, p.lng]));
       setActiveExercise('run');
       setView('running');
+      setIsTracking(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -438,19 +427,16 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
     canvas.width = 1080;
     canvas.height = 1440;
-
-    // Drawing transparent
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    const dataDistance = (lastWorkoutData?.distance || distance).toFixed(2);
-    const dataElevation = Math.round(lastWorkoutData?.elevationGain || elevationGain);
-    const dataTime = formatTime(lastWorkoutData?.durationSeconds || elapsedTime);
+    const dataDistance = (selectedRecord?.distance || lastWorkoutData?.distance || distance).toFixed(2);
+    const dataElevation = Math.round(selectedRecord?.elevationGain || lastWorkoutData?.elevationGain || elevationGain);
+    const dataTime = formatTime(selectedRecord?.durationSeconds || lastWorkoutData?.durationSeconds || elapsedTime);
+    const currentPath = selectedRecord?.path || lastWorkoutData?.path || path;
 
-    // Drop Shadow for visibility over any image
     ctx.shadowColor = "rgba(0,0,0,0.5)";
     ctx.shadowBlur = 15;
     ctx.shadowOffsetX = 0;
@@ -471,15 +457,15 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     ctx.font = "bold 130px Arial";
     ctx.fillText(dataTime, 540, 780);
 
-    if (path.length > 1) {
+    if (currentPath && currentPath.length > 1) {
       ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
       ctx.lineWidth = 14;
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
       ctx.beginPath();
       
-      const lats = path.map(p => p.lat);
-      const lngs = path.map(p => p.lng);
+      const lats = currentPath.map((p: any) => p.lat);
+      const lngs = currentPath.map((p: any) => p.lng);
       const minLat = Math.min(...lats);
       const maxLat = Math.max(...lats);
       const minLng = Math.min(...lngs);
@@ -494,7 +480,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       const lngRange = maxLng - minLng || 0.00001;
       const scale = Math.min(drawWidth / lngRange, drawHeight / latRange) * 0.9;
 
-      path.forEach((p, i) => {
+      currentPath.forEach((p: any, i: number) => {
         const x = centerX + (p.lng - (minLng + maxLng) / 2) * scale;
         const y = centerY - (p.lat - (minLat + maxLat) / 2) * scale;
         if (i === 0) ctx.moveTo(x, y);
@@ -521,7 +507,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={view === 'hub' ? onBack : () => setView('hub')} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow transition-none">
+            <Button variant="ghost" size="icon" onClick={view === 'hub' ? onBack : () => { setView('hub'); setHistoryPath(null); setSelectedRecord(null); }} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow">
               <ChevronRight className="h-5 w-5 text-foreground" />
             </Button>
             <h2 className="text-2xl font-extrabold text-foreground font-cairo">
@@ -594,7 +580,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   { id: 'pullups', view: 'rep_counter' as const, hint: 'pull-up exercise', desc: 'تقوية عضلات الظهر والذراعين' },
                   { id: 'gym', view: 'gym' as const, hint: 'gym weightlifting', desc: 'نظام مرن لجدولة تمارين الحديد والعضلات' }
                 ].map((ex) => (
-                  <div key={ex.id} onClick={() => { setActiveExercise(ex.id as ExerciseType); setView(ex.view); }} className={`bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center gap-4 active:scale-[0.98] transition-all cursor-pointer group ${ex.id === 'gym' ? 'order-last' : ''}`}>
+                  <div key={ex.id} onClick={() => { setActiveExercise(ex.id as ExerciseType); setView(ex.view); setSelectedRecord(null); setHistoryPath(null); }} className={`bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center gap-4 active:scale-[0.98] transition-all cursor-pointer group ${ex.id === 'gym' ? 'order-last' : ''}`}>
                     <div className="h-16 w-16 rounded-[10px] overflow-hidden relative shrink-0 shadow-md">
                       <Image src={getExerciseImage(ex.id) || "https://picsum.photos/seed/exercise/200/200"} alt={ex.id} fill className="object-cover" data-ai-hint={ex.hint} />
                     </div>
@@ -616,30 +602,26 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           <div className={`animate-in slide-in-from-bottom-4 duration-500 ${isMapExpanded ? 'fixed inset-0 z-[60] bg-background pb-0' : 'pb-32'}`}>
             {isMapExpanded ? (
               <div className="h-full w-full flex flex-col bg-background overflow-hidden">
-                 {/* Close Button */}
                  <div className="absolute top-6 right-6 z-[70]">
                    <Button onClick={() => setIsMapExpanded(false)} size="icon" className="rounded-full h-10 w-10 bg-white/90 backdrop-blur-sm shadow-xl text-foreground hover:bg-white transition-none"><X className="h-5 w-5" /></Button>
                  </div>
 
-                 {/* Top Stats Overlay (No Background) */}
-                 {!historyPath && (
-                   <div className="absolute top-8 left-0 right-0 z-[70] flex justify-center pointer-events-none">
-                     <div className="flex gap-8 items-center text-white drop-shadow-[0_4px_12px_rgba(0,0,0,1)]">
-                       <div className="text-center">
-                         <p className="text-[9px] font-bold opacity-80 uppercase tracking-widest">KM</p>
-                         <p className="text-2xl font-black tabular-nums">{distance.toFixed(2)}</p>
-                       </div>
-                       <div className="text-center">
-                         <p className="text-[9px] font-bold opacity-80 uppercase tracking-widest">M</p>
-                         <p className="text-2xl font-black tabular-nums">{Math.round(elevationGain)}</p>
-                       </div>
-                       <div className="text-center">
-                         <p className="text-[9px] font-bold opacity-80 uppercase tracking-widest">TIME</p>
-                         <p className="text-2xl font-black tabular-nums">{formatTime(elapsedTime)}</p>
-                       </div>
+                 <div className="absolute top-8 left-0 right-0 z-[70] flex justify-center pointer-events-none">
+                   <div className="flex gap-8 items-center text-white drop-shadow-[0_4px_12px_rgba(0,0,0,1)]">
+                     <div className="text-center">
+                       <p className="text-[9px] font-bold opacity-80 uppercase tracking-widest">KM</p>
+                       <p className="text-2xl font-black tabular-nums">{(selectedRecord?.distance || distance).toFixed(2)}</p>
+                     </div>
+                     <div className="text-center">
+                       <p className="text-[9px] font-bold opacity-80 uppercase tracking-widest">M</p>
+                       <p className="text-2xl font-black tabular-nums">{Math.round(selectedRecord?.elevationGain || elevationGain)}</p>
+                     </div>
+                     <div className="text-center">
+                       <p className="text-[9px] font-bold opacity-80 uppercase tracking-widest">TIME</p>
+                       <p className="text-2xl font-black tabular-nums">{formatTime(selectedRecord?.durationSeconds || elapsedTime)}</p>
                      </div>
                    </div>
-                 )}
+                 </div>
 
                  <div className="flex-1 w-full">
                     <MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} />
@@ -650,7 +632,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 <div className={`rounded-[10px] py-6 px-6 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-orange-600' : 'primary-gradient'}`}>
                   <div className="relative z-10">
                     <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-lg font-black">{isTracking ? 'Tracking Session' : 'New Run'}</h3>
+                      <h3 className="text-lg font-black">{selectedRecord ? 'Activity Summary' : isTracking ? 'Tracking Session' : 'New Run'}</h3>
                       {isTracking && <div className="h-2 w-2 rounded-full bg-white animate-ping" />}
                     </div>
 
@@ -658,34 +640,34 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                       <div className="text-center space-y-1">
                         <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest">Distance</p>
                         <div className="flex items-baseline justify-center gap-1">
-                          <span className="text-3xl font-black tabular-nums">{distance.toFixed(2)}</span>
+                          <span className="text-3xl font-black tabular-nums">{(selectedRecord?.distance || distance).toFixed(2)}</span>
                           <span className="text-[10px] font-bold">km</span>
                         </div>
                       </div>
                       <div className="text-center space-y-1 border-x border-white/10">
                         <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest">Elevation</p>
                         <div className="flex items-baseline justify-center gap-1">
-                          <span className="text-3xl font-black tabular-nums">{Math.round(elevationGain)}</span>
+                          <span className="text-3xl font-black tabular-nums">{Math.round(selectedRecord?.elevationGain || elevationGain)}</span>
                           <span className="text-[10px] font-bold">m</span>
                         </div>
                       </div>
                       <div className="text-center space-y-1">
                         <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest">Time</p>
                         <div className="flex items-baseline justify-center gap-1">
-                          <span className="text-3xl font-black tabular-nums">{formatTime(elapsedTime)}</span>
+                          <span className="text-3xl font-black tabular-nums">{formatTime(selectedRecord?.durationSeconds || elapsedTime)}</span>
                         </div>
                       </div>
                     </div>
 
-                    {!historyPath && (
+                    {!selectedRecord && (
                       <Button onClick={toggleTracking} className="w-full h-14 bg-white text-primary rounded-[10px] font-black shadow-xl transition-none active:scale-95">
                         {isTracking ? 'Stop & Save' : 'Start Running'}
                       </Button>
                     )}
-                    {historyPath && (
+                    {selectedRecord && (
                       <div className="flex gap-2">
-                        <Button onClick={() => setHistoryPath(null)} className="flex-1 h-12 bg-white/20 text-white rounded-[10px] transition-none">Resume Tracking</Button>
-                        <Button onClick={() => setShowShareModal(true)} className="h-12 w-12 bg-white text-primary rounded-[10px] flex items-center justify-center transition-none"><Share2 className="h-5 w-5" /></Button>
+                        <Button onClick={() => { setHistoryPath(null); setSelectedRecord(null); }} className="flex-1 h-12 bg-white/20 text-white rounded-[10px] transition-none">New Activity</Button>
+                        <Button onClick={() => { setLastWorkoutData(selectedRecord); setShowShareModal(true); }} className="h-12 w-12 bg-white text-primary rounded-[10px] flex items-center justify-center transition-none"><Share2 className="h-5 w-5" /></Button>
                       </div>
                     )}
                   </div>
@@ -702,7 +684,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   {exerciseHistory.length > 0 ? (
                     <div className="space-y-3">
                       {exerciseHistory.map((rec) => (
-                        <div key={rec.id} onClick={() => handleRecordClick(rec)} className="bg-white p-5 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between active:scale-[0.98] transition-all cursor-pointer group">
+                        <div key={rec.id} onClick={() => handleRecordClick(rec)} className={`bg-white p-5 rounded-[10px] premium-shadow border flex items-center justify-between active:scale-[0.98] transition-all cursor-pointer group ${selectedRecord?.id === rec.id ? 'border-primary ring-1 ring-primary/20' : 'border-border/40'}`}>
                           <div className="flex items-center gap-4">
                             <div className="h-12 w-12 rounded-[10px] bg-primary/5 flex items-center justify-center text-primary shadow-sm">
                               <Mountain className="h-6 w-6" />
@@ -825,11 +807,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           <div className="bg-slate-900 p-8 rounded-[24px] text-white space-y-8 relative overflow-hidden flex flex-col items-center shadow-2xl">
             <div className="relative z-10 w-full space-y-6">
               
-              {/* Distance Section */}
               <div className="text-center space-y-0.5">
                 <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">DISTANCE</p>
                 <div className="flex items-baseline justify-center gap-1.5">
-                  <p className="text-4xl font-black tabular-nums">{(lastWorkoutData?.distance || distance).toFixed(2)}</p>
+                  <p className="text-4xl font-black tabular-nums">{(selectedRecord?.distance || lastWorkoutData?.distance || distance).toFixed(2)}</p>
                   <p className="text-sm font-bold opacity-60">KM</p>
                 </div>
               </div>
@@ -838,22 +819,22 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 <div className="text-center space-y-0.5 border-r border-white/10">
                   <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest">ELEVATION</p>
                   <div className="flex items-baseline justify-center gap-1">
-                    <p className="text-2xl font-black tabular-nums">{lastWorkoutData?.elevationGain || elevationGain ? Math.round(lastWorkoutData?.elevationGain || elevationGain) : 0}</p>
+                    <p className="text-2xl font-black tabular-nums">{Math.round(selectedRecord?.elevationGain || lastWorkoutData?.elevationGain || elevationGain)}</p>
                     <p className="text-[10px] font-bold opacity-50">M</p>
                   </div>
                 </div>
                 <div className="text-center space-y-0.5">
                   <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest">DURATION</p>
-                  <p className="text-2xl font-black tabular-nums">{formatTime(lastWorkoutData?.durationSeconds || elapsedTime)}</p>
+                  <p className="text-2xl font-black tabular-nums">{formatTime(selectedRecord?.durationSeconds || lastWorkoutData?.durationSeconds || elapsedTime)}</p>
                 </div>
               </div>
 
-              {/* Path Visualization Area */}
               <div className="w-full h-36 bg-white/5 rounded-[16px] relative overflow-hidden flex items-center justify-center border border-white/5">
                 <svg viewBox="0 0 100 100" className="w-full h-full opacity-70 stroke-primary fill-none" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d={path.length > 1 ? `M ${path.map((p, i) => {
-                    const lats = path.map(pt => pt.lat);
-                    const lngs = path.map(pt => pt.lng);
+                  <path d={(selectedRecord?.path || path).length > 1 ? `M ${(selectedRecord?.path || path).map((p: any, i: number) => {
+                    const currentPath = selectedRecord?.path || path;
+                    const lats = currentPath.map((pt: any) => pt.lat);
+                    const lngs = currentPath.map((pt: any) => pt.lng);
                     const minLat = Math.min(...lats);
                     const maxLat = Math.max(...lats);
                     const minLng = Math.min(...lngs);
@@ -867,7 +848,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 </svg>
               </div>
 
-              {/* App Branding */}
               <div className="text-center space-y-1">
                 <p className="text-sm font-black tracking-tight text-white/90">LifeOS - Personal Assistant</p>
                 <p className="text-[8px] font-bold text-white/30 uppercase tracking-[0.2em]">POWERED BY HAYATI</p>
