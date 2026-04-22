@@ -520,11 +520,13 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         {view === 'running' && (
           <div className={`animate-in slide-in-from-bottom-4 duration-500 pb-32 ${isMapExpanded ? 'fixed inset-0 z-[60] bg-background' : ''}`}>
             {isMapExpanded ? (
-              <div className="h-full w-full flex flex-col">
-                 <div className="absolute top-10 right-6 z-[70]">
-                   <Button onClick={() => setIsMapExpanded(false)} size="icon" className="rounded-full h-12 w-12 bg-white shadow-xl text-foreground transition-none"><Minimize2 className="h-6 w-6" /></Button>
+              <div className="h-full w-full flex flex-col bg-background">
+                 <div className="absolute top-6 right-6 z-[70]">
+                   <Button onClick={() => setIsMapExpanded(false)} size="icon" className="rounded-full h-10 w-10 bg-white/90 backdrop-blur-sm shadow-xl text-foreground hover:bg-white transition-none"><X className="h-5 w-5" /></Button>
                  </div>
-                 <MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} />
+                 <div className="h-full w-full">
+                    <MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} />
+                 </div>
               </div>
             ) : (
               <div className="px-6 py-6 space-y-8">

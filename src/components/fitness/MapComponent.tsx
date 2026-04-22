@@ -23,17 +23,13 @@ function MapController({ path, isStatic }: { path: [number, number][], isStatic?
       // إذا كان مساراً تاريخياً، نقوم بضبط الخريطة لتشمل المسار بالكامل فوراً
       const bounds = L.latLngBounds(path);
       map.fitBounds(bounds, { padding: [50, 50], animate: true });
-    } else {
-      // في حالة التتبع المباشر
+    } else if (isFirstRender.current) {
+      // في حالة التتبع المباشر، نضبط الكاميرا لأول مرة فقط
       const currentPos = path[path.length - 1];
-      if (isFirstRender.current) {
-        map.setView(currentPos, 17);
-        isFirstRender.current = false;
-      } else {
-        // نكتفي بالتحرك للموقع الجديد دون تغيير مستوى الزويم الذي اختاره المستخدم
-        map.panTo(currentPos, { animate: true });
-      }
+      map.setView(currentPos, 17);
+      isFirstRender.current = false;
     }
+    // ملاحظة: لا نقم بتحريك الكاميرا (panTo) في كل تحديث للمسار لإعطاء المستخدم الحرية في تحريك الخريطة يدوياً
   }, [path, map, isStatic]);
 
   return null;
@@ -50,7 +46,10 @@ export default function MapComponent({ path, isStatic = false }: MapComponentPro
       zoom={16} 
       scrollWheelZoom={true}
       zoomControl={true}
-      style={{ height: "100%", width: "100%" }}
+      dragging={true}
+      touchZoom={true}
+      doubleClickZoom={true}
+      style={{ height: "100%", width: "100%", borderRadius: 'inherit' }}
       className="z-0"
     >
       <TileLayer
