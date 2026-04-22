@@ -282,7 +282,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "white"; // Professional white for transparent overlay
+    ctx.fillStyle = "white"; 
 
     // Row 1: Distance
     ctx.font = "bold 40px Arial";
@@ -547,7 +547,31 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   </Button>
                 </div>
              </div>
-             {/* History for reps would go here */}
+
+             <div className="space-y-4">
+                <h3 className="text-lg font-bold text-foreground/90 font-cairo">سجل التمرين</h3>
+                {exerciseHistory.length > 0 ? (
+                  <div className="space-y-3">
+                    {exerciseHistory.map((rec) => (
+                      <div key={rec.id} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between group active:scale-[0.98] transition-all">
+                        <div className="flex items-center gap-4">
+                          <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center text-primary"><Zap className="h-5 w-5" /></div>
+                          <div>
+                            <p className="text-sm font-black">{rec.reps} تكرار</p>
+                            <p className="text-[10px] text-muted-foreground font-bold">{rec.date?.seconds ? new Date(rec.date.seconds * 1000).toLocaleDateString('ar-EG') : 'اليوم'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           <div className="text-left"><p className="text-[10px] font-black">{formatTime(rec.durationSeconds || 0)}</p></div>
+                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/30 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteRecord(rec.id); }}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center text-xs text-muted-foreground border-2 border-dashed rounded-[10px]">لا توجد سجلات بعد</div>
+                )}
+             </div>
           </div>
         )}
       </div>
