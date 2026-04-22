@@ -1,18 +1,19 @@
+
 "use client"
 
 import React, { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Polyline, CircleMarker, useMap, LayersControl } from "react-leaflet";
 import L from "leaflet";
 
-// إصلاح مشكلة الأيقونات في Leaflet مع Next.js والشبكات الخلوية
+// إصلاح مشكلة الأيقونات وتحسين الأداء للشبكات الجوالة
 const fixLeafletIcons = () => {
   if (typeof window !== 'undefined') {
     // @ts-ignore
     delete L.Icon.Default.prototype._getIconUrl;
     L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+      iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
     });
   }
 };
@@ -27,10 +28,12 @@ function MapController({ path, isStatic }: { path: [number, number][], isStatic?
   const isFirstRender = useRef(true);
 
   useEffect(() => {
-    // تنبيه الخريطة لتحديث حجمها فور التحميل (مهم للشبكات الخلوية)
-    map.invalidateSize();
+    // حل مشكلة "البياض" على شبكات الجوال: إجبار الخريطة على إعادة حساب أبعادها
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
     
-    if (path.length === 0) return;
+    if (path.length === 0) return () => clearTimeout(timer);
 
     if (isStatic) {
       const bounds = L.latLngBounds(path);
@@ -40,6 +43,8 @@ function MapController({ path, isStatic }: { path: [number, number][], isStatic?
       map.setView(currentPos, 17);
       isFirstRender.current = false;
     }
+
+    return () => clearTimeout(timer);
   }, [path, map, isStatic]);
 
   return null;
@@ -53,6 +58,7 @@ export default function MapComponent({ path, isStatic = false }: MapComponentPro
   const defaultCenter: [number, number] = [24.7136, 46.6753];
   const currentPosition = path.length > 0 ? path[path.length - 1] : defaultCenter;
 
+  // استخدام CartoDB Voyager كمزود افتراضي لسرعته العالية على شبكات الجوال
   return (
     <MapContainer 
       center={currentPosition} 
@@ -62,15 +68,16 @@ export default function MapComponent({ path, isStatic = false }: MapComponentPro
       dragging={true}
       touchZoom={true}
       doubleClickZoom={true}
-      style={{ height: "100%", width: "100%", borderRadius: 'inherit' }}
+      style={{ height: "100%", width: "100%", borderRadius: 'inherit', background: '#f8faff' }}
       className="z-0"
     >
       <LayersControl position="bottomleft">
-        <LayersControl.BaseLayer checked name="الوضع العادي">
+        <LayersControl.BaseLayer checked name="الخريطة السريعة">
           <TileLayer
-            attribution='&copy; OpenStreetMap'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; CartoDB'
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
             crossOrigin={true}
+            subdomains="abcd"
           />
         </LayersControl.BaseLayer>
         <LayersControl.BaseLayer name="قمر صناعي">
@@ -83,7 +90,7 @@ export default function MapComponent({ path, isStatic = false }: MapComponentPro
         <LayersControl.BaseLayer name="تضاريس">
           <TileLayer
             attribution='&copy; OpenStreetMap'
-            url="https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png"
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             crossOrigin={true}
           />
         </LayersControl.BaseLayer>
