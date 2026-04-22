@@ -17,7 +17,8 @@ import {
   LayoutGrid,
   Share2,
   Download,
-  Mountain
+  Mountain,
+  RotateCcw
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -81,6 +82,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const [path, setPath] = useState<{lat: number, lng: number, alt?: number | null}[]>([]);
   const [historyPath, setHistoryPath] = useState<[number, number][] | null>(null);
   
+  // Persistence state
+  const [hasStoredSession, setHasStoredSession] = useState(false);
+
   // Share Card State
   const [showShareModal, setShowShareModal] = useState(false);
   const [lastWorkoutData, setLastWorkoutData] = useState<any>(null);
@@ -108,6 +112,34 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   }, [db, user]);
 
   const { data: records, isLoading: isHistoryLoading } = useCollection(fitnessQuery);
+
+  // Check for stored session on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('active_fitness_session');
+    if (stored) {
+      setHasStoredSession(true);
+    }
+  }, []);
+
+  // Sync session to localStorage during tracking
+  useEffect(() => {
+    if (isTracking && activeExercise === 'run') {
+      const session = {
+        distance,
+        elevationGain,
+        steps,
+        elapsedTime,
+        path,
+        lastCoord: lastCoord.current ? {
+          latitude: lastCoord.current.latitude,
+          longitude: lastCoord.current.longitude,
+          altitude: lastCoord.current.altitude
+        } : null,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('active_fitness_session', JSON.stringify(session));
+    }
+  }, [isTracking, distance, elevationGain, steps, elapsedTime, path]);
 
   const dailyStats = useMemo(() => {
     if (!records) return { steps: 0, distance: 0, pushups: 0, squats: 0, abs: 0, jumprope: 0, pullups: 0 };
@@ -166,15 +198,14 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && isTracking) {
-        if (activeExercise === 'run' && distance > 0.01) {
-          saveRunRecord();
-        }
+        // Just ensure localStorage is synced, don't necessarily terminate
+        // The continuous sync useEffect already handles this.
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isTracking, activeExercise, distance, steps, elapsedTime, path, elevationGain]);
+  }, [isTracking]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -215,47 +246,96 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), runData);
       setLastWorkoutData(runData);
       setShowShareModal(true);
+      // Clear session after successful save
+      localStorage.removeItem('active_fitness_session');
+      setHasStoredSession(false);
     }
+  };
+
+  const handleResumeSession = () => {
+    const stored = localStorage.getItem('active_fitness_session');
+    if (stored) {
+      const session = JSON.parse(stored);
+      setDistance(session.distance || 0);
+      setElevationGain(session.elevationGain || 0);
+      setSteps(session.steps || 0);
+      setElapsedTime(session.elapsedTime || 0);
+      setPath(session.path || []);
+      if (session.lastCoord) {
+        lastCoord.current = session.lastCoord;
+      }
+      setActiveExercise('run');
+      setView('running');
+      setHasStoredSession(false);
+      // Immediately start tracking again
+      startGpsTracking();
+    }
+  };
+
+  const startGpsTracking = async () => {
+    if (!navigator.geolocation) {
+      toast({ variant: "destructive", title: "Error", description: "GPS not supported." });
+      return;
+    }
+    setIsTracking(true);
+    await requestWakeLock();
+    window.addEventListener('devicemotion', handleMotion);
+    watchId.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const current = { lat: pos.coords.latitude, lng: pos.coords.longitude, alt: pos.coords.altitude };
+        
+        // Filter noisy GPS data (only add if movement is significant)
+        if (lastCoord.current) {
+          const R = 6371; // km
+          const lat1 = lastCoord.current.latitude;
+          const lon1 = lastCoord.current.longitude;
+          const lat2 = pos.coords.latitude;
+          const lon2 = pos.coords.longitude;
+          
+          const dLat = (lat2 - lat1) * Math.PI / 180;
+          const dLon = (lon2 - lon1) * Math.PI / 180;
+          
+          const a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          const d = R * c;
+
+          // Accuracy filter: ignore jumps > 0.05km in a single update (unlikely unless car/glitch)
+          // and ignore tiny tremors < 0.002km (drift)
+          if (d > 0.002 && d < 0.05) {
+            setDistance(prev => prev + d);
+            setPath(prev => [...prev, current]);
+
+            // Elevation filtering: only count upward moves > 1.5m to avoid signal noise
+            if (pos.coords.altitude !== null && lastCoord.current.altitude !== null) {
+              const altDiff = pos.coords.altitude - lastCoord.current.altitude;
+              if (altDiff > 1.5) {
+                setElevationGain(prev => prev + altDiff);
+              }
+            }
+          }
+        } else {
+          // First point
+          setPath([current]);
+        }
+        lastCoord.current = pos.coords;
+      },
+      (err) => {
+        console.error(err);
+        toast({ variant: "destructive", title: "GPS Error", description: "Could not get your location." });
+      },
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 }
+    );
   };
 
   const toggleTracking = async () => {
     if (!isTracking) {
       if (activeExercise === 'run') {
-        if (!navigator.geolocation) return toast({ variant: "destructive", title: "Error", description: "GPS not supported." });
         setDistance(0); setElevationGain(0); setSteps(0); setElapsedTime(0); setPath([]); lastCoord.current = null;
         setHistoryPath(null);
-        setIsTracking(true);
-        await requestWakeLock();
-        window.addEventListener('devicemotion', handleMotion);
-        watchId.current = navigator.geolocation.watchPosition(
-          (pos) => {
-            const current = { lat: pos.coords.latitude, lng: pos.coords.longitude, alt: pos.coords.altitude };
-            setPath(prev => [...prev, current]);
-            
-            if (lastCoord.current) {
-              const R = 6371;
-              const lat1 = lastCoord.current.latitude;
-              const lon1 = lastCoord.current.longitude;
-              const lat2 = pos.coords.latitude;
-              const lon2 = pos.coords.longitude;
-              const dLat = (lat2 - lat1) * Math.PI / 180;
-              const dLon = (lon2 - lon1) * Math.PI / 180;
-              const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-              const d = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-              if (d > 0.001) setDistance(prev => prev + d);
-
-              if (pos.coords.altitude !== null && lastCoord.current.altitude !== null) {
-                const altDiff = pos.coords.altitude - lastCoord.current.altitude;
-                if (altDiff > 1) {
-                  setElevationGain(prev => prev + altDiff);
-                }
-              }
-            }
-            lastCoord.current = pos.coords;
-          },
-          (err) => console.error(err),
-          { enableHighAccuracy: true }
-        );
+        startGpsTracking();
       } else {
         setIsTracking(true);
         await requestWakeLock();
@@ -269,7 +349,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         window.removeEventListener('devicemotion', handleMotion);
         if (watchId.current) navigator.geolocation.clearWatch(watchId.current);
         saveRunRecord();
-        toast({ title: "Saved", description: "Activity recorded successfully." });
       } else {
         setShowRepDialog(true);
       }
@@ -360,6 +439,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     canvas.width = 1080;
     canvas.height = 1440;
 
+    // Drawing transparent
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -367,6 +449,12 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     const dataDistance = (lastWorkoutData?.distance || distance).toFixed(2);
     const dataElevation = Math.round(lastWorkoutData?.elevationGain || elevationGain);
     const dataTime = formatTime(lastWorkoutData?.durationSeconds || elapsedTime);
+
+    // Drop Shadow for visibility over any image
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 4;
 
     ctx.font = "bold 44px Arial";
     ctx.fillText("DISTANCE", 540, 150);
@@ -422,7 +510,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     ctx.fillText("POWERED BY HAYATI", 540, 1340);
 
     const link = document.createElement("a");
-    link.download = `Hayati-Transparent-${new Date().getTime()}.png`;
+    link.download = `Hayati-Workout-${new Date().getTime()}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
     toast({ title: "Success", description: "Transparent achievement card saved!" });
@@ -476,6 +564,23 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 ))}
               </div>
             </div>
+
+            {hasStoredSession && (
+              <div className="bg-orange-50 border border-orange-200 p-4 rounded-[12px] flex items-center justify-between animate-in slide-in-from-top-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                    <RotateCcw className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-orange-900">جلسة غير مكتملة</h4>
+                    <p className="text-[10px] text-orange-700">لقد خرجت بالخطأ، هل تود الاستكمال؟</p>
+                  </div>
+                </div>
+                <Button onClick={handleResumeSession} size="sm" className="bg-orange-600 text-white rounded-[10px] font-bold px-4 h-9 shadow-sm">
+                  استئناف
+                </Button>
+              </div>
+            )}
 
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-foreground/90 font-cairo">ابدأ نشاطك</h3>
