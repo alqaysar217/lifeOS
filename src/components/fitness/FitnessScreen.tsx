@@ -31,7 +31,6 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -361,36 +360,29 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     canvas.width = 1080;
     canvas.height = 1440;
 
-    // IMPORTANT: No background fill. Canvas remains transparent (muffaragha)
-
     ctx.fillStyle = "white";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    // Typography Setup
     const dataDistance = (lastWorkoutData?.distance || distance).toFixed(2);
     const dataElevation = Math.round(lastWorkoutData?.elevationGain || elevationGain);
     const dataTime = formatTime(lastWorkoutData?.durationSeconds || elapsedTime);
 
-    // Row 1: Distance
     ctx.font = "bold 44px Arial";
     ctx.fillText("DISTANCE", 540, 150);
     ctx.font = "black 160px Arial";
     ctx.fillText(`${dataDistance} KM`, 540, 260);
 
-    // Row 2: Elevation
     ctx.font = "bold 44px Arial";
     ctx.fillText("ELEVATION GAIN", 540, 420);
     ctx.font = "bold 130px Arial";
     ctx.fillText(`${dataElevation} M`, 540, 520);
 
-    // Row 3: Time
     ctx.font = "bold 44px Arial";
     ctx.fillText("DURATION", 540, 680);
     ctx.font = "bold 130px Arial";
     ctx.fillText(dataTime, 540, 780);
 
-    // Row 4: Path Visualization (Professional constrained scale)
     if (path.length > 1) {
       ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
       ctx.lineWidth = 14;
@@ -423,14 +415,12 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       ctx.stroke();
     }
 
-    // Row 5: Branding
     ctx.font = "bold 56px Arial";
     ctx.fillText("LifeOS - My Personal Assistant", 540, 1280);
     ctx.font = "bold 28px Arial";
     ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
     ctx.fillText("POWERED BY HAYATI", 540, 1340);
 
-    // Download PNG
     const link = document.createElement("a");
     link.download = `Hayati-Transparent-${new Date().getTime()}.png`;
     link.href = canvas.toDataURL("image/png");
@@ -518,9 +508,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         {view === 'gym' && <GymWorkoutScreen onBack={() => setView('hub')} />}
 
         {view === 'running' && (
-          <div className={`animate-in slide-in-from-bottom-4 duration-500 pb-32 ${isMapExpanded ? 'fixed inset-0 z-[60] bg-background' : ''}`}>
+          <div className={`animate-in slide-in-from-bottom-4 duration-500 ${isMapExpanded ? 'fixed inset-0 z-[60] bg-background pb-0' : 'pb-32'}`}>
             {isMapExpanded ? (
-              <div className="h-full w-full flex flex-col bg-background">
+              <div className="h-full w-full flex flex-col bg-background overflow-hidden">
                  {/* Close Button */}
                  <div className="absolute top-6 right-6 z-[70]">
                    <Button onClick={() => setIsMapExpanded(false)} size="icon" className="rounded-full h-10 w-10 bg-white/90 backdrop-blur-sm shadow-xl text-foreground hover:bg-white transition-none"><X className="h-5 w-5" /></Button>
@@ -546,7 +536,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                    </div>
                  )}
 
-                 <div className="h-full w-full">
+                 <div className="flex-1 w-full">
                     <MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} />
                  </div>
               </div>
@@ -743,7 +733,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 <div className="text-center space-y-0.5 border-r border-white/10">
                   <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest">ELEVATION</p>
                   <div className="flex items-baseline justify-center gap-1">
-                    <p className="text-2xl font-black tabular-nums">{Math.round(lastWorkoutData?.elevationGain || elevationGain)}</p>
+                    <p className="text-2xl font-black tabular-nums">{lastWorkoutData?.elevationGain || elevationGain ? Math.round(lastWorkoutData?.elevationGain || elevationGain) : 0}</p>
                     <p className="text-[10px] font-bold opacity-50">M</p>
                   </div>
                 </div>
