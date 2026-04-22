@@ -519,17 +519,17 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                  {/* Top Stats Overlay (No Background) */}
                  {!historyPath && (
                    <div className="absolute top-8 left-0 right-0 z-[70] flex justify-center pointer-events-none">
-                     <div className="flex gap-8 items-center text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                     <div className="flex gap-8 items-center text-white drop-shadow-[0_4px_12px_rgba(0,0,0,1)]">
                        <div className="text-center">
-                         <p className="text-[9px] font-bold opacity-70 uppercase tracking-widest">KM</p>
+                         <p className="text-[9px] font-bold opacity-80 uppercase tracking-widest">KM</p>
                          <p className="text-2xl font-black tabular-nums">{distance.toFixed(2)}</p>
                        </div>
                        <div className="text-center">
-                         <p className="text-[9px] font-bold opacity-70 uppercase tracking-widest">M</p>
+                         <p className="text-[9px] font-bold opacity-80 uppercase tracking-widest">M</p>
                          <p className="text-2xl font-black tabular-nums">{Math.round(elevationGain)}</p>
                        </div>
                        <div className="text-center">
-                         <p className="text-[9px] font-bold opacity-70 uppercase tracking-widest">TIME</p>
+                         <p className="text-[9px] font-bold opacity-80 uppercase tracking-widest">TIME</p>
                          <p className="text-2xl font-black tabular-nums">{formatTime(elapsedTime)}</p>
                        </div>
                      </div>
