@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Polyline, CircleMarker, useMap, LayersControl } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -11,7 +11,7 @@ interface MapComponentProps {
   isStatic?: boolean;
 }
 
-// مكون ذكي للتحكم في الكاميرا دون إفساد تجربة المستخدم في الزويم
+// مكون ذكي للتحكم في الكاميرا وتوسيط الموقع
 function MapController({ path, isStatic }: { path: [number, number][], isStatic?: boolean }) {
   const map = useMap();
   const isFirstRender = useRef(true);
@@ -24,12 +24,11 @@ function MapController({ path, isStatic }: { path: [number, number][], isStatic?
       const bounds = L.latLngBounds(path);
       map.fitBounds(bounds, { padding: [50, 50], animate: true });
     } else if (isFirstRender.current) {
-      // في حالة التتبع المباشر، نضبط الكاميرا لأول مرة فقط
+      // في حالة التتبع المباشر، نضبط الكاميرا على الموقع الحالي لأول مرة فقط
       const currentPos = path[path.length - 1];
       map.setView(currentPos, 17);
       isFirstRender.current = false;
     }
-    // ملاحظة: لا نقم بتحريك الكاميرا (panTo) في كل تحديث للمسار لإعطاء المستخدم الحرية في تحريك الخريطة يدوياً
   }, [path, map, isStatic]);
 
   return null;
@@ -37,7 +36,7 @@ function MapController({ path, isStatic }: { path: [number, number][], isStatic?
 
 export default function MapComponent({ path, isStatic = false }: MapComponentProps) {
   // الموقع الافتراضي في حال عدم وجود مسار
-  const defaultCenter: [number, number] = [14.536, 49.126]; 
+  const defaultCenter: [number, number] = [24.7136, 46.6753]; // الرياض كموقع افتراضي
   const currentPosition = path.length > 0 ? path[path.length - 1] : defaultCenter;
 
   return (
@@ -45,17 +44,33 @@ export default function MapComponent({ path, isStatic = false }: MapComponentPro
       center={currentPosition} 
       zoom={16} 
       scrollWheelZoom={true}
-      zoomControl={true}
+      zoomControl={false} // سنعتمد على واجهة مخصصة أو الزويم باللمس
       dragging={true}
       touchZoom={true}
       doubleClickZoom={true}
       style={{ height: "100%", width: "100%", borderRadius: 'inherit' }}
       className="z-0"
     >
-      <TileLayer
-        attribution='&copy; OpenStreetMap'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      <LayersControl position="bottomleft">
+        <LayersControl.BaseLayer checked name="الوضع العادي">
+          <TileLayer
+            attribution='&copy; OpenStreetMap'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+        </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="قمر صناعي">
+          <TileLayer
+            attribution='Map data &copy; Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EBP, and the GIS User Community'
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          />
+        </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="تضاريس">
+          <TileLayer
+            attribution='&copy; OpenStreetMap contributors'
+            url="https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png"
+          />
+        </LayersControl.BaseLayer>
+      </LayersControl>
       
       <MapController path={path} isStatic={isStatic} />
 
