@@ -47,7 +47,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from "@/firebase";
-import { collection, serverTimestamp, doc, query, orderBy, limit } from "firebase/firestore";
+import { collection, serverTimestamp, doc, query, orderBy, limit, where } from "firebase/firestore";
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -102,7 +102,11 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   const fitnessQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    return query(collection(db, 'users', user.uid, 'fitnessRecords'), orderBy('date', 'desc'), limit(50));
+    return query(
+      collection(db, 'users', user.uid, 'fitnessRecords'), 
+      orderBy('date', 'desc'), 
+      limit(50)
+    );
   }, [db, user]);
 
   const { data: records, isLoading: isHistoryLoading } = useCollection(fitnessQuery);
@@ -141,7 +145,19 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   // Check for stored session on mount
   useEffect(() => {
     const stored = localStorage.getItem('active_fitness_session');
-    if (stored) setHasStoredSession(true);
+    if (stored) {
+      try {
+        const session = JSON.parse(stored);
+        // Only show if it's recent (less than 24 hours)
+        if (Date.now() - session.timestamp < 86400000) {
+          setHasStoredSession(true);
+        } else {
+          localStorage.removeItem('active_fitness_session');
+        }
+      } catch(e) {
+        localStorage.removeItem('active_fitness_session');
+      }
+    }
   }, []);
 
   // Update persistence while tracking
@@ -149,16 +165,11 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     if (isTracking && activeExercise === 'run') {
       const session = {
         distance, elevationGain, steps, elapsedTime, path,
-        lastCoord: lastCoord.current ? {
-          latitude: lastCoord.current.latitude,
-          longitude: lastCoord.current.longitude,
-          altitude: lastCoord.current.altitude
-        } : null,
         timestamp: Date.now()
       };
       localStorage.setItem('active_fitness_session', JSON.stringify(session));
     }
-  }, [isTracking, distance, elevationGain, steps, elapsedTime, path]);
+  }, [isTracking, distance, elevationGain, steps, elapsedTime, path, activeExercise]);
 
   // Timer logic
   useEffect(() => {
@@ -183,7 +194,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   };
 
   const saveRunRecord = () => {
-    if (db && user && (distance > 0 || elapsedTime > 10)) {
+    if (db && user) {
+      // Save even if small distance to satisfy user request for "always save"
       const runData = {
         type: 'run',
         date: serverTimestamp(),
@@ -195,31 +207,45 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         userId: user.uid,
         path: path,
       };
+      
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), runData);
       setLastWorkoutData(runData);
-      setShowShareModal(true);
-      toast({ title: "تم حفظ النشاط", description: "تمت إضافة الركضة إلى سجلك بنجاح." });
+      
+      // Only show share modal if there's actually some distance
+      if (distance > 0.01) {
+        setShowShareModal(true);
+      }
+      
+      toast({ title: "تم حفظ النشاط", description: "تمت إضافة الجلسة إلى سجلك بنجاح." });
     }
-    // Always clear storage when stopping
+    
+    // CRITICAL: Always clear storage and state immediately
     localStorage.removeItem('active_fitness_session');
     setHasStoredSession(false);
   };
 
   const toggleTracking = async () => {
     if (!isTracking) {
-      // Clear before start just in case
-      localStorage.removeItem('active_fitness_session');
-      setHasStoredSession(false);
+      // Reset all tracking states
+      setDistance(0); 
+      setElevationGain(0); 
+      setSteps(0); 
+      setElapsedTime(0); 
+      setPath([]); 
+      lastCoord.current = null;
+      setHistoryPath(null); 
+      setSelectedRecord(null);
       
-      setDistance(0); setElevationGain(0); setSteps(0); setElapsedTime(0); setPath([]); lastCoord.current = null;
-      setHistoryPath(null); setSelectedRecord(null);
       setIsTracking(true);
       window.addEventListener('devicemotion', handleMotion);
       startGpsTracking();
     } else {
+      // Stop tracking
       setIsTracking(false);
       window.removeEventListener('devicemotion', handleMotion);
       if (watchId.current) navigator.geolocation.clearWatch(watchId.current);
+      
+      // Save to database
       saveRunRecord();
     }
   };
@@ -236,12 +262,14 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lastCoord.current.latitude * Math.PI / 180) * Math.cos(pos.coords.latitude * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
           const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
           const d = R * c;
+          
+          // Filter out GPS jumps
           if (d > 0.002 && d < 0.05) {
             setDistance(prev => prev + d);
             setPath(prev => [...prev, current]);
             if (pos.coords.altitude !== null && lastCoord.current.altitude !== null) {
               const altDiff = pos.coords.altitude - lastCoord.current.altitude;
-              if (altDiff > 1.5) setElevationGain(prev => prev + altDiff);
+              if (altDiff > 1.0) setElevationGain(prev => prev + altDiff);
             }
           }
         } else {
@@ -282,6 +310,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     ctx.textBaseline = "middle";
     ctx.fillStyle = "white"; 
 
+    // Labels with Shadow
+    ctx.shadowColor = "rgba(0,0,0,0.8)";
+    ctx.shadowBlur = 15;
+    
     ctx.font = "bold 40px Arial";
     ctx.fillText("DISTANCE", 540, 200);
     ctx.font = "black 220px Arial";
@@ -298,7 +330,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     ctx.fillText(dataTime, 540, 1000);
 
     if (currentPath && currentPath.length > 1) {
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+      ctx.strokeStyle = "rgba(139, 92, 246, 0.9)";
       ctx.lineWidth = 14;
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
@@ -330,16 +362,16 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     }
 
     ctx.font = "bold 60px Arial";
-    ctx.fillText("LifeOS - My Personal Assistant", 540, 1750);
+    ctx.fillText("حياتي - نظام تشغيلك المتكامل", 540, 1750);
     ctx.font = "bold 30px Arial";
     ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-    ctx.fillText("POWERED BY HAYATI", 540, 1820);
+    ctx.fillText("POWERED BY LIFE OS", 540, 1820);
 
     const link = document.createElement("a");
-    link.download = `Hayati-Achievement-${new Date().getTime()}.png`;
+    link.download = `LifeOS-Achievement-${new Date().getTime()}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
-    toast({ title: "تم التصدير", description: "تم حفظ صورة الإنجاز المفرغة." });
+    toast({ title: "تم التصدير", description: "تم حفظ بطاقة الإنجاز المفرغة." });
   };
 
   const handleDeleteRecord = (recordId: string) => {
@@ -360,7 +392,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   };
 
   const calculateSpeed = (dist: number, seconds: number) => {
-    if (seconds <= 0) return 0;
+    if (seconds <= 0 || dist <= 0) return "0";
     const hours = seconds / 3600;
     return (dist / hours).toFixed(1);
   };
@@ -381,7 +413,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const handleClearStuckSession = () => {
     localStorage.removeItem('active_fitness_session');
     setHasStoredSession(false);
-    toast({ title: "تم المسح", description: "تم تنظيف الجلسات السابقة." });
+    toast({ title: "تم المسح", description: "تم تنظيف الجلسة المعلقة." });
   };
 
   const handleResumeSession = () => {
@@ -390,9 +422,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       if (s.distance !== undefined) {
         setDistance(s.distance);
         setElevationGain(s.elevationGain);
-        setSteps(s.steps);
+        setSteps(s.steps || 0);
         setElapsedTime(s.elapsedTime);
-        setPath(s.path);
+        setPath(s.path || []);
         setIsTracking(true);
         startGpsTracking();
         setHasStoredSession(false);
@@ -408,7 +440,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={view === 'hub' ? onBack : () => { setView('hub'); setHistoryPath(null); setSelectedRecord(null); }} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow">
+            <Button variant="ghost" size="icon" onClick={view === 'hub' ? onBack : () => { setView('hub'); setHistoryPath(null); setSelectedRecord(null); }} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow hover:bg-white">
               <ChevronRight className="h-5 w-5 text-foreground" />
             </Button>
             <h2 className="text-2xl font-extrabold text-foreground font-cairo">
@@ -477,15 +509,15 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         {view === 'running' && (
           <div className={`animate-in slide-in-from-bottom-4 duration-500 ${isMapExpanded ? 'fixed inset-0 z-[60] bg-background' : 'px-6 py-6 space-y-8'}`}>
             {isMapExpanded ? (
-              <div className="h-full w-full flex flex-col relative">
+              <div className="h-full w-full flex flex-col relative overflow-hidden">
                  <div className="absolute top-6 right-6 z-[70]">
                    <Button onClick={() => setIsMapExpanded(false)} size="icon" className="rounded-full h-10 w-10 bg-white/90 backdrop-blur-sm shadow-xl text-foreground"><X className="h-5 w-5" /></Button>
                  </div>
 
-                 <div className="absolute top-10 left-0 right-0 z-[70] flex justify-center gap-8 text-white pointer-events-none drop-shadow-[0_2px_10px_rgba(0,0,0,8)]">
-                    <div className="text-center"><p className="text-[10px] font-bold">KM</p><p className="text-2xl font-black">{(selectedRecord?.distance || distance).toFixed(2)}</p></div>
-                    <div className="text-center"><p className="text-[10px] font-bold">M</p><p className="text-2xl font-black">{Math.round(selectedRecord?.elevationGain || elevationGain)}</p></div>
-                    <div className="text-center"><p className="text-[10px] font-bold">TIME</p><p className="text-2xl font-black">{formatTime(selectedRecord?.durationSeconds || elapsedTime)}</p></div>
+                 <div className="absolute top-10 left-0 right-0 z-[70] flex justify-center gap-8 text-white pointer-events-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)]">
+                    <div className="text-center"><p className="text-[10px] font-black tracking-widest opacity-80">KM</p><p className="text-2xl font-black">{(selectedRecord?.distance || distance).toFixed(2)}</p></div>
+                    <div className="text-center"><p className="text-[10px] font-black tracking-widest opacity-80">M</p><p className="text-2xl font-black">{Math.round(selectedRecord?.elevationGain || elevationGain)}</p></div>
+                    <div className="text-center"><p className="text-[10px] font-black tracking-widest opacity-80">TIME</p><p className="text-2xl font-black">{formatTime(selectedRecord?.durationSeconds || elapsedTime)}</p></div>
                  </div>
 
                  <div className="flex-1 w-full"><MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} /></div>
@@ -502,14 +534,14 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
                     <div className="flex gap-2">
                       {!selectedRecord && (
-                        <Button onClick={toggleTracking} className="flex-1 h-12 bg-white text-primary rounded-[10px] font-black shadow-xl active:scale-95">
+                        <Button onClick={toggleTracking} className="flex-1 h-12 bg-white text-primary rounded-[10px] font-black shadow-xl active:scale-95 transition-all">
                           {isTracking ? 'إيقاف وحفظ' : 'بدء الركض'}
                         </Button>
                       )}
                       {selectedRecord && (
                         <>
-                          <Button onClick={() => { setHistoryPath(null); setSelectedRecord(null); }} className="flex-1 h-12 bg-white/20 text-white rounded-[10px]">نشاط جديد</Button>
-                          <Button onClick={() => { setLastWorkoutData(selectedRecord); setShowShareModal(true); }} className="h-12 w-12 bg-white text-primary rounded-[10px] flex items-center justify-center"><Share2 className="h-5 w-5" /></Button>
+                          <Button onClick={() => { setHistoryPath(null); setSelectedRecord(null); }} className="flex-1 h-12 bg-white/20 text-white rounded-[10px] font-bold">نشاط جديد</Button>
+                          <Button onClick={() => { setLastWorkoutData(selectedRecord); setShowShareModal(true); }} className="h-12 w-12 bg-white text-primary rounded-[10px] flex items-center justify-center shadow-lg"><Share2 className="h-5 w-5" /></Button>
                         </>
                       )}
                     </div>
@@ -524,13 +556,13 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     </div>
                     <div className="flex gap-2">
                       <Button onClick={handleResumeSession} size="sm" className="bg-orange-600 text-white rounded-[10px] h-8 font-bold">استئناف</Button>
-                      <Button onClick={handleClearStuckSession} variant="ghost" size="sm" className="h-8 w-8 text-orange-400 p-0"><X className="h-4 w-4" /></Button>
+                      <Button onClick={handleClearStuckSession} variant="ghost" size="sm" className="h-8 w-8 text-orange-400 p-0 hover:bg-transparent"><X className="h-4 w-4" /></Button>
                     </div>
                   </div>
                 )}
 
                 <div className="h-64 w-full rounded-[10px] overflow-hidden bg-slate-50 border relative premium-shadow">
-                  <Button variant="ghost" size="icon" onClick={() => setIsMapExpanded(true)} className="absolute top-4 right-4 z-10 bg-white/80 backdrop-blur-md"><Maximize2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => setIsMapExpanded(true)} className="absolute top-4 right-4 z-10 bg-white/80 backdrop-blur-md shadow-md transition-none"><Maximize2 className="h-4 w-4" /></Button>
                   <MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} />
                 </div>
 
@@ -541,18 +573,18 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                       {exerciseHistory.map((rec) => (
                         <div key={rec.id} onClick={() => handleRecordClick(rec)} className={`bg-white p-4 rounded-[10px] premium-shadow border flex items-center justify-between active:scale-[0.98] transition-all cursor-pointer group ${selectedRecord?.id === rec.id ? 'border-primary' : 'border-border/40'}`}>
                           <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center text-primary"><Mountain className="h-5 w-5" /></div>
+                            <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center text-primary group-hover:bg-primary/10 transition-colors"><Mountain className="h-5 w-5" /></div>
                             <div>
-                              <p className="text-sm font-black">{rec.distance} كم</p>
+                              <p className="text-sm font-black">{rec.distance.toFixed(2)} كم</p>
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-muted-foreground font-bold">{rec.date?.seconds ? new Date(rec.date.seconds * 1000).toLocaleDateString('ar-EG') : 'اليوم'}</span>
+                                <span className="text-[10px] text-muted-foreground font-bold">{rec.date?.seconds ? new Date(rec.date.seconds * 1000).toLocaleDateString('ar-EG') : 'الآن'}</span>
                                 <span className="text-[10px] text-primary font-bold">{calculateSpeed(rec.distance, rec.durationSeconds)} كم/س</span>
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                              <div className="text-left"><p className="text-[10px] font-black">{formatTime(rec.durationSeconds || 0)}</p></div>
-                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/30 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteRecord(rec.id); }}><Trash2 className="h-4 w-4" /></Button>
+                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/20 hover:text-destructive transition-colors" onClick={(e) => { e.stopPropagation(); handleDeleteRecord(rec.id); }}><Trash2 className="h-4 w-4" /></Button>
                           </div>
                         </div>
                       ))}
@@ -572,9 +604,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           <div className="px-6 py-6 space-y-8 animate-in slide-in-from-bottom-4 duration-500">
              <div className={`rounded-[10px] p-5 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
                 <div className="text-center space-y-4">
-                  <h3 className="text-sm font-black uppercase">{getExerciseName(activeExercise)}</h3>
+                  <h3 className="text-sm font-black uppercase tracking-widest">{getExerciseName(activeExercise)}</h3>
                   <p className="text-5xl font-black">{reps}</p>
-                  <Button onClick={() => { if(!isTracking) { setIsTracking(true); setReps(0); setElapsedTime(0); } else { setIsTracking(false); setShowRepDialog(true); } }} className="w-full h-12 bg-white text-primary rounded-[10px] font-black">
+                  <Button onClick={() => { if(!isTracking) { setIsTracking(true); setReps(0); setElapsedTime(0); } else { setIsTracking(false); setShowRepDialog(true); } }} className="w-full h-12 bg-white text-primary rounded-[10px] font-black shadow-lg">
                     {isTracking ? 'إكمال الجلسة' : 'ابدأ التكرار'}
                   </Button>
                 </div>
@@ -595,13 +627,13 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                         </div>
                         <div className="flex items-center gap-2">
                            <div className="text-left"><p className="text-[10px] font-black">{formatTime(rec.durationSeconds || 0)}</p></div>
-                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/30 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteRecord(rec.id); }}><Trash2 className="h-4 w-4" /></Button>
+                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/20 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteRecord(rec.id); }}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="py-12 text-center text-xs text-muted-foreground border-2 border-dashed rounded-[10px]">لا توجد سجلات بعد</div>
+                  <div className="py-12 text-center text-xs text-muted-foreground border-2 border-dashed rounded-[10px] font-bold">لا توجد سجلات بعد</div>
                 )}
              </div>
           </div>
@@ -642,8 +674,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 </svg>
               </div>
               <div className="text-center space-y-1">
-                <p className="text-sm font-black">LifeOS - My Personal Assistant</p>
-                <p className="text-[8px] font-bold text-white/30 uppercase tracking-[0.2em]">POWERED BY HAYATI</p>
+                <p className="text-sm font-black">حياتي - نظام تشغيلك المتكامل</p>
+                <p className="text-[8px] font-bold text-white/30 uppercase tracking-[0.2em]">POWERED BY LIFE OS</p>
               </div>
               <Button onClick={exportShareCard} className="w-full h-12 bg-white text-slate-900 rounded-[12px] font-black flex items-center justify-center gap-2">
                 <Download className="h-4 w-4" /> Download PNG (Transparent)
