@@ -18,7 +18,8 @@ import {
   Share2,
   Download,
   Mountain,
-  RotateCcw
+  RotateCcw,
+  ZapOff
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -136,13 +137,14 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const watchId = useRef<number | null>(null);
   const lastCoord = useRef<GeolocationCoordinates | null>(null);
   const lastStepTime = useRef<number>(0);
-  const wakeLock = useRef<any>(null);
 
+  // Check for stored session on mount
   useEffect(() => {
     const stored = localStorage.getItem('active_fitness_session');
     if (stored) setHasStoredSession(true);
   }, []);
 
+  // Update persistence while tracking
   useEffect(() => {
     if (isTracking && activeExercise === 'run') {
       const session = {
@@ -158,6 +160,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     }
   }, [isTracking, distance, elevationGain, steps, elapsedTime, path]);
 
+  // Timer logic
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isTracking) {
@@ -180,7 +183,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   };
 
   const saveRunRecord = () => {
-    if (db && user && distance > 0) {
+    if (db && user && (distance > 0 || elapsedTime > 10)) {
       const runData = {
         type: 'run',
         date: serverTimestamp(),
@@ -195,13 +198,19 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), runData);
       setLastWorkoutData(runData);
       setShowShareModal(true);
-      localStorage.removeItem('active_fitness_session');
-      setHasStoredSession(false);
+      toast({ title: "تم حفظ النشاط", description: "تمت إضافة الركضة إلى سجلك بنجاح." });
     }
+    // Always clear storage when stopping
+    localStorage.removeItem('active_fitness_session');
+    setHasStoredSession(false);
   };
 
   const toggleTracking = async () => {
     if (!isTracking) {
+      // Clear before start just in case
+      localStorage.removeItem('active_fitness_session');
+      setHasStoredSession(false);
+      
       setDistance(0); setElevationGain(0); setSteps(0); setElapsedTime(0); setPath([]); lastCoord.current = null;
       setHistoryPath(null); setSelectedRecord(null);
       setIsTracking(true);
@@ -260,7 +269,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Mobile aspect ratio 9:16 (1080x1920)
     canvas.width = 1080;
     canvas.height = 1920;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -274,25 +282,21 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     ctx.textBaseline = "middle";
     ctx.fillStyle = "white"; 
 
-    // Row 1: Distance
     ctx.font = "bold 40px Arial";
     ctx.fillText("DISTANCE", 540, 200);
     ctx.font = "black 220px Arial";
     ctx.fillText(`${dataDistance} KM`, 540, 360);
 
-    // Row 2: Elevation
     ctx.font = "bold 40px Arial";
     ctx.fillText("ELEVATION GAIN", 540, 560);
     ctx.font = "bold 140px Arial";
     ctx.fillText(`${dataElevation} M`, 540, 680);
 
-    // Row 3: Duration
     ctx.font = "bold 40px Arial";
     ctx.fillText("DURATION", 540, 880);
     ctx.font = "bold 140px Arial";
     ctx.fillText(dataTime, 540, 1000);
 
-    // Row 4: Path Visualization
     if (currentPath && currentPath.length > 1) {
       ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
       ctx.lineWidth = 14;
@@ -325,7 +329,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       ctx.stroke();
     }
 
-    // Row 5: Branding
     ctx.font = "bold 60px Arial";
     ctx.fillText("LifeOS - My Personal Assistant", 540, 1750);
     ctx.font = "bold 30px Arial";
@@ -336,7 +339,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     link.download = `Hayati-Achievement-${new Date().getTime()}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
-    toast({ title: "تم تصدير الصورة", description: "تم حفظ الصورة بنجاح على جهازك." });
+    toast({ title: "تم التصدير", description: "تم حفظ صورة الإنجاز المفرغة." });
   };
 
   const handleDeleteRecord = (recordId: string) => {
@@ -346,7 +349,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       setSelectedRecord(null);
       setHistoryPath(null);
     }
-    toast({ title: "تم الحذف", description: "تم مسح السجل بنجاح." });
+    toast({ title: "تم الحذف", description: "تمت إزالة النشاط من السجل." });
   };
 
   const formatTime = (s: number) => {
@@ -354,6 +357,12 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     const m = Math.floor((s % 3600) / 60);
     const sec = s % 60;
     return `${h > 0 ? h + ':' : ''}${m < 10 && h > 0 ? '0' : ''}${m}:${sec < 10 ? '0' : ''}${sec}`;
+  };
+
+  const calculateSpeed = (dist: number, seconds: number) => {
+    if (seconds <= 0) return 0;
+    const hours = seconds / 3600;
+    return (dist / hours).toFixed(1);
   };
 
   const getExerciseName = (type: string) => {
@@ -366,6 +375,31 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       case 'pullups': return 'تمارين العقلة';
       case 'gym': return 'تمارين الحديد';
       default: return 'تمرين رياضي';
+    }
+  };
+
+  const handleClearStuckSession = () => {
+    localStorage.removeItem('active_fitness_session');
+    setHasStoredSession(false);
+    toast({ title: "تم المسح", description: "تم تنظيف الجلسات السابقة." });
+  };
+
+  const handleResumeSession = () => {
+    try {
+      const s = JSON.parse(localStorage.getItem('active_fitness_session') || '{}');
+      if (s.distance !== undefined) {
+        setDistance(s.distance);
+        setElevationGain(s.elevationGain);
+        setSteps(s.steps);
+        setElapsedTime(s.elapsedTime);
+        setPath(s.path);
+        setIsTracking(true);
+        startGpsTracking();
+        setHasStoredSession(false);
+        toast({ title: "تم الاستئناف", description: "عدنا للعمل يا بطل!" });
+      }
+    } catch (e) {
+      handleClearStuckSession();
     }
   };
 
@@ -420,9 +454,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               <h3 className="text-lg font-bold text-foreground/90 font-cairo">ابدأ نشاطك</h3>
               <div className="space-y-4">
                 {[
-                  { id: 'run', view: 'running', hint: 'running person', desc: 'تتبع مسارك عبر GPS واحسب خطواتك بدقة' },
-                  { id: 'pushups', view: 'rep_counter', hint: 'pushups exercise', desc: 'سجل عدات الضغط وراقب تقدمك' },
-                  { id: 'gym', view: 'gym', hint: 'gym workout', desc: 'نظام مرن لجدولة تمارين الحديد' }
+                  { id: 'run', view: 'running', desc: 'تتبع مسارك عبر GPS واحسب خطواتك بدقة' },
+                  { id: 'pushups', view: 'rep_counter', desc: 'سجل عدات الضغط وراقب تقدمك' },
+                  { id: 'gym', view: 'gym', desc: 'نظام مرن لجدولة تمارين الحديد' }
                 ].map((ex) => (
                   <div key={ex.id} onClick={() => { setActiveExercise(ex.id as ExerciseType); setView(ex.view as FitnessView); }} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center gap-4 active:scale-[0.98] transition-all cursor-pointer group">
                     <div className="h-16 w-16 rounded-[10px] overflow-hidden relative shrink-0 shadow-md">
@@ -488,11 +522,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                       <RotateCcw className="h-5 w-5 text-orange-600" />
                       <p className="text-xs font-bold text-orange-900">لديك جلسة غير مكتملة</p>
                     </div>
-                    <Button onClick={() => {
-                      const s = JSON.parse(localStorage.getItem('active_fitness_session') || '{}');
-                      setDistance(s.distance); setElevationGain(s.elevationGain); setSteps(s.steps); setElapsedTime(s.elapsedTime); setPath(s.path);
-                      setView('running'); setIsTracking(true); startGpsTracking();
-                    }} size="sm" className="bg-orange-600 text-white rounded-[10px] h-8 font-bold">استئناف</Button>
+                    <div className="flex gap-2">
+                      <Button onClick={handleResumeSession} size="sm" className="bg-orange-600 text-white rounded-[10px] h-8 font-bold">استئناف</Button>
+                      <Button onClick={handleClearStuckSession} variant="ghost" size="sm" className="h-8 w-8 text-orange-400 p-0"><X className="h-4 w-4" /></Button>
+                    </div>
                   </div>
                 )}
 
@@ -511,7 +544,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                             <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center text-primary"><Mountain className="h-5 w-5" /></div>
                             <div>
                               <p className="text-sm font-black">{rec.distance} كم</p>
-                              <p className="text-[10px] text-muted-foreground font-bold">{rec.date?.seconds ? new Date(rec.date.seconds * 1000).toLocaleDateString('ar-EG') : 'اليوم'}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-muted-foreground font-bold">{rec.date?.seconds ? new Date(rec.date.seconds * 1000).toLocaleDateString('ar-EG') : 'اليوم'}</span>
+                                <span className="text-[10px] text-primary font-bold">{calculateSpeed(rec.distance, rec.durationSeconds)} كم/س</span>
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -538,7 +574,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 <div className="text-center space-y-4">
                   <h3 className="text-sm font-black uppercase">{getExerciseName(activeExercise)}</h3>
                   <p className="text-5xl font-black">{reps}</p>
-                  <Button onClick={() => { if(!isTracking) { setIsTracking(true); setReps(0); } else { setIsTracking(false); setShowRepDialog(true); } }} className="w-full h-12 bg-white text-primary rounded-[10px] font-black">
+                  <Button onClick={() => { if(!isTracking) { setIsTracking(true); setReps(0); setElapsedTime(0); } else { setIsTracking(false); setShowRepDialog(true); } }} className="w-full h-12 bg-white text-primary rounded-[10px] font-black">
                     {isTracking ? 'إكمال الجلسة' : 'ابدأ التكرار'}
                   </Button>
                 </div>
@@ -625,6 +661,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
            <Button onClick={() => {
              if(db && user) addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), { type: activeExercise, date: serverTimestamp(), reps: parseInt(inputReps), durationSeconds: elapsedTime, userId: user.uid });
              setShowRepDialog(false); setInputReps(""); setView('hub');
+             toast({ title: "تم الحفظ", description: "تم تسجيل التمرين بنجاح." });
            }} className="w-full h-12 primary-gradient text-white font-black rounded-[10px]">حفظ النتيجة</Button>
          </DialogContent>
       </Dialog>
