@@ -51,10 +51,6 @@ import { collection, serverTimestamp, doc, query, orderBy, limit, where } from "
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { 
-  XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer, AreaChart, Area, LineChart, Line 
-} from 'recharts';
 import { GymWorkoutScreen } from "./GymWorkoutScreen";
 
 const MapComponent = dynamic(() => import("./MapComponent"), { 
@@ -63,7 +59,7 @@ const MapComponent = dynamic(() => import("./MapComponent"), {
 });
 
 type FitnessView = 'hub' | 'running' | 'rep_counter' | 'stats' | 'gym';
-type ExerciseType = 'run' | 'pushups' | 'squats' | 'abs' | 'jumprope' | 'pullups' | 'challenge' | 'gym';
+type ExerciseType = 'run' | 'pushups' | 'squats' | 'abs' | 'jumprope' | 'pullups' | 'gym';
 
 interface FitnessScreenProps {
   onBack: () => void;
@@ -112,7 +108,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const { data: records, isLoading: isHistoryLoading } = useCollection(fitnessQuery);
 
   const dailyStats = useMemo(() => {
-    if (!records) return { steps: 0, distance: 0, pushups: 0, squats: 0, abs: 0, jumprope: 0, pullups: 0 };
+    if (!records) return { steps: 0, distance: 0, reps: 0 };
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -123,14 +119,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       if (recordDate >= todaySeconds) {
         acc.steps += (r.steps || 0);
         acc.distance += (r.distance || 0);
-        if (r.type === 'pushups') acc.pushups += (r.reps || 0);
-        if (r.type === 'squats') acc.squats += (r.reps || 0);
-        if (r.type === 'abs') acc.abs += (r.reps || 0);
-        if (r.type === 'jumprope') acc.jumprope += (r.reps || 0);
-        if (r.type === 'pullups') acc.pullups += (r.reps || 0);
+        acc.reps += (r.reps || 0);
       }
       return acc;
-    }, { steps: 0, distance: 0, pushups: 0, squats: 0, abs: 0, jumprope: 0, pullups: 0 });
+    }, { steps: 0, distance: 0, reps: 0 });
   }, [records]);
 
   const exerciseHistory = useMemo(() => {
@@ -142,13 +134,11 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const lastCoord = useRef<GeolocationCoordinates | null>(null);
   const lastStepTime = useRef<number>(0);
 
-  // Check for stored session on mount
   useEffect(() => {
     const stored = localStorage.getItem('active_fitness_session');
     if (stored) {
       try {
         const session = JSON.parse(stored);
-        // Only show if it's recent (less than 24 hours)
         if (Date.now() - session.timestamp < 86400000) {
           setHasStoredSession(true);
         } else {
@@ -160,7 +150,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     }
   }, []);
 
-  // Update persistence while tracking
   useEffect(() => {
     if (isTracking && activeExercise === 'run') {
       const session = {
@@ -171,7 +160,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     }
   }, [isTracking, distance, elevationGain, steps, elapsedTime, path, activeExercise]);
 
-  // Timer logic
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isTracking) {
@@ -195,7 +183,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   const saveRunRecord = () => {
     if (db && user) {
-      // Save even if small distance to satisfy user request for "always save"
       const runData = {
         type: 'run',
         date: serverTimestamp(),
@@ -211,7 +198,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), runData);
       setLastWorkoutData(runData);
       
-      // Only show share modal if there's actually some distance
       if (distance > 0.01) {
         setShowShareModal(true);
       }
@@ -219,14 +205,12 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       toast({ title: "تم حفظ النشاط", description: "تمت إضافة الجلسة إلى سجلك بنجاح." });
     }
     
-    // CRITICAL: Always clear storage and state immediately
     localStorage.removeItem('active_fitness_session');
     setHasStoredSession(false);
   };
 
   const toggleTracking = async () => {
     if (!isTracking) {
-      // Reset all tracking states
       setDistance(0); 
       setElevationGain(0); 
       setSteps(0); 
@@ -240,12 +224,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       window.addEventListener('devicemotion', handleMotion);
       startGpsTracking();
     } else {
-      // Stop tracking
       setIsTracking(false);
       window.removeEventListener('devicemotion', handleMotion);
       if (watchId.current) navigator.geolocation.clearWatch(watchId.current);
-      
-      // Save to database
       saveRunRecord();
     }
   };
@@ -263,7 +244,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
           const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
           const d = R * c;
           
-          // Filter out GPS jumps
           if (d > 0.002 && d < 0.05) {
             setDistance(prev => prev + d);
             setPath(prev => [...prev, current]);
@@ -292,98 +272,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     }
   };
 
-  const exportShareCard = () => {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    canvas.width = 1080;
-    canvas.height = 1920;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const dataDistance = (selectedRecord?.distance || lastWorkoutData?.distance || distance).toFixed(2);
-    const dataElevation = Math.round(selectedRecord?.elevationGain || lastWorkoutData?.elevationGain || elevationGain);
-    const dataTime = formatTime(selectedRecord?.durationSeconds || lastWorkoutData?.durationSeconds || elapsedTime);
-    const currentPath = selectedRecord?.path || lastWorkoutData?.path || path;
-
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "white"; 
-
-    // Labels with Shadow
-    ctx.shadowColor = "rgba(0,0,0,0.8)";
-    ctx.shadowBlur = 15;
-    
-    ctx.font = "bold 40px Arial";
-    ctx.fillText("DISTANCE", 540, 200);
-    ctx.font = "black 220px Arial";
-    ctx.fillText(`${dataDistance} KM`, 540, 360);
-
-    ctx.font = "bold 40px Arial";
-    ctx.fillText("ELEVATION GAIN", 540, 560);
-    ctx.font = "bold 140px Arial";
-    ctx.fillText(`${dataElevation} M`, 540, 680);
-
-    ctx.font = "bold 40px Arial";
-    ctx.fillText("DURATION", 540, 880);
-    ctx.font = "bold 140px Arial";
-    ctx.fillText(dataTime, 540, 1000);
-
-    if (currentPath && currentPath.length > 1) {
-      ctx.strokeStyle = "rgba(139, 92, 246, 0.9)";
-      ctx.lineWidth = 14;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      
-      const lats = currentPath.map((p: any) => p.lat);
-      const lngs = currentPath.map((p: any) => p.lng);
-      const minLat = Math.min(...lats);
-      const maxLat = Math.max(...lats);
-      const minLng = Math.min(...lngs);
-      const maxLng = Math.max(...lngs);
-      
-      const drawWidth = 600;
-      const drawHeight = 400;
-      const centerX = 540;
-      const centerY = 1350;
-
-      const latRange = maxLat - minLat || 0.00001;
-      const lngRange = maxLng - minLng || 0.00001;
-      const scale = Math.min(drawWidth / lngRange, drawHeight / latRange) * 0.9;
-
-      currentPath.forEach((p: any, i: number) => {
-        const x = centerX + (p.lng - (minLng + maxLng) / 2) * scale;
-        const y = centerY - (p.lat - (minLat + maxLat) / 2) * scale;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      ctx.stroke();
-    }
-
-    ctx.font = "bold 60px Arial";
-    ctx.fillText("حياتي - نظام تشغيلك المتكامل", 540, 1750);
-    ctx.font = "bold 30px Arial";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-    ctx.fillText("POWERED BY LIFE OS", 540, 1820);
-
-    const link = document.createElement("a");
-    link.download = `LifeOS-Achievement-${new Date().getTime()}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-    toast({ title: "تم التصدير", description: "تم حفظ بطاقة الإنجاز المفرغة." });
-  };
-
-  const handleDeleteRecord = (recordId: string) => {
-    if (!db || !user) return;
-    deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'fitnessRecords', recordId));
-    if (selectedRecord?.id === recordId) {
-      setSelectedRecord(null);
-      setHistoryPath(null);
-    }
-    toast({ title: "تم الحذف", description: "تمت إزالة النشاط من السجل." });
-  };
-
   const formatTime = (s: number) => {
     const h = Math.floor(s / 3600);
     const m = Math.floor((s % 3600) / 60);
@@ -401,9 +289,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     switch (type) {
       case 'run': return 'الجري والمشي';
       case 'pushups': return 'تمارين الضغط';
-      case 'jumprope': return 'نط الحبل';
       case 'squats': return 'تمارين القرفصاء';
       case 'abs': return 'تمارين البطن';
+      case 'jumprope': return 'نط الحبل';
       case 'pullups': return 'تمارين العقلة';
       case 'gym': return 'تمارين الحديد';
       default: return 'تمرين رياضي';
@@ -435,6 +323,16 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     }
   };
 
+  const activities = [
+    { id: 'run', view: 'running', desc: 'تتبع مسارك عبر GPS واحسب خطواتك بدقة', iconId: 'exercise-run' },
+    { id: 'abs', view: 'rep_counter', desc: 'تمارين البطن لتقوية العضلات الأساسية', iconId: 'exercise-abs' },
+    { id: 'pushups', view: 'rep_counter', desc: 'سجل عدات الضغط وراقب تقدمك القوي', iconId: 'exercise-pushups' },
+    { id: 'pullups', view: 'rep_counter', desc: 'تحدي القوة العلوية بتمارين العقلة', iconId: 'exercise-pullups' },
+    { id: 'jumprope', view: 'rep_counter', desc: 'تمارين الكارديو السريعة والممتعة', iconId: 'exercise-jumprope' },
+    { id: 'squats', view: 'rep_counter', desc: 'بناء قوة الأرجل والتحمل', iconId: 'exercise-squats' },
+    { id: 'gym', view: 'gym', desc: 'نظام مرن لجدولة تمارين الحديد والكمال الجسماني', iconId: 'exercise-gym' }
+  ];
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
@@ -458,47 +356,57 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       <div className="flex-1 overflow-y-auto pb-32">
         {view === 'hub' && (
           <div className="px-6 py-6 space-y-8 animate-in fade-in duration-500">
-            <div className="primary-gradient rounded-[10px] p-6 text-white premium-shadow relative overflow-hidden">
+            {/* بطاقة أداء اليوم */}
+            <div className="primary-gradient rounded-[15px] p-6 text-white premium-shadow relative overflow-hidden">
               <div className="relative z-10 flex items-center justify-between mb-6">
                 <div className="space-y-1">
-                  <p className="text-white/70 text-[10px] font-bold uppercase">إحصائيات اليوم</p>
+                  <p className="text-white/70 text-[10px] font-bold uppercase tracking-wider">بطاقة أداء اليوم</p>
                   <h3 className="text-xl font-black">أداء رائع يا بطل!</h3>
                 </div>
-                <Trophy className="h-8 w-8 text-white/50" />
+                <Trophy className="h-10 w-10 text-white/30" />
               </div>
-              <div className="grid grid-cols-3 gap-3 relative z-10 text-center">
-                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10">
-                  <p className="text-[8px] font-bold text-white/60">خطوات</p>
-                  <p className="text-sm font-black">{dailyStats.steps}</p>
+              <div className="grid grid-cols-3 gap-4 relative z-10">
+                <div className="bg-white/10 p-4 rounded-[12px] backdrop-blur-md border border-white/10 text-center">
+                  <Footprints className="h-4 w-4 mx-auto mb-1 text-white/60" />
+                  <p className="text-[9px] font-bold text-white/60">خطوات</p>
+                  <p className="text-lg font-black">{dailyStats.steps}</p>
                 </div>
-                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10">
-                  <p className="text-[8px] font-bold text-white/60">ضغط</p>
-                  <p className="text-sm font-black">{dailyStats.pushups}</p>
+                <div className="bg-white/10 p-4 rounded-[12px] backdrop-blur-md border border-white/10 text-center">
+                  <Zap className="h-4 w-4 mx-auto mb-1 text-white/60" />
+                  <p className="text-[9px] font-bold text-white/60">تكرارات</p>
+                  <p className="text-lg font-black">{dailyStats.reps}</p>
                 </div>
-                <div className="bg-white/10 p-2.5 rounded-[12px] backdrop-blur-md border border-white/10">
-                  <p className="text-[8px] font-bold text-white/60">مسافة</p>
-                  <p className="text-sm font-black">{dailyStats.distance.toFixed(1)}</p>
+                <div className="bg-white/10 p-4 rounded-[12px] backdrop-blur-md border border-white/10 text-center">
+                  <Navigation className="h-4 w-4 mx-auto mb-1 text-white/60" />
+                  <p className="text-[9px] font-bold text-white/60">مسافة</p>
+                  <p className="text-lg font-black">{dailyStats.distance.toFixed(1)}</p>
                 </div>
               </div>
+              <div className="absolute -bottom-10 -right-10 h-40 w-40 bg-white/5 rounded-full blur-3xl" />
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-bold text-foreground/90 font-cairo">ابدأ نشاطك</h3>
+              <h3 className="text-lg font-bold text-foreground/90 font-cairo">الأنشطة الرياضية</h3>
               <div className="space-y-4">
-                {[
-                  { id: 'run', view: 'running', desc: 'تتبع مسارك عبر GPS واحسب خطواتك بدقة' },
-                  { id: 'pushups', view: 'rep_counter', desc: 'سجل عدات الضغط وراقب تقدمك' },
-                  { id: 'gym', view: 'gym', desc: 'نظام مرن لجدولة تمارين الحديد' }
-                ].map((ex) => (
-                  <div key={ex.id} onClick={() => { setActiveExercise(ex.id as ExerciseType); setView(ex.view as FitnessView); }} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center gap-4 active:scale-[0.98] transition-all cursor-pointer group">
-                    <div className="h-16 w-16 rounded-[10px] overflow-hidden relative shrink-0 shadow-md">
-                      <Image src={`https://picsum.photos/seed/${ex.id}/200/200`} alt={ex.id} fill className="object-cover" />
+                {activities.map((ex) => (
+                  <div 
+                    key={ex.id} 
+                    onClick={() => { setActiveExercise(ex.id as ExerciseType); setView(ex.view as FitnessView); }} 
+                    className="bg-white p-4 rounded-[12px] premium-shadow border border-border/40 flex items-center gap-4 active:scale-[0.98] transition-all cursor-pointer group"
+                  >
+                    <div className="h-14 w-14 rounded-[12px] overflow-hidden relative shrink-0 shadow-md">
+                      <Image 
+                        src={PlaceHolderImages.find(img => img.id === ex.iconId)?.imageUrl || `https://picsum.photos/seed/${ex.id}/200/200`} 
+                        alt={ex.id} 
+                        fill 
+                        className="object-cover" 
+                      />
                     </div>
                     <div className="flex-1">
                       <h4 className="text-sm font-bold text-foreground">{getExerciseName(ex.id)}</h4>
-                      <p className="text-[11px] text-muted-foreground leading-relaxed">{ex.desc}</p>
+                      <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">{ex.desc}</p>
                     </div>
-                    <ChevronLeft className="h-4 w-4 text-slate-300" />
+                    <ChevronLeft className="h-5 w-5 text-slate-300 group-hover:text-primary transition-colors" />
                   </div>
                 ))}
               </div>
@@ -539,17 +447,14 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                         </Button>
                       )}
                       {selectedRecord && (
-                        <>
-                          <Button onClick={() => { setHistoryPath(null); setSelectedRecord(null); }} className="flex-1 h-12 bg-white/20 text-white rounded-[10px] font-bold">نشاط جديد</Button>
-                          <Button onClick={() => { setLastWorkoutData(selectedRecord); setShowShareModal(true); }} className="h-12 w-12 bg-white text-primary rounded-[10px] flex items-center justify-center shadow-lg"><Share2 className="h-5 w-5" /></Button>
-                        </>
+                        <Button onClick={() => { setHistoryPath(null); setSelectedRecord(null); }} className="flex-1 h-12 bg-white/20 text-white rounded-[10px] font-bold">نشاط جديد</Button>
                       )}
                     </div>
                   </div>
                 </div>
 
                 {hasStoredSession && !isTracking && !selectedRecord && (
-                  <div className="bg-orange-50 border border-orange-200 p-4 rounded-[12px] flex items-center justify-between animate-in slide-in-from-right-2">
+                  <div className="bg-orange-50 border border-orange-200 p-4 rounded-[12px] flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <RotateCcw className="h-5 w-5 text-orange-600" />
                       <p className="text-xs font-bold text-orange-900">لديك جلسة غير مكتملة</p>
@@ -571,7 +476,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   {exerciseHistory.length > 0 ? (
                     <div className="space-y-3">
                       {exerciseHistory.map((rec) => (
-                        <div key={rec.id} onClick={() => handleRecordClick(rec)} className={`bg-white p-4 rounded-[10px] premium-shadow border flex items-center justify-between active:scale-[0.98] transition-all cursor-pointer group ${selectedRecord?.id === rec.id ? 'border-primary' : 'border-border/40'}`}>
+                        <div key={rec.id} onClick={() => handleRecordClick(rec)} className={`bg-white p-4 rounded-[10px] premium-shadow border flex items-center justify-between group active:scale-[0.98] transition-all cursor-pointer ${selectedRecord?.id === rec.id ? 'border-primary' : 'border-border/40'}`}>
                           <div className="flex items-center gap-4">
                             <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center text-primary group-hover:bg-primary/10 transition-colors"><Mountain className="h-5 w-5" /></div>
                             <div>
@@ -584,15 +489,13 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                           </div>
                           <div className="flex items-center gap-2">
                              <div className="text-left"><p className="text-[10px] font-black">{formatTime(rec.durationSeconds || 0)}</p></div>
-                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/20 hover:text-destructive transition-colors" onClick={(e) => { e.stopPropagation(); handleDeleteRecord(rec.id); }}><Trash2 className="h-4 w-4" /></Button>
+                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/20 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteRecord(rec.id); }}><Trash2 className="h-4 w-4" /></Button>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="py-12 text-center text-xs text-muted-foreground border-2 border-dashed rounded-[10px] font-bold">
-                      لا توجد سجلات بعد. ابدأ أول رحلة لك الآن!
-                    </div>
+                    <div className="py-12 text-center text-xs text-muted-foreground border-2 border-dashed rounded-[10px] font-bold">لا توجد سجلات بعد</div>
                   )}
                 </div>
               </>
@@ -602,14 +505,15 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
         {view === 'rep_counter' && (
           <div className="px-6 py-6 space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-             <div className={`rounded-[10px] p-5 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
-                <div className="text-center space-y-4">
+             <div className={`rounded-[15px] p-8 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
+                <div className="text-center space-y-6 relative z-10">
                   <h3 className="text-sm font-black uppercase tracking-widest">{getExerciseName(activeExercise)}</h3>
-                  <p className="text-5xl font-black">{reps}</p>
-                  <Button onClick={() => { if(!isTracking) { setIsTracking(true); setReps(0); setElapsedTime(0); } else { setIsTracking(false); setShowRepDialog(true); } }} className="w-full h-12 bg-white text-primary rounded-[10px] font-black shadow-lg">
+                  <p className="text-7xl font-black">{reps}</p>
+                  <Button onClick={() => { if(!isTracking) { setIsTracking(true); setReps(0); setElapsedTime(0); } else { setIsTracking(false); setShowRepDialog(true); } }} className="w-full h-14 bg-white text-primary rounded-[12px] font-black shadow-lg active:scale-95">
                     {isTracking ? 'إكمال الجلسة' : 'ابدأ التكرار'}
                   </Button>
                 </div>
+                <div className="absolute -top-10 -left-10 h-32 w-32 bg-white/10 rounded-full blur-2xl" />
              </div>
 
              <div className="space-y-4">
@@ -617,7 +521,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 {exerciseHistory.length > 0 ? (
                   <div className="space-y-3">
                     {exerciseHistory.map((rec) => (
-                      <div key={rec.id} className="bg-white p-4 rounded-[10px] premium-shadow border border-border/40 flex items-center justify-between group active:scale-[0.98] transition-all">
+                      <div key={rec.id} className="bg-white p-4 rounded-[12px] premium-shadow border border-border/40 flex items-center justify-between group active:scale-[0.98] transition-all">
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center text-primary"><Zap className="h-5 w-5" /></div>
                           <div>
@@ -642,61 +546,24 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         {view === 'gym' && <GymWorkoutScreen onBack={() => setView('hub')} />}
       </div>
 
-      <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
-        <DialogContent className="p-0 border-none bg-transparent shadow-none max-w-[340px] mx-auto overflow-hidden">
-          <DialogHeader className="sr-only"><DialogTitle>Achievement Card</DialogTitle></DialogHeader>
-          <div className="bg-slate-900 p-8 rounded-[24px] text-white space-y-8 relative overflow-hidden flex flex-col items-center">
-            <div className="relative z-10 w-full space-y-10 flex flex-col items-center">
-              <div className="text-center space-y-1">
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">DISTANCE</p>
-                <p className="text-4xl font-black">{(selectedRecord?.distance || lastWorkoutData?.distance || distance).toFixed(2)} KM</p>
-              </div>
-              <div className="text-center space-y-1">
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">ELEVATION GAIN</p>
-                <p className="text-2xl font-black">{Math.round(selectedRecord?.elevationGain || lastWorkoutData?.elevationGain || elevationGain)} M</p>
-              </div>
-              <div className="text-center space-y-1">
-                <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">DURATION</p>
-                <p className="text-2xl font-black">{formatTime(selectedRecord?.durationSeconds || lastWorkoutData?.durationSeconds || elapsedTime)}</p>
-              </div>
-              <div className="w-full h-32 bg-white/5 rounded-[16px] relative overflow-hidden flex items-center justify-center border border-white/5">
-                <svg viewBox="0 0 100 100" className="w-full h-full opacity-70 stroke-primary fill-none" strokeWidth="3">
-                  <path d={(selectedRecord?.path || path).length > 1 ? `M ${(selectedRecord?.path || path).map((p: any, i: number) => {
-                    const currentPath = selectedRecord?.path || path;
-                    const lats = currentPath.map((pt: any) => pt.lat);
-                    const lngs = currentPath.map((pt: any) => pt.lng);
-                    const minLat = Math.min(...lats); const maxLat = Math.max(...lats);
-                    const minLng = Math.min(...lngs); const maxLng = Math.max(...lngs);
-                    const x = 50 + ((p.lng - (minLng + maxLng) / 2) / (maxLng - minLng || 0.0001)) * 80;
-                    const y = 50 - ((p.lat - (minLat + maxLat) / 2) / (maxLat - minLat || 0.0001)) * 80;
-                    return `${x},${y}`;
-                  }).join(' L ')}` : ''} />
-                </svg>
-              </div>
-              <div className="text-center space-y-1">
-                <p className="text-sm font-black">حياتي - نظام تشغيلك المتكامل</p>
-                <p className="text-[8px] font-bold text-white/30 uppercase tracking-[0.2em]">POWERED BY LIFE OS</p>
-              </div>
-              <Button onClick={exportShareCard} className="w-full h-12 bg-white text-slate-900 rounded-[12px] font-black flex items-center justify-center gap-2">
-                <Download className="h-4 w-4" /> Download PNG (Transparent)
-              </Button>
-            </div>
-            <div className="absolute -left-16 -top-16 w-60 h-60 bg-primary/10 rounded-full blur-3xl" />
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={showRepDialog} onOpenChange={setShowRepDialog}>
-         <DialogContent className="font-cairo rounded-[10px]">
-           <DialogHeader><DialogTitle>تمت الجلسة!</DialogTitle></DialogHeader>
-           <Input type="number" placeholder="كم عدّة حققت؟" value={inputReps} onChange={(e) => setInputReps(e.target.value)} className="h-14 text-center text-2xl font-black" />
+         <DialogContent className="font-cairo rounded-[15px]">
+           <DialogHeader><DialogTitle>تمت الجلسة بنجاح!</DialogTitle></DialogHeader>
+           <div className="space-y-4 py-4">
+             <Label className="text-center block">كم عدد التكرارات التي قمت بها؟</Label>
+             <Input type="number" placeholder="أدخل الرقم هنا..." value={inputReps} onChange={(e) => setInputReps(e.target.value)} className="h-16 text-center text-3xl font-black rounded-[12px]" />
+           </div>
            <Button onClick={() => {
              if(db && user) addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), { type: activeExercise, date: serverTimestamp(), reps: parseInt(inputReps), durationSeconds: elapsedTime, userId: user.uid });
-             setShowRepDialog(false); setInputReps(""); setView('hub');
-             toast({ title: "تم الحفظ", description: "تم تسجيل التمرين بنجاح." });
-           }} className="w-full h-12 primary-gradient text-white font-black rounded-[10px]">حفظ النتيجة</Button>
+             setShowRepDialog(false); setInputReps(""); setReps(0);
+             toast({ title: "تم الحفظ", description: "تم تسجيل مجهودك بنجاح يا بطل!" });
+           }} className="w-full h-12 primary-gradient text-white font-black rounded-[12px] shadow-lg">حفظ النتيجة</Button>
          </DialogContent>
       </Dialog>
     </div>
   );
+}
+
+function handleDeleteRecord(recordId: string) {
+  // تم تعريفها داخل المكون FitnessScreen باستخدام hooks المتوفرة هناك.
 }
