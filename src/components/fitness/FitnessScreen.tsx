@@ -346,12 +346,11 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     if (shareCardRef.current === null) return;
     setIsExporting(true);
     try {
-      // Create high-res PNG with transparent background
       const dataUrl = await toPng(shareCardRef.current, { 
         cacheBust: true, 
         backgroundColor: 'transparent',
         skipFonts: true,
-        pixelRatio: 3, // High Resolution
+        pixelRatio: 3, 
       });
       const link = document.createElement('a');
       link.download = `LifeOS-Achievement-${Date.now()}.png`;
@@ -370,7 +369,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     }
   };
 
-  // Generate SVG path for sharing card visualization
   const generateSvgPath = (coords: {lat: number, lng: number}[]) => {
     if (!coords || coords.length < 2) return "";
     const lats = coords.map(c => c.lat);
@@ -650,25 +648,19 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             <DialogDescription className="text-center font-bold">بطاقة الإنجاز الشفافة لمشاركتها مع أصدقائك</DialogDescription>
           </DialogHeader>
           <div ref={shareCardRef} className="bg-transparent aspect-[9/16] w-full rounded-[25px] p-8 text-white flex flex-col items-center relative overflow-hidden">
-             {/* Decorative Background for Preview Only (Not in Export if transparent PNG is desired, but keeping subtle) */}
-             <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-64 h-64 bg-primary/20 rounded-full blur-[100px]" />
-             
-             {/* Date Header - Uniform Size, English */}
-             <div className="w-full text-center opacity-70 font-bold text-xs mb-8 uppercase tracking-widest text-foreground">
+             <div className="w-full text-center text-white drop-shadow-md font-bold text-xs mb-8 uppercase tracking-widest">
                {shareData?.date?.seconds ? new Date(shareData.date.seconds * 1000).toLocaleDateString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Today'}
              </div>
 
-             {/* Distance - Primary Stat - Uniform Scale */}
-             <div className="flex flex-col items-center gap-2 mb-10 relative z-10 text-foreground">
-               <Navigation className="h-8 w-8 text-primary mb-1" />
-               <p className="text-[10px] font-black text-primary uppercase tracking-widest">DISTANCE</p>
+             <div className="flex flex-col items-center gap-2 mb-10 relative z-10 text-white drop-shadow-lg text-center">
+               <Navigation className="h-8 w-8 text-white mb-1" />
+               <p className="text-[10px] font-black opacity-80 uppercase tracking-widest">DISTANCE</p>
                <h3 className="text-5xl font-black tabular-nums">{shareData?.distance?.toFixed(2)}</h3>
                <p className="text-[10px] font-bold opacity-60">KILOMETERS</p>
              </div>
 
-             {/* Elevation - Secondary Stat - Uniform Scale */}
-             <div className="flex flex-col items-center gap-1 mb-8 relative z-10 text-foreground">
-               <div className="flex items-center gap-2 text-primary/80">
+             <div className="flex flex-col items-center gap-1 mb-8 relative z-10 text-white drop-shadow-lg text-center">
+               <div className="flex items-center gap-2">
                  <Mountain className="h-5 w-5" />
                  <span className="text-[10px] font-black uppercase tracking-widest">ELEVATION</span>
                </div>
@@ -676,41 +668,32 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                <p className="text-[10px] font-bold opacity-60">METERS</p>
              </div>
 
-             {/* Duration - Tertiary Stat - Uniform Scale */}
-             <div className="flex flex-col items-center gap-1 mb-10 relative z-10 text-foreground">
-               <div className="flex items-center gap-2 text-primary/60">
+             <div className="flex flex-col items-center gap-1 mb-10 relative z-10 text-white drop-shadow-lg text-center">
+               <div className="flex items-center gap-2">
                  <Clock className="h-5 w-5" />
                  <span className="text-[10px] font-black uppercase tracking-widest">DURATION</span>
                </div>
                <h4 className="text-3xl font-black tabular-nums">{formatTime(shareData?.durationSeconds || 0)}</h4>
              </div>
 
-             {/* Path Shape Visualization */}
-             <div className="flex-1 w-full flex items-center justify-center relative z-10 bg-primary/5 rounded-[20px] border border-primary/5 mb-8">
+             <div className="flex-1 w-full flex items-center justify-center relative z-10 mb-8 drop-shadow-xl">
                 {shareData?.path && shareData.path.length > 1 ? (
-                  <svg width="240" height="240" viewBox="0 0 280 280" className="drop-shadow-xl">
+                  <svg width="240" height="240" viewBox="0 0 280 280">
                     <path 
                       d={generateSvgPath(shareData.path)} 
                       fill="none" 
-                      stroke="url(#gradient)" 
+                      stroke="white" 
                       strokeWidth="8" 
                       strokeLinecap="round" 
                       strokeLinejoin="round" 
                     />
-                    <defs>
-                      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#8b5cf6" />
-                        <stop offset="100%" stopColor="#6366f1" />
-                      </linearGradient>
-                    </defs>
                   </svg>
                 ) : (
-                  <div className="text-[10px] text-foreground/20 font-bold">ROUTE DATA UNAVAILABLE</div>
+                  <div className="text-[10px] text-white/40 font-bold">ROUTE DATA UNAVAILABLE</div>
                 )}
              </div>
 
-             {/* App Branding - Standardized Size */}
-             <div className="w-full flex items-center justify-between border-t border-foreground/10 pt-6 relative z-10 text-foreground">
+             <div className="w-full flex items-center justify-between pt-6 relative z-10 text-white drop-shadow-md">
                 <span className="text-xs font-black tracking-tighter">LifeOS</span>
                 <span className="text-xs font-black font-cairo">حياتي</span>
              </div>
