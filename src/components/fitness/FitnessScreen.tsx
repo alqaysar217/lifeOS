@@ -112,7 +112,15 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   const { data: records, isLoading: isHistoryLoading } = useCollection(fitnessQuery);
 
   const dailyStats = useMemo(() => {
-    if (!records) return { steps: 0, distance: 0, reps: 0 };
+    const stats = {
+      run: 0,
+      pushups: 0,
+      abs: 0,
+      pullups: 0,
+      squats: 0,
+      jumprope: 0,
+    };
+    if (!records) return stats;
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -121,12 +129,15 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     return records.reduce((acc, r) => {
       const recordDate = r.date?.seconds || 0;
       if (recordDate >= todaySeconds) {
-        acc.steps += (r.steps || 0);
-        acc.distance += (r.distance || 0);
-        acc.reps += (r.reps || 0);
+        if (r.type === 'run') acc.run += (r.distance || 0);
+        else if (r.type === 'pushups') acc.pushups += (r.reps || 0);
+        else if (r.type === 'abs') acc.abs += (r.reps || 0);
+        else if (r.type === 'pullups') acc.pullups += (r.reps || 0);
+        else if (r.type === 'squats') acc.squats += (r.reps || 0);
+        else if (r.type === 'jumprope') acc.jumprope += (r.reps || 0);
       }
       return acc;
-    }, { steps: 0, distance: 0, reps: 0 });
+    }, stats);
   }, [records]);
 
   const exerciseHistory = useMemo(() => {
@@ -435,21 +446,36 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 </div>
                 <Trophy className="h-10 w-10 text-white/30" />
               </div>
-              <div className="grid grid-cols-3 gap-4 relative z-10">
-                <div className="bg-white/10 p-4 rounded-[12px] backdrop-blur-md border border-white/10 text-center">
-                  <Footprints className="h-4 w-4 mx-auto mb-1 text-white/60" />
-                  <p className="text-[9px] font-bold text-white/60">خطوات</p>
-                  <p className="text-lg font-black">{dailyStats.steps}</p>
-                </div>
-                <div className="bg-white/10 p-4 rounded-[12px] backdrop-blur-md border border-white/10 text-center">
-                  <Zap className="h-4 w-4 mx-auto mb-1 text-white/60" />
-                  <p className="text-[9px] font-bold text-white/60">تكرارات</p>
-                  <p className="text-lg font-black">{dailyStats.reps}</p>
-                </div>
-                <div className="bg-white/10 p-4 rounded-[12px] backdrop-blur-md border border-white/10 text-center">
+              <div className="grid grid-cols-3 gap-3 relative z-10">
+                <div className="bg-white/10 p-3 rounded-[12px] backdrop-blur-md border border-white/10 text-center">
                   <Navigation className="h-4 w-4 mx-auto mb-1 text-white/60" />
-                  <p className="text-[9px] font-bold text-white/60">مسافة</p>
-                  <p className="text-lg font-black">{dailyStats.distance.toFixed(1)}</p>
+                  <p className="text-[8px] font-bold text-white/60">جري</p>
+                  <p className="text-sm font-black">{dailyStats.run.toFixed(1)}</p>
+                </div>
+                <div className="bg-white/10 p-3 rounded-[12px] backdrop-blur-md border border-white/10 text-center">
+                  <Zap className="h-4 w-4 mx-auto mb-1 text-white/60" />
+                  <p className="text-[8px] font-bold text-white/60">ضغط</p>
+                  <p className="text-sm font-black">{dailyStats.pushups}</p>
+                </div>
+                <div className="bg-white/10 p-3 rounded-[12px] backdrop-blur-md border border-white/10 text-center">
+                  <Activity className="h-4 w-4 mx-auto mb-1 text-white/60" />
+                  <p className="text-[8px] font-bold text-white/60">بطن</p>
+                  <p className="text-sm font-black">{dailyStats.abs}</p>
+                </div>
+                <div className="bg-white/10 p-3 rounded-[12px] backdrop-blur-md border border-white/10 text-center">
+                  <Trophy className="h-4 w-4 mx-auto mb-1 text-white/60" />
+                  <p className="text-[8px] font-bold text-white/60">عقلة</p>
+                  <p className="text-sm font-black">{dailyStats.pullups}</p>
+                </div>
+                <div className="bg-white/10 p-3 rounded-[12px] backdrop-blur-md border border-white/10 text-center">
+                  <Flame className="h-4 w-4 mx-auto mb-1 text-white/60" />
+                  <p className="text-[8px] font-bold text-white/60">قرفصاء</p>
+                  <p className="text-sm font-black">{dailyStats.squats}</p>
+                </div>
+                <div className="bg-white/10 p-3 rounded-[12px] backdrop-blur-md border border-white/10 text-center">
+                  <Timer className="h-4 w-4 mx-auto mb-1 text-white/60" />
+                  <p className="text-[8px] font-bold text-white/60">نط حبل</p>
+                  <p className="text-sm font-black">{dailyStats.jumprope}</p>
                 </div>
               </div>
               <div className="absolute -bottom-10 -right-10 h-40 w-40 bg-white/5 rounded-full blur-3xl" />
@@ -647,7 +673,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             <DialogTitle className="text-center text-xl font-black">مشاركة الإنجاز</DialogTitle>
             <DialogDescription className="text-center font-bold">بطاقة الإنجاز الشفافة لمشاركتها مع أصدقائك</DialogDescription>
           </DialogHeader>
-          <div ref={shareCardRef} className="bg-transparent aspect-[9/16] w-full rounded-[25px] p-8 text-white flex flex-col items-center relative overflow-hidden">
+          <div ref={shareCardRef} className="bg-transparent aspect-[9:16] w-full rounded-[25px] p-8 text-white flex flex-col items-center relative overflow-hidden">
              <div className="w-full text-center text-white drop-shadow-md font-bold text-xs mb-8 uppercase tracking-widest">
                {shareData?.date?.seconds ? new Date(shareData.date.seconds * 1000).toLocaleDateString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Today'}
              </div>
