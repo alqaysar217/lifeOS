@@ -210,7 +210,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   const toggleTracking = async () => {
     if (!isTracking) {
-      // If we're resuming from a selected record
       if (selectedRecord) {
         setDistance(selectedRecord.distance || 0);
         setElevationGain(selectedRecord.elevationGain || 0);
@@ -289,7 +288,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       setSelectedRecord(null);
       setHistoryPath(null);
     }
-    toast({ title: "تم الحذف", description: "تم إزالة السجل بنجاح." });
+    toast({ title: "تم الحفظ", description: "تم إزالة السجل بنجاح." });
   };
 
   const formatTime = (s: number) => {
@@ -347,14 +346,13 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     if (shareCardRef.current === null) return;
     setIsExporting(true);
     try {
-      // تم تعطيل skipFonts لحل مشكلة "font is undefined" وضمان تصدير الصورة بنجاح
       const dataUrl = await toPng(shareCardRef.current, { 
         cacheBust: true, 
         backgroundColor: 'transparent',
-        skipFonts: true, // تخطي معالجة الخطوط الخارجية لحل أخطاء الأمان
+        skipFonts: true,
       });
       const link = document.createElement('a');
-      link.download = `hayaty-achievement-${Date.now()}.png`;
+      link.download = `LifeOS-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
       toast({ title: "تم التنزيل", description: "تم حفظ بطاقة الإنجاز بنجاح." });
@@ -368,6 +366,32 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  // وظيفة لتوليد مسار SVG بناءً على الإحداثيات
+  const generateSvgPath = (coords: {lat: number, lng: number}[]) => {
+    if (!coords || coords.length < 2) return "";
+    const lats = coords.map(c => c.lat);
+    const lngs = coords.map(c => c.lng);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+
+    const width = 280;
+    const height = 280;
+    const padding = 40;
+
+    const scaleX = (width - 2 * padding) / (maxLng - minLng || 0.000001);
+    const scaleY = (height - 2 * padding) / (maxLat - minLat || 0.000001);
+
+    const points = coords.map(c => {
+      const x = padding + (c.lng - minLng) * scaleX;
+      const y = height - (padding + (c.lat - minLat) * scaleY);
+      return `${x},${y}`;
+    });
+
+    return `M ${points.join(" L ")}`;
   };
 
   const activities = [
@@ -623,20 +647,71 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             <DialogTitle className="text-center text-xl font-black">مشاركة الإنجاز</DialogTitle>
             <DialogDescription className="text-center font-bold">بطاقة الإنجاز الشفافة لمشاركتها مع أصدقائك</DialogDescription>
           </DialogHeader>
-          <div ref={shareCardRef} className="bg-slate-900 aspect-[9/16] w-full rounded-[15px] p-6 text-white flex flex-col justify-between relative overflow-hidden">
-             <div className="relative z-10">
-               <h4 className="text-2xl font-black mb-1">حياتي | إنجاز جري</h4>
-               <p className="text-xs opacity-60 font-bold">{shareData?.date?.seconds ? new Date(shareData.date.seconds * 1000).toLocaleDateString('ar-EG') : 'اليوم'}</p>
+          <div ref={shareCardRef} className="bg-slate-950 aspect-[9/16] w-full rounded-[25px] p-8 text-white flex flex-col items-center relative overflow-hidden">
+             {/* Background Decoration */}
+             <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-64 h-64 bg-primary/20 rounded-full blur-[100px]" />
+             
+             {/* Date Header */}
+             <div className="w-full text-right opacity-60 font-bold text-[10px] mb-8">
+               {shareData?.date?.seconds ? new Date(shareData.date.seconds * 1000).toLocaleDateString('ar-EG') : 'اليوم'}
              </div>
-             <div className="relative z-10 text-center space-y-2">
-               <p className="text-6xl font-black tabular-nums">{shareData?.distance?.toFixed(2)}</p>
-               <p className="text-xl font-bold opacity-80 uppercase tracking-widest">KILOMETERS</p>
+
+             {/* Distance - Primary Stat */}
+             <div className="flex flex-col items-center gap-2 mb-10 relative z-10">
+               <Navigation className="h-10 w-10 text-primary mb-2" />
+               <p className="text-[10px] font-black text-primary uppercase tracking-widest">DISTANCE</p>
+               <h3 className="text-6xl font-black tabular-nums">{shareData?.distance?.toFixed(2)}</h3>
+               <p className="text-sm font-bold opacity-60">KILOMETERS</p>
              </div>
-             <div className="relative z-10 grid grid-cols-2 gap-4 border-t border-white/20 pt-4">
-               <div><p className="text-[10px] opacity-60 font-bold uppercase">TIME</p><p className="text-lg font-black">{formatTime(shareData?.durationSeconds || 0)}</p></div>
-               <div><p className="text-[10px] opacity-60 font-bold uppercase">AVG PACE</p><p className="text-lg font-black">{calculateSpeed(shareData?.distance || 0, shareData?.durationSeconds || 0)} km/h</p></div>
+
+             {/* Elevation - Secondary Stat */}
+             <div className="flex flex-col items-center gap-1 mb-8 relative z-10">
+               <div className="flex items-center gap-2 text-primary/80">
+                 <Mountain className="h-5 w-5" />
+                 <span className="text-[10px] font-black uppercase tracking-widest">ELEVATION GAIN</span>
+               </div>
+               <h4 className="text-3xl font-black tabular-nums">{Math.round(shareData?.elevationGain || 0)}</h4>
+               <p className="text-[10px] font-bold opacity-60">METERS</p>
              </div>
-             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/20 rounded-full blur-[100px]" />
+
+             {/* Duration - Tertiary Stat */}
+             <div className="flex flex-col items-center gap-1 mb-10 relative z-10">
+               <div className="flex items-center gap-2 text-primary/60">
+                 <Clock className="h-4 w-4" />
+                 <span className="text-[10px] font-black uppercase tracking-widest">DURATION</span>
+               </div>
+               <h4 className="text-2xl font-black tabular-nums">{formatTime(shareData?.durationSeconds || 0)}</h4>
+             </div>
+
+             {/* Path Shape Visualization */}
+             <div className="flex-1 w-full flex items-center justify-center relative z-10 bg-white/5 rounded-[20px] border border-white/5 mb-8">
+                {shareData?.path && shareData.path.length > 1 ? (
+                  <svg width="280" height="280" viewBox="0 0 280 280" className="drop-shadow-2xl">
+                    <path 
+                      d={generateSvgPath(shareData.path)} 
+                      fill="none" 
+                      stroke="url(#gradient)" 
+                      strokeWidth="6" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                    />
+                    <defs>
+                      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#8b5cf6" />
+                        <stop offset="100%" stopColor="#6366f1" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                ) : (
+                  <div className="text-[10px] opacity-20 font-bold">ROUTE DATA UNAVAILABLE</div>
+                )}
+             </div>
+
+             {/* App Branding */}
+             <div className="w-full flex items-center justify-between border-t border-white/10 pt-6 relative z-10">
+                <span className="text-sm font-black tracking-tighter">LifeOS</span>
+                <span className="text-sm font-black font-cairo">حياتي</span>
+             </div>
           </div>
           <Button 
             onClick={handleExportImage} 
