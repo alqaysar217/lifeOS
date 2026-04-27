@@ -21,38 +21,44 @@
     {
       "id": "exercise-run",
       "description": "صورة تمرين الجري",
-      "imageUrl": "https://picsum.photos/seed/run-exercise/200/200",
+      "imageUrl": "/traaning-1.png",
       "imageHint": "running person"
     },
     {
       "id": "exercise-pushups",
       "description": "صورة تمرين الضغط",
-      "imageUrl": "https://picsum.photos/seed/pushups-exercise/200/200",
+      "imageUrl": "/traaning-2.png",
       "imageHint": "pushups exercise"
     },
     {
       "id": "exercise-squats",
       "description": "صورة تمرين القرفصاء",
-      "imageUrl": "https://picsum.photos/seed/squats-exercise/200/200",
+      "imageUrl": "/traaning-4.png",
       "imageHint": "squats exercise"
     },
     {
       "id": "exercise-abs",
       "description": "صورة تمرين البطن",
-      "imageUrl": "https://picsum.photos/seed/abs-exercise/200/200",
+      "imageUrl": "/traaning-5.png",
       "imageHint": "abs workout"
     },
     {
       "id": "exercise-jumprope",
       "description": "صورة تمرين نط الحبل",
-      "imageUrl": "https://picsum.photos/seed/jumprope-exercise/200/200",
+      "imageUrl": "/traaning-3.png",
       "imageHint": "skipping rope"
     },
     {
       "id": "exercise-pullups",
       "description": "صورة تمرين العقلة",
-      "imageUrl": "https://picsum.photos/seed/pullups-exercise/200/200",
+      "imageUrl": "/traaning-6.png",
       "imageHint": "pull-up exercise"
+    },
+    {
+      "id": "exercise-gym",
+      "description": "صورة تمارين الحديد",
+      "imageUrl": "/traaning-7.png",
+      "imageHint": "gym workout"
     }
   ]
 }
