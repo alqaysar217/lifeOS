@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
@@ -352,19 +351,24 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     if (shareCardRef.current === null) return;
     setIsExporting(true);
     try {
-      // استخدام خيار cacheBust وتجاهل أخطاء التنسيقات الخارجية
+      // استخدام خيارات متقدمة لتجاوز مشاكل CORS والأمان
       const dataUrl = await toPng(shareCardRef.current, { 
         cacheBust: true, 
         backgroundColor: 'transparent',
+        skipFonts: false, // سنحاول تضمين الخطوط
       });
       const link = document.createElement('a');
       link.download = `hayaty-achievement-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
-      toast({ title: "نجاح التصدير", description: "تم تحميل بطاقة الإنجاز المفرغة." });
+      toast({ title: "نجاح التصدير", description: "تم تحميل بطاقة الإنجاز بنجاح." });
     } catch (err) {
       console.error('Export error:', err);
-      toast({ variant: "destructive", title: "خطأ في التصدير", description: "حدثت مشكلة أمنية في المتصفح أثناء التصدير." });
+      toast({ 
+        variant: "destructive", 
+        title: "خطأ في التصدير", 
+        description: "تعذر الوصول إلى بعض التنسيقات الخارجية. جرب مرة أخرى." 
+      });
     } finally {
       setIsExporting(false);
     }

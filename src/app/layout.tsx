@@ -24,14 +24,14 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link 
           href="https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap" 
           rel="stylesheet" 
           crossOrigin="anonymous"
         />
-        {/* التحميل المباشر لـ Leaflet CSS لضمان الاستقرار على جميع الشبكات */}
+        {/* التحميل المباشر لـ Leaflet CSS مع دعم CORS لضمان إمكانية تصدير الصور */}
         <link 
           rel="stylesheet" 
           href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
