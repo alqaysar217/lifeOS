@@ -19,7 +19,8 @@ import {
   Download,
   Mountain,
   RotateCcw,
-  ZapOff
+  ZapOff,
+  Share
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -48,7 +49,7 @@ import {
 } from "@/components/ui/dialog";
 import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from "@/firebase";
 import { collection, serverTimestamp, doc, query, orderBy, limit, where } from "firebase/firestore";
-import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { GymWorkoutScreen } from "./GymWorkoutScreen";
@@ -85,7 +86,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   // Share Card State
   const [showShareModal, setShowShareModal] = useState(false);
-  const [lastWorkoutData, setLastWorkoutData] = useState<any>(null);
+  const [shareData, setShareData] = useState<any>(null);
 
   // Rep counter states
   const [reps, setReps] = useState(0);
@@ -196,7 +197,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       };
       
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), runData);
-      setLastWorkoutData(runData);
+      setShareData(runData);
       
       if (distance > 0.01) {
         setShowShareModal(true);
@@ -211,15 +212,27 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   const toggleTracking = async () => {
     if (!isTracking) {
-      setDistance(0); 
-      setElevationGain(0); 
-      setSteps(0); 
-      setElapsedTime(0); 
-      setPath([]); 
-      lastCoord.current = null;
-      setHistoryPath(null); 
-      setSelectedRecord(null);
+      // If we're resuming from a selected record
+      if (selectedRecord && !isTracking) {
+        setDistance(selectedRecord.distance || 0);
+        setElevationGain(selectedRecord.elevationGain || 0);
+        setSteps(selectedRecord.steps || 0);
+        setElapsedTime(selectedRecord.durationSeconds || 0);
+        setPath(selectedRecord.path || []);
+        setHistoryPath(null);
+        setSelectedRecord(null);
+        toast({ title: "استئناف التمرين", description: "جاري إكمال التمرين المختار..." });
+      } else {
+        setDistance(0); 
+        setElevationGain(0); 
+        setSteps(0); 
+        setElapsedTime(0); 
+        setPath([]); 
+        setHistoryPath(null); 
+        setSelectedRecord(null);
+      }
       
+      lastCoord.current = null;
       setIsTracking(true);
       window.addEventListener('devicemotion', handleMotion);
       startGpsTracking();
@@ -253,7 +266,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             }
           }
         } else {
-          setPath([current]);
+          setPath(prev => prev.length === 0 ? [current] : prev);
         }
         lastCoord.current = pos.coords;
       },
@@ -268,8 +281,17 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       setHistoryPath(record.path.map((p: any) => [p.lat, p.lng]));
       setView('running');
       setIsTracking(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+  };
+
+  const handleDeleteRecord = (recordId: string) => {
+    if (!db || !user) return;
+    deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'fitnessRecords', recordId));
+    if (selectedRecord?.id === recordId) {
+      setSelectedRecord(null);
+      setHistoryPath(null);
+    }
+    toast({ title: "تم الحذف", description: "تم إزالة السجل بنجاح." });
   };
 
   const formatTime = (s: number) => {
@@ -356,7 +378,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       <div className="flex-1 overflow-y-auto pb-32">
         {view === 'hub' && (
           <div className="px-6 py-6 space-y-8 animate-in fade-in duration-500">
-            {/* بطاقة أداء اليوم */}
             <div className="primary-gradient rounded-[15px] p-6 text-white premium-shadow relative overflow-hidden">
               <div className="relative z-10 flex items-center justify-between mb-6">
                 <div className="space-y-1">
@@ -441,13 +462,19 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     </div>
 
                     <div className="flex gap-2">
-                      {!selectedRecord && (
-                        <Button onClick={toggleTracking} className="flex-1 h-12 bg-white text-primary rounded-[10px] font-black shadow-xl active:scale-95 transition-all">
-                          {isTracking ? 'إيقاف وحفظ' : 'بدء الركض'}
+                      <Button 
+                        onClick={toggleTracking} 
+                        className="flex-1 h-12 bg-white text-primary rounded-[10px] font-black shadow-xl active:scale-95 transition-all hover:bg-white hover:opacity-100"
+                      >
+                        {isTracking ? 'إيقاف وحفظ' : (selectedRecord ? 'استئناف التمرين' : 'بدء الركض')}
+                      </Button>
+                      {selectedRecord && !isTracking && (
+                        <Button 
+                          onClick={() => { setHistoryPath(null); setSelectedRecord(null); }} 
+                          className="h-12 w-12 bg-white/20 text-white rounded-[10px] flex items-center justify-center p-0"
+                        >
+                          <RotateCcw className="h-5 w-5" />
                         </Button>
-                      )}
-                      {selectedRecord && (
-                        <Button onClick={() => { setHistoryPath(null); setSelectedRecord(null); }} className="flex-1 h-12 bg-white/20 text-white rounded-[10px] font-bold">نشاط جديد</Button>
                       )}
                     </div>
                   </div>
@@ -476,7 +503,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                   {exerciseHistory.length > 0 ? (
                     <div className="space-y-3">
                       {exerciseHistory.map((rec) => (
-                        <div key={rec.id} onClick={() => handleRecordClick(rec)} className={`bg-white p-4 rounded-[10px] premium-shadow border flex items-center justify-between group active:scale-[0.98] transition-all cursor-pointer ${selectedRecord?.id === rec.id ? 'border-primary' : 'border-border/40'}`}>
+                        <div key={rec.id} onClick={() => handleRecordClick(rec)} className={`bg-white p-4 rounded-[10px] premium-shadow border flex items-center justify-between group active:scale-[0.98] transition-all cursor-pointer ${selectedRecord?.id === rec.id ? 'border-primary ring-2 ring-primary/10' : 'border-border/40'}`}>
                           <div className="flex items-center gap-4">
                             <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center text-primary group-hover:bg-primary/10 transition-colors"><Mountain className="h-5 w-5" /></div>
                             <div>
@@ -487,9 +514,24 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                             <div className="text-left"><p className="text-[10px] font-black">{formatTime(rec.durationSeconds || 0)}</p></div>
-                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/20 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteRecord(rec.id); }}><Trash2 className="h-4 w-4" /></Button>
+                          <div className="flex items-center gap-1">
+                             <div className="text-left ml-2"><p className="text-[10px] font-black">{formatTime(rec.durationSeconds || 0)}</p></div>
+                             <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-primary/40 hover:text-primary transition-colors"
+                                onClick={(e) => { e.stopPropagation(); setShareData(rec); setShowShareModal(true); }}
+                             >
+                                <Share className="h-4 w-4" />
+                             </Button>
+                             <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-destructive/20 hover:text-destructive transition-colors"
+                                onClick={(e) => { e.stopPropagation(); handleDeleteRecord(rec.id); }}
+                             >
+                                <Trash2 className="h-4 w-4" />
+                             </Button>
                           </div>
                         </div>
                       ))}
@@ -509,7 +551,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 <div className="text-center space-y-6 relative z-10">
                   <h3 className="text-sm font-black uppercase tracking-widest">{getExerciseName(activeExercise)}</h3>
                   <p className="text-7xl font-black">{reps}</p>
-                  <Button onClick={() => { if(!isTracking) { setIsTracking(true); setReps(0); setElapsedTime(0); } else { setIsTracking(false); setShowRepDialog(true); } }} className="w-full h-14 bg-white text-primary rounded-[12px] font-black shadow-lg active:scale-95">
+                  <Button 
+                    onClick={() => { if(!isTracking) { setIsTracking(true); setReps(0); setElapsedTime(0); } else { setIsTracking(false); setShowRepDialog(true); } }} 
+                    className="w-full h-14 bg-white text-primary rounded-[12px] font-black shadow-lg active:scale-95 hover:bg-white hover:opacity-100"
+                  >
                     {isTracking ? 'إكمال الجلسة' : 'ابدأ التكرار'}
                   </Button>
                 </div>
@@ -531,7 +576,14 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                         </div>
                         <div className="flex items-center gap-2">
                            <div className="text-left"><p className="text-[10px] font-black">{formatTime(rec.durationSeconds || 0)}</p></div>
-                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/20 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteRecord(rec.id); }}><Trash2 className="h-4 w-4" /></Button>
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
+                             className="h-8 w-8 text-destructive/20 hover:text-destructive" 
+                             onClick={(e) => { e.stopPropagation(); handleDeleteRecord(rec.id); }}
+                           >
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
                         </div>
                       </div>
                     ))}
@@ -546,6 +598,35 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
         {view === 'gym' && <GymWorkoutScreen onBack={() => setView('hub')} />}
       </div>
 
+      {/* Share Modal */}
+      <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+        <DialogContent className="font-cairo rounded-[20px] max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl font-black">مشاركة الإنجاز</DialogTitle>
+            <DialogDescription className="text-center font-bold">بطاقة الإنجاز الشفافة لمشاركتها مع أصدقائك</DialogDescription>
+          </DialogHeader>
+          <div className="bg-slate-900 aspect-[9/16] w-full rounded-[15px] p-6 text-white flex flex-col justify-between relative overflow-hidden">
+             <div className="relative z-10">
+               <h4 className="text-2xl font-black mb-1">حياتي | إنجاز جري</h4>
+               <p className="text-xs opacity-60 font-bold">{shareData?.date?.seconds ? new Date(shareData.date.seconds * 1000).toLocaleDateString('ar-EG') : 'اليوم'}</p>
+             </div>
+             <div className="relative z-10 text-center space-y-2">
+               <p className="text-6xl font-black tabular-nums">{shareData?.distance?.toFixed(2)}</p>
+               <p className="text-xl font-bold opacity-80 uppercase tracking-widest">KILOMETERS</p>
+             </div>
+             <div className="relative z-10 grid grid-cols-2 gap-4 border-t border-white/20 pt-4">
+               <div><p className="text-[10px] opacity-60 font-bold uppercase">TIME</p><p className="text-lg font-black">{formatTime(shareData?.durationSeconds || 0)}</p></div>
+               <div><p className="text-[10px] opacity-60 font-bold uppercase">AVG PACE</p><p className="text-lg font-black">{calculateSpeed(shareData?.distance || 0, shareData?.durationSeconds || 0)} km/h</p></div>
+             </div>
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/20 rounded-full blur-[100px]" />
+          </div>
+          <Button className="w-full h-12 primary-gradient text-white font-black rounded-[12px] shadow-lg">
+            <Download className="h-5 w-5 ml-2" />
+            تصدير الصورة (PNG)
+          </Button>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showRepDialog} onOpenChange={setShowRepDialog}>
          <DialogContent className="font-cairo rounded-[15px]">
            <DialogHeader><DialogTitle>تمت الجلسة بنجاح!</DialogTitle></DialogHeader>
@@ -557,13 +638,9 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
              if(db && user) addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), { type: activeExercise, date: serverTimestamp(), reps: parseInt(inputReps), durationSeconds: elapsedTime, userId: user.uid });
              setShowRepDialog(false); setInputReps(""); setReps(0);
              toast({ title: "تم الحفظ", description: "تم تسجيل مجهودك بنجاح يا بطل!" });
-           }} className="w-full h-12 primary-gradient text-white font-black rounded-[12px] shadow-lg">حفظ النتيجة</Button>
+           }} className="w-full h-12 primary-gradient text-white font-black rounded-[12px] shadow-lg hover:opacity-100">حفظ النتيجة</Button>
          </DialogContent>
       </Dialog>
     </div>
   );
-}
-
-function handleDeleteRecord(recordId: string) {
-  // تم تعريفها داخل المكون FitnessScreen باستخدام hooks المتوفرة هناك.
 }
