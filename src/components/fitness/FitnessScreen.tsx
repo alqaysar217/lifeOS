@@ -20,7 +20,9 @@ import {
   Mountain,
   RotateCcw,
   ZapOff,
-  Share
+  Share,
+  TrendingUp,
+  LineChart as LineChartIcon
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -31,15 +33,16 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toPng } from 'html-to-image';
 import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  AreaChart,
+  Area
+} from 'recharts';
 import {
   Dialog,
   DialogContent,
@@ -105,7 +108,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     return query(
       collection(db, 'users', user.uid, 'fitnessRecords'), 
       orderBy('date', 'desc'), 
-      limit(50)
+      limit(100)
     );
   }, [db, user]);
 
@@ -138,6 +141,28 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       }
       return acc;
     }, stats);
+  }, [records]);
+
+  // Process chart data for each activity
+  const chartData = useMemo(() => {
+    if (!records) return {};
+    
+    const types: ExerciseType[] = ['run', 'pushups', 'squats', 'abs', 'jumprope', 'pullups'];
+    const results: any = {};
+
+    types.forEach(type => {
+      const filtered = records
+        .filter(r => r.type === type)
+        .sort((a, b) => (a.date?.seconds || 0) - (b.date?.seconds || 0))
+        .map(r => ({
+          date: r.date?.seconds ? new Date(r.date.seconds * 1000).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) : 'N/A',
+          value: type === 'run' ? r.distance : r.reps,
+          fullDate: r.date?.seconds ? new Date(r.date.seconds * 1000).toLocaleString() : 'N/A'
+        }));
+      results[type] = filtered;
+    });
+
+    return results;
   }, [records]);
 
   const exerciseHistory = useMemo(() => {
@@ -424,7 +449,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               <ChevronRight className="h-5 w-5 text-foreground" />
             </Button>
             <h2 className="text-2xl font-extrabold text-foreground font-cairo">
-              {view === 'hub' ? 'اللياقة البدنية' : getExerciseName(activeExercise)}
+              {view === 'hub' ? 'اللياقة البدنية' : view === 'stats' ? 'إحصائيات التقدم' : getExerciseName(activeExercise)}
             </h2>
           </div>
           {view === 'hub' && (
@@ -507,6 +532,91 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {view === 'stats' && (
+          <div className="px-6 py-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {['run', 'pushups', 'squats', 'abs', 'jumprope', 'pullups'].map((type) => {
+              const data = chartData[type] || [];
+              const hasData = data.length > 0;
+              const unit = type === 'run' ? 'كم' : 'عدة';
+              
+              return (
+                <div key={type} className="bg-white p-6 rounded-[20px] premium-shadow border border-border/40 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-[12px] primary-gradient flex items-center justify-center text-white shadow-lg">
+                        <TrendingUp className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-foreground">{getExerciseName(type)}</h4>
+                        <p className="text-[10px] text-muted-foreground font-bold">تتبع التقدم عبر الزمن</p>
+                      </div>
+                    </div>
+                    {hasData && (
+                      <div className="text-left">
+                        <p className="text-xs font-black text-primary">
+                          {data[data.length - 1].value} {unit}
+                        </p>
+                        <p className="text-[8px] font-bold text-muted-foreground">آخر تمرين</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {hasData ? (
+                    <div className="h-48 w-full mt-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={data}>
+                          <defs>
+                            <linearGradient id={`color-${type}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis 
+                            dataKey="date" 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 600 }}
+                            dy={10}
+                          />
+                          <YAxis hide />
+                          <Tooltip 
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="bg-white p-3 rounded-[12px] shadow-xl border border-border/50 text-right">
+                                    <p className="text-[10px] font-bold text-muted-foreground">{payload[0].payload.fullDate}</p>
+                                    <p className="text-xs font-black text-primary">{payload[0].value} {unit}</p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="value" 
+                            stroke="#8b5cf6" 
+                            strokeWidth={3}
+                            fillOpacity={1} 
+                            fill={`url(#color-${type})`}
+                            animationDuration={1500}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="h-40 flex flex-col items-center justify-center border-2 border-dashed border-border/40 rounded-[15px] bg-slate-50/50 space-y-2">
+                      <LineChartIcon className="h-8 w-8 text-slate-200" />
+                      <p className="text-[10px] font-bold text-muted-foreground">لا توجد بيانات كافية للرسم البياني</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
