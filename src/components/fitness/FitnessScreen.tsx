@@ -346,16 +346,18 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     if (shareCardRef.current === null) return;
     setIsExporting(true);
     try {
+      // Create high-res PNG with transparent background
       const dataUrl = await toPng(shareCardRef.current, { 
         cacheBust: true, 
         backgroundColor: 'transparent',
         skipFonts: true,
+        pixelRatio: 3, // High Resolution
       });
       const link = document.createElement('a');
-      link.download = `LifeOS-${Date.now()}.png`;
+      link.download = `LifeOS-Achievement-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
-      toast({ title: "تم التنزيل", description: "تم حفظ بطاقة الإنجاز بنجاح." });
+      toast({ title: "تم التنزيل", description: "تم حفظ بطاقة الإنجاز بدقة عالية بنجاح." });
     } catch (err) {
       console.error('Export error:', err);
       toast({ 
@@ -368,7 +370,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     }
   };
 
-  // وظيفة لتوليد مسار SVG بناءً على الإحداثيات
+  // Generate SVG path for sharing card visualization
   const generateSvgPath = (coords: {lat: number, lng: number}[]) => {
     if (!coords || coords.length < 2) return "";
     const lats = coords.map(c => c.lat);
@@ -551,8 +553,8 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                             <div>
                               <p className="text-sm font-black">{rec.distance.toFixed(2)} كم</p>
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-muted-foreground font-bold">{rec.date?.seconds ? new Date(rec.date.seconds * 1000).toLocaleDateString('ar-EG') : 'الآن'}</span>
-                                <span className="text-[10px] text-primary font-bold">{calculateSpeed(rec.distance, rec.durationSeconds)} كم/س</span>
+                                <span className="text-[10px] text-muted-foreground font-bold">{rec.date?.seconds ? new Date(rec.date.seconds * 1000).toLocaleDateString('en-US') : 'Now'}</span>
+                                <span className="text-[10px] text-primary font-bold">{calculateSpeed(rec.distance, rec.durationSeconds)} km/h</span>
                               </div>
                             </div>
                           </div>
@@ -613,7 +615,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                           <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center text-primary"><Zap className="h-5 w-5" /></div>
                           <div>
                             <p className="text-sm font-black">{rec.reps} تكرار</p>
-                            <p className="text-[10px] text-muted-foreground font-bold">{rec.date?.seconds ? new Date(rec.date.seconds * 1000).toLocaleDateString('ar-EG') : 'اليوم'}</p>
+                            <p className="text-[10px] text-muted-foreground font-bold">{rec.date?.seconds ? new Date(rec.date.seconds * 1000).toLocaleDateString('en-US') : 'Today'}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -647,51 +649,51 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             <DialogTitle className="text-center text-xl font-black">مشاركة الإنجاز</DialogTitle>
             <DialogDescription className="text-center font-bold">بطاقة الإنجاز الشفافة لمشاركتها مع أصدقائك</DialogDescription>
           </DialogHeader>
-          <div ref={shareCardRef} className="bg-slate-950 aspect-[9/16] w-full rounded-[25px] p-8 text-white flex flex-col items-center relative overflow-hidden">
-             {/* Background Decoration */}
+          <div ref={shareCardRef} className="bg-transparent aspect-[9/16] w-full rounded-[25px] p-8 text-white flex flex-col items-center relative overflow-hidden">
+             {/* Decorative Background for Preview Only (Not in Export if transparent PNG is desired, but keeping subtle) */}
              <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-64 h-64 bg-primary/20 rounded-full blur-[100px]" />
              
-             {/* Date Header */}
-             <div className="w-full text-right opacity-60 font-bold text-[10px] mb-8">
-               {shareData?.date?.seconds ? new Date(shareData.date.seconds * 1000).toLocaleDateString('ar-EG') : 'اليوم'}
+             {/* Date Header - Uniform Size, English */}
+             <div className="w-full text-center opacity-70 font-bold text-xs mb-8 uppercase tracking-widest text-foreground">
+               {shareData?.date?.seconds ? new Date(shareData.date.seconds * 1000).toLocaleDateString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Today'}
              </div>
 
-             {/* Distance - Primary Stat */}
-             <div className="flex flex-col items-center gap-2 mb-10 relative z-10">
-               <Navigation className="h-10 w-10 text-primary mb-2" />
+             {/* Distance - Primary Stat - Uniform Scale */}
+             <div className="flex flex-col items-center gap-2 mb-10 relative z-10 text-foreground">
+               <Navigation className="h-8 w-8 text-primary mb-1" />
                <p className="text-[10px] font-black text-primary uppercase tracking-widest">DISTANCE</p>
-               <h3 className="text-6xl font-black tabular-nums">{shareData?.distance?.toFixed(2)}</h3>
-               <p className="text-sm font-bold opacity-60">KILOMETERS</p>
+               <h3 className="text-5xl font-black tabular-nums">{shareData?.distance?.toFixed(2)}</h3>
+               <p className="text-[10px] font-bold opacity-60">KILOMETERS</p>
              </div>
 
-             {/* Elevation - Secondary Stat */}
-             <div className="flex flex-col items-center gap-1 mb-8 relative z-10">
+             {/* Elevation - Secondary Stat - Uniform Scale */}
+             <div className="flex flex-col items-center gap-1 mb-8 relative z-10 text-foreground">
                <div className="flex items-center gap-2 text-primary/80">
                  <Mountain className="h-5 w-5" />
-                 <span className="text-[10px] font-black uppercase tracking-widest">ELEVATION GAIN</span>
+                 <span className="text-[10px] font-black uppercase tracking-widest">ELEVATION</span>
                </div>
                <h4 className="text-3xl font-black tabular-nums">{Math.round(shareData?.elevationGain || 0)}</h4>
                <p className="text-[10px] font-bold opacity-60">METERS</p>
              </div>
 
-             {/* Duration - Tertiary Stat */}
-             <div className="flex flex-col items-center gap-1 mb-10 relative z-10">
+             {/* Duration - Tertiary Stat - Uniform Scale */}
+             <div className="flex flex-col items-center gap-1 mb-10 relative z-10 text-foreground">
                <div className="flex items-center gap-2 text-primary/60">
-                 <Clock className="h-4 w-4" />
+                 <Clock className="h-5 w-5" />
                  <span className="text-[10px] font-black uppercase tracking-widest">DURATION</span>
                </div>
-               <h4 className="text-2xl font-black tabular-nums">{formatTime(shareData?.durationSeconds || 0)}</h4>
+               <h4 className="text-3xl font-black tabular-nums">{formatTime(shareData?.durationSeconds || 0)}</h4>
              </div>
 
              {/* Path Shape Visualization */}
-             <div className="flex-1 w-full flex items-center justify-center relative z-10 bg-white/5 rounded-[20px] border border-white/5 mb-8">
+             <div className="flex-1 w-full flex items-center justify-center relative z-10 bg-primary/5 rounded-[20px] border border-primary/5 mb-8">
                 {shareData?.path && shareData.path.length > 1 ? (
-                  <svg width="280" height="280" viewBox="0 0 280 280" className="drop-shadow-2xl">
+                  <svg width="240" height="240" viewBox="0 0 280 280" className="drop-shadow-xl">
                     <path 
                       d={generateSvgPath(shareData.path)} 
                       fill="none" 
                       stroke="url(#gradient)" 
-                      strokeWidth="6" 
+                      strokeWidth="8" 
                       strokeLinecap="round" 
                       strokeLinejoin="round" 
                     />
@@ -703,14 +705,14 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     </defs>
                   </svg>
                 ) : (
-                  <div className="text-[10px] opacity-20 font-bold">ROUTE DATA UNAVAILABLE</div>
+                  <div className="text-[10px] text-foreground/20 font-bold">ROUTE DATA UNAVAILABLE</div>
                 )}
              </div>
 
-             {/* App Branding */}
-             <div className="w-full flex items-center justify-between border-t border-white/10 pt-6 relative z-10">
-                <span className="text-sm font-black tracking-tighter">LifeOS</span>
-                <span className="text-sm font-black font-cairo">حياتي</span>
+             {/* App Branding - Standardized Size */}
+             <div className="w-full flex items-center justify-between border-t border-foreground/10 pt-6 relative z-10 text-foreground">
+                <span className="text-xs font-black tracking-tighter">LifeOS</span>
+                <span className="text-xs font-black font-cairo">حياتي</span>
              </div>
           </div>
           <Button 
