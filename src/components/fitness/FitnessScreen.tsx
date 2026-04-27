@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
@@ -199,23 +200,18 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
       };
       
       addDocumentNonBlocking(collection(db, 'users', user.uid, 'fitnessRecords'), runData);
-      setShareData(runData);
       
-      if (distance > 0.001) {
-        setShowShareModal(true);
-      }
+      localStorage.removeItem('active_fitness_session');
+      setHasStoredSession(false);
       
-      toast({ title: "تم حفظ النشاط", description: "تمت إضافة الجلسة إلى سجلك بنجاح." });
+      toast({ title: "تم الحفظ", description: "تم تسجيل الجلسة بنجاح." });
     }
-    
-    localStorage.removeItem('active_fitness_session');
-    setHasStoredSession(false);
   };
 
   const toggleTracking = async () => {
     if (!isTracking) {
       // If we're resuming from a selected record
-      if (selectedRecord && !isTracking) {
+      if (selectedRecord) {
         setDistance(selectedRecord.distance || 0);
         setElevationGain(selectedRecord.elevationGain || 0);
         setSteps(selectedRecord.steps || 0);
@@ -351,23 +347,23 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     if (shareCardRef.current === null) return;
     setIsExporting(true);
     try {
-      // استخدام خيارات متقدمة لتجاوز مشاكل CORS والأمان
+      // تم تعطيل skipFonts لحل مشكلة "font is undefined" وضمان تصدير الصورة بنجاح
       const dataUrl = await toPng(shareCardRef.current, { 
         cacheBust: true, 
         backgroundColor: 'transparent',
-        skipFonts: false, // سنحاول تضمين الخطوط
+        skipFonts: true, // تخطي معالجة الخطوط الخارجية لحل أخطاء الأمان
       });
       const link = document.createElement('a');
       link.download = `hayaty-achievement-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
-      toast({ title: "نجاح التصدير", description: "تم تحميل بطاقة الإنجاز بنجاح." });
+      toast({ title: "تم التنزيل", description: "تم حفظ بطاقة الإنجاز بنجاح." });
     } catch (err) {
       console.error('Export error:', err);
       toast({ 
         variant: "destructive", 
         title: "خطأ في التصدير", 
-        description: "تعذر الوصول إلى بعض التنسيقات الخارجية. جرب مرة أخرى." 
+        description: "تعذر تصدير الصورة حالياً." 
       });
     } finally {
       setIsExporting(false);
@@ -471,13 +467,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                  <div className="absolute top-6 right-6 z-[70]">
                    <Button onClick={() => setIsMapExpanded(false)} size="icon" className="rounded-full h-10 w-10 bg-white/90 backdrop-blur-sm shadow-xl text-foreground transition-none"><X className="h-5 w-5" /></Button>
                  </div>
-
-                 <div className="absolute top-10 left-0 right-0 z-[70] flex justify-center gap-8 text-white pointer-events-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)]">
-                    <div className="text-center"><p className="text-[10px] font-black tracking-widest opacity-80 uppercase">KM</p><p className="text-2xl font-black">{(selectedRecord?.distance || distance).toFixed(2)}</p></div>
-                    <div className="text-center"><p className="text-[10px] font-black tracking-widest opacity-80 uppercase">M</p><p className="text-2xl font-black">{Math.round(selectedRecord?.elevationGain || elevationGain)}</p></div>
-                    <div className="text-center"><p className="text-[10px] font-black tracking-widest opacity-80 uppercase">TIME</p><p className="text-2xl font-black">{formatTime(selectedRecord?.durationSeconds || elapsedTime)}</p></div>
-                 </div>
-
                  <div className="flex-1 w-full"><MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} /></div>
               </div>
             ) : (
@@ -566,7 +555,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                       ))}
                     </div>
                   ) : (
-                    <div className="py-12 text-center text-xs text-muted-foreground border-2 border-dashed rounded-[10px] font-bold">لا توجد سجلات بعد</div>
+                    <div className="py-12 text-center text-xs text-muted-foreground border-2 border-dashed rounded-[10px] font-bold">اريد السجل ينحفظ هنا</div>
                   )}
                 </div>
               </>
@@ -618,7 +607,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     ))}
                   </div>
                 ) : (
-                  <div className="py-12 text-center text-xs text-muted-foreground border-2 border-dashed rounded-[10px] font-bold">لا توجد سجلات بعد</div>
+                  <div className="py-12 text-center text-xs text-muted-foreground border-2 border-dashed rounded-[10px] font-bold">اريد السجل ينحفظ هنا</div>
                 )}
              </div>
           </div>
