@@ -618,7 +618,14 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
              <div className={`rounded-[15px] p-8 text-white premium-shadow relative overflow-hidden transition-all duration-700 ${isTracking ? 'bg-green-600' : 'primary-gradient'}`}>
                 <div className="text-center space-y-6 relative z-10">
                   <h3 className="text-sm font-black uppercase tracking-widest">{getExerciseName(activeExercise)}</h3>
-                  <p className="text-7xl font-black">{reps}</p>
+                  {isTracking ? (
+                    <div className="space-y-2">
+                      <p className="text-7xl font-black tabular-nums">{formatTime(elapsedTime)}</p>
+                      <p className="text-[10px] font-bold opacity-60">الوقت المنقضي</p>
+                    </div>
+                  ) : (
+                    <p className="text-7xl font-black">{reps}</p>
+                  )}
                   <Button 
                     onClick={() => { if(!isTracking) { setIsTracking(true); setReps(0); setElapsedTime(0); } else { setIsTracking(false); setShowRepDialog(true); } }} 
                     className="w-full h-14 bg-white text-primary rounded-[12px] font-black shadow-lg active:scale-95 transition-none hover:bg-white hover:opacity-100"
