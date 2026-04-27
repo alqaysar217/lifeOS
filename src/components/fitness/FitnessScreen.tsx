@@ -542,12 +542,20 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
               const hasData = data.length > 0;
               const unit = type === 'run' ? 'كم' : 'عدة';
               
+              const activityIconId = activities.find(a => a.id === type)?.iconId;
+              const activityImageUrl = PlaceHolderImages.find(img => img.id === activityIconId)?.imageUrl || `https://picsum.photos/seed/${type}/200/200`;
+
               return (
                 <div key={type} className="bg-white p-6 rounded-[20px] premium-shadow border border-border/40 space-y-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-[12px] primary-gradient flex items-center justify-center text-white shadow-lg">
-                        <TrendingUp className="h-5 w-5" />
+                      <div className="h-10 w-10 rounded-[12px] overflow-hidden relative shadow-lg">
+                        <Image 
+                          src={activityImageUrl} 
+                          alt={type} 
+                          fill 
+                          className="object-cover" 
+                        />
                       </div>
                       <div>
                         <h4 className="text-sm font-black text-foreground">{getExerciseName(type)}</h4>
