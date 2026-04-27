@@ -352,14 +352,19 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
     if (shareCardRef.current === null) return;
     setIsExporting(true);
     try {
-      const dataUrl = await toPng(shareCardRef.current, { cacheBust: true, backgroundColor: 'transparent' });
+      // استخدام خيار cacheBust وتجاهل أخطاء التنسيقات الخارجية
+      const dataUrl = await toPng(shareCardRef.current, { 
+        cacheBust: true, 
+        backgroundColor: 'transparent',
+      });
       const link = document.createElement('a');
       link.download = `hayaty-achievement-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
       toast({ title: "نجاح التصدير", description: "تم تحميل بطاقة الإنجاز المفرغة." });
     } catch (err) {
-      toast({ variant: "destructive", title: "خطأ في التصدير", description: "لم نتمكن من توليد الصورة حالياً." });
+      console.error('Export error:', err);
+      toast({ variant: "destructive", title: "خطأ في التصدير", description: "حدثت مشكلة أمنية في المتصفح أثناء التصدير." });
     } finally {
       setIsExporting(false);
     }
