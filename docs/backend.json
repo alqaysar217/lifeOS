@@ -51,6 +51,8 @@
         "title": { "type": "string" },
         "status": { "type": "string", "enum": ["pending", "completed"] },
         "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "expectedTime": { "type": "string", "description": "Expected time to complete" },
+        "actualTime": { "type": "string", "description": "Actual time taken" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "projectId", "stageId", "title", "status", "priority"]
@@ -100,7 +102,7 @@
           "entityName": "user",
           "schema": { "$ref": "#/backend/entities/User" },
           "description": "Stores core user data."
-"        }
+        }
       },
       {
         "path": "/users/{userId}/taskProjects/{projectId}",

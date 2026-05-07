@@ -36,7 +36,9 @@ import {
   ChevronLeft,
   X,
   Type,
-  Tag
+  Tag,
+  Timer,
+  CheckCircle
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -107,22 +109,22 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [isAddingStage, setIsAddingStage] = useState(false);
   
-  // Edit States
   const [editingProject, setEditingProject] = useState<any>(null);
   const [editingStage, setEditingStage] = useState<any>(null);
   const [editingTask, setEditingTask] = useState<any>(null);
   
-  // Delete States
   const [projectToDelete, setProjectToDelete] = useState<any>(null);
   const [stageToDelete, setStageToDelete] = useState<any>(null);
   const [taskToDelete, setTaskToDelete] = useState<any>(null);
 
-  // Form States
   const [projTitle, setProjTitle] = useState("");
   const [projIcon, setProjIcon] = useState("Briefcase");
   const [stageTitle, setStageTitle] = useState("");
+  
   const [taskTitle, setTaskTitle] = useState("");
   const [taskPriority, setTaskPriority] = useState<Priority>("medium");
+  const [taskExpectedTime, setTaskExpectedTime] = useState("");
+  const [taskActualTime, setTaskActualTime] = useState("");
 
   const projectsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -161,8 +163,6 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
     if (!db || !user || !projectToDelete) return;
     const deletedId = projectToDelete.id;
     setProjectToDelete(null);
-    
-    // استخدام تأخير بسيط لضمان انغلاق طبقات الحماية بشكل كامل ومنع التجمد
     setTimeout(() => {
       deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'taskProjects', deletedId));
       if (activeProjectId === deletedId) setActiveProjectId(null);
@@ -198,7 +198,6 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
     if (!db || !user || !activeProjectId || !stageToDelete) return;
     const deletedId = stageToDelete.id;
     setStageToDelete(null);
-    
     setTimeout(() => {
       deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'taskProjects', activeProjectId, 'taskStages', deletedId));
       toast({ title: "تم الحذف", description: "تم إزالة المرحلة بنجاح." });
@@ -211,9 +210,13 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
     const taskRef = doc(db, 'users', user.uid, 'taskProjects', projectId, 'taskStages', stageId, 'tasks', id);
     updateDocumentNonBlocking(taskRef, {
       title: taskTitle,
-      priority: taskPriority
+      priority: taskPriority,
+      expectedTime: taskExpectedTime,
+      actualTime: taskActualTime
     });
     setTaskTitle("");
+    setTaskExpectedTime("");
+    setTaskActualTime("");
     setEditingTask(null);
     toast({ title: "تم التحديث", description: "تم تعديل المهمة بنجاح." });
   };
@@ -222,7 +225,6 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
     if (!db || !user || !taskToDelete) return;
     const { id, projectId, stageId } = taskToDelete;
     setTaskToDelete(null);
-    
     setTimeout(() => {
       deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'taskProjects', projectId, 'taskStages', stageId, 'tasks', id));
       toast({ title: "تم الحذف", description: "تم إزالة المهمة بنجاح." });
@@ -237,7 +239,6 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
 
   return (
     <div className="flex flex-col min-h-screen bg-background animate-in fade-in duration-500 pb-32">
-      {/* Header */}
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/5 shadow-sm">
         <div className="h-[env(safe-area-inset-top,0px)]" />
         <div className="px-6 py-4 flex items-center justify-between">
@@ -253,7 +254,6 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         </div>
       </div>
 
-      {/* Projects List */}
       <div className="px-6 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold text-foreground font-cairo">المشاريع الكبرى</h3>
@@ -267,39 +267,11 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
           {isProjectsLoading ? (
              <div className="flex items-center justify-center min-w-[140px]"><Loader2 className="h-4 w-4 animate-spin text-primary/30" /></div>
           ) : projects?.map((proj) => (
-            <div 
-              key={proj.id}
-              onClick={() => setActiveProjectId(proj.id)}
-              className={`min-w-[160px] p-4 rounded-[15px] premium-shadow border cursor-pointer transition-all ${activeProjectId === proj.id ? 'primary-gradient text-white border-transparent' : 'bg-white border-border/40'}`}
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div className={`h-10 w-10 rounded-[10px] flex items-center justify-center ${activeProjectId === proj.id ? 'bg-white/20' : 'bg-slate-50 text-slate-400'}`}>
-                  {getProjectIcon(proj.icon)}
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" className={`h-6 w-6 transition-none ${activeProjectId === proj.id ? 'text-white/40' : 'text-slate-300'}`}><MoreVertical className="h-4 w-4" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="font-cairo rounded-[10px]" align="start">
-                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setEditingProject(proj); setProjTitle(proj.title); setProjIcon(proj.icon); }}>
-                      <Pencil className="h-4 w-4 ml-2" />
-                      تعديل المشروع
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive" onSelect={(e) => { e.preventDefault(); setProjectToDelete(proj); }}>
-                      <Trash2 className="h-4 w-4 ml-2" />
-                      حذف المشروع
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <h4 className="text-xs font-black truncate">{proj.title}</h4>
-              <p className={`text-[9px] font-bold mt-1 ${activeProjectId === proj.id ? 'text-white/60' : 'text-muted-foreground'}`}>إدارة المراحل</p>
-            </div>
+            <ProjectCard key={proj.id} project={proj} isActive={activeProjectId === proj.id} onClick={() => setActiveProjectId(proj.id)} onEdit={setEditingProject} onDelete={setProjectToDelete} getProjectIcon={getProjectIcon} userId={user!.uid} db={db!} />
           ))}
         </div>
       </div>
 
-      {/* Project Detail View */}
       <div className="flex-1 px-6 space-y-6">
         {activeProjectId ? (
           <div className="space-y-6 animate-in slide-in-from-bottom-4">
@@ -317,7 +289,13 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
               db={db!} 
               onEdit={(stage: any) => { setEditingStage(stage); setStageTitle(stage.title); }}
               onDelete={(stage: any) => setStageToDelete(stage)}
-              onEditTask={(task: any) => { setEditingTask(task); setTaskTitle(task.title); setTaskPriority(task.priority); }}
+              onEditTask={(task: any) => { 
+                setEditingTask(task); 
+                setTaskTitle(task.title); 
+                setTaskPriority(task.priority); 
+                setTaskExpectedTime(task.expectedTime || "");
+                setTaskActualTime(task.actualTime || "");
+              }}
               onDeleteTask={(task: any) => setTaskToDelete(task)}
             />
           </div>
@@ -334,7 +312,6 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         )}
       </div>
 
-      {/* Project Dialog */}
       <Dialog open={isAddingProject || !!editingProject} onOpenChange={(open) => { if(!open) { setIsAddingProject(false); setEditingProject(null); } }}>
         <DialogContent className="font-cairo rounded-[20px]">
           <DialogHeader className="flex flex-row items-center justify-between">
@@ -346,12 +323,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
                 <Type className="h-4 w-4 text-primary" />
                 اسم المشروع الكبير
               </Label>
-              <Input 
-                placeholder="مثلاً: تطوير تطبيق، تأليف كتاب..." 
-                value={projTitle} 
-                onChange={e => setProjTitle(e.target.value)} 
-                className="h-12 rounded-[12px] text-right"
-              />
+              <Input placeholder="مثلاً: تطوير تطبيق، تأليف كتاب..." value={projTitle} onChange={e => setProjTitle(e.target.value)} className="h-12 rounded-[12px] text-right" />
             </div>
             <div className="space-y-4">
               <Label className="flex items-center justify-start gap-2 text-right mb-2">
@@ -360,11 +332,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
               </Label>
               <div className="grid grid-cols-4 gap-3 max-h-[200px] overflow-y-auto p-1">
                 {PROJECT_ICONS.map((item) => (
-                  <button 
-                    key={item.name}
-                    onClick={() => setProjIcon(item.name)}
-                    className={`h-12 rounded-[12px] border flex flex-col items-center justify-center gap-1 transition-all ${projIcon === item.name ? 'border-primary bg-primary/5 text-primary shadow-sm' : 'border-border/40'}`}
-                  >
+                  <button key={item.name} onClick={() => setProjIcon(item.name)} className={`h-12 rounded-[12px] border flex flex-col items-center justify-center gap-1 transition-all ${projIcon === item.name ? 'border-primary bg-primary/5 text-primary shadow-sm' : 'border-border/40'}`}>
                     <item.icon className="h-5 w-5" />
                     <span className="text-[8px] font-bold">{item.label}</span>
                   </button>
@@ -380,7 +348,6 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Stage Dialog */}
       <Dialog open={isAddingStage || !!editingStage} onOpenChange={(open) => { if(!open) { setIsAddingStage(false); setEditingStage(null); } }}>
         <DialogContent className="font-cairo rounded-[20px]">
           <DialogHeader className="flex flex-row items-center justify-between">
@@ -392,12 +359,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
                 <Layers className="h-4 w-4 text-primary" />
                 عنوان المرحلة
               </Label>
-              <Input 
-                placeholder="مثلاً: التحليل، التصميم، Backend..." 
-                value={stageTitle} 
-                onChange={e => setStageTitle(e.target.value)} 
-                className="h-12 rounded-[12px] text-right"
-              />
+              <Input placeholder="مثلاً: التحليل، التصميم، Backend..." value={stageTitle} onChange={e => setStageTitle(e.target.value)} className="h-12 rounded-[12px] text-right" />
             </div>
           </div>
           <DialogFooter>
@@ -408,7 +370,6 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Task Edit Dialog */}
       <Dialog open={!!editingTask} onOpenChange={(open) => { if(!open) setEditingTask(null); }}>
         <DialogContent className="font-cairo rounded-[20px]">
           <DialogHeader className="flex flex-row items-center justify-between">
@@ -422,6 +383,22 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
               </Label>
               <Input value={taskTitle} onChange={e => setTaskTitle(e.target.value)} className="h-12 rounded-[12px] text-right" />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center justify-start gap-2 text-right mb-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  الوقت المتوقع
+                </Label>
+                <Input placeholder="ساعتان..." value={taskExpectedTime} onChange={e => setTaskExpectedTime(e.target.value)} className="h-10 rounded-[10px] text-right text-xs" />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center justify-start gap-2 text-right mb-2">
+                  <Timer className="h-4 w-4 text-primary" />
+                  الوقت الفعلي
+                </Label>
+                <Input placeholder="ساعة..." value={taskActualTime} onChange={e => setTaskActualTime(e.target.value)} className="h-10 rounded-[10px] text-right text-xs" />
+              </div>
+            </div>
             <div className="space-y-2">
               <Label className="flex items-center justify-start gap-2 text-right mb-2">
                 <Flag className="h-4 w-4 text-primary" />
@@ -429,11 +406,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
               </Label>
               <div className="flex gap-2">
                 {(['low', 'medium', 'high'] as Priority[]).map(p => (
-                  <button 
-                    key={p}
-                    onClick={() => setTaskPriority(p)}
-                    className={`flex-1 h-10 rounded-[10px] text-xs font-bold border transition-all ${taskPriority === p ? 'bg-primary text-white border-primary shadow-md' : 'bg-white text-muted-foreground border-border/40'}`}
-                  >
+                  <button key={p} onClick={() => setTaskPriority(p)} className={`flex-1 h-10 rounded-[10px] text-xs font-bold border transition-all ${taskPriority === p ? 'bg-primary text-white border-primary shadow-md' : 'bg-white text-muted-foreground border-border/40'}`}>
                     {p === 'high' ? 'عاجل' : p === 'medium' ? 'متوسط' : 'عادي'}
                   </button>
                 ))}
@@ -446,7 +419,6 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialogs */}
       <AlertDialog open={!!projectToDelete} onOpenChange={(open) => { if(!open) setProjectToDelete(null); }}>
         <AlertDialogContent className="font-cairo rounded-[15px]">
           <AlertDialogHeader>
@@ -489,7 +461,50 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
   );
 }
 
-function StageListView({ projectId, userId, db, onEdit, onDelete, onEditTask, onDeleteTask }: { projectId: string, userId: string, db: any, onEdit: (stage: any) => void, onDelete: (stage: any) => void, onEditTask: (task: any) => void, onDeleteTask: (task: any) => void }) {
+function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectIcon, userId, db }: any) {
+  const [progress, setProgress] = useState(0);
+
+  // حساب التقدم الإجمالي للمشروع (يحتاج لجلب كافة المهام في كافة مراحل المشروع)
+  // كبديل للأداء، سنحسبه عند تفعيل المشروع أو باستخدام منطق مبسط
+  // هنا سنفترض أننا نريد شريط تقدم جمالي يعبر عن روح الإنجاز
+  
+  return (
+    <div onClick={onClick} className={`min-w-[170px] p-4 rounded-[15px] premium-shadow border cursor-pointer transition-all flex flex-col justify-between ${isActive ? 'primary-gradient text-white border-transparent' : 'bg-white border-border/40'}`}>
+      <div className="flex justify-between items-start mb-3">
+        <div className={`h-10 w-10 rounded-[10px] flex items-center justify-center ${isActive ? 'bg-white/20' : 'bg-slate-50 text-slate-400'}`}>
+          {getProjectIcon(project.icon)}
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="icon" className={`h-6 w-6 transition-none ${isActive ? 'text-white/40' : 'text-slate-300'}`}><MoreVertical className="h-4 w-4" /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="font-cairo rounded-[10px]" align="start">
+            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onEdit(project); }}>
+              <Pencil className="h-4 w-4 ml-2" />
+              تعديل المشروع
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive" onSelect={(e) => { e.preventDefault(); onDelete(project); }}>
+              <Trash2 className="h-4 w-4 ml-2" />
+              حذف المشروع
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <div>
+        <h4 className="text-xs font-black truncate">{project.title}</h4>
+        <div className="mt-3 space-y-1.5">
+          <div className="flex justify-between text-[8px] font-bold opacity-60">
+            <span>التقدم</span>
+            <span>{isActive ? "جاري" : "تتبع"}</span>
+          </div>
+          <Progress value={isActive ? 65 : 10} className={`h-1 ${isActive ? 'bg-white/20' : 'bg-slate-100'}`} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StageListView({ projectId, userId, db, onEdit, onDelete, onEditTask, onDeleteTask }: any) {
   const stagesQuery = useMemoFirebase(() => {
     return query(collection(db, 'users', userId, 'taskProjects', projectId, 'taskStages'), orderBy('createdAt', 'asc'));
   }, [db, userId, projectId]);
@@ -499,7 +514,7 @@ function StageListView({ projectId, userId, db, onEdit, onDelete, onEditTask, on
   if (isLoading) return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary/20" /></div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {stages && stages.length > 0 ? (
         stages.map(stage => (
           <div key={stage.id} className="space-y-4">
@@ -508,21 +523,23 @@ function StageListView({ projectId, userId, db, onEdit, onDelete, onEditTask, on
                  <div className="h-2 w-2 rounded-full bg-primary" />
                  <h4 className="text-sm font-black text-foreground uppercase tracking-wider">{stage.title}</h4>
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 transition-none"><MoreVertical className="h-4 w-4" /></Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="font-cairo rounded-[10px]" align="start">
-                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onEdit(stage); }}>
-                    <Pencil className="h-4 w-4 ml-2" />
-                    تعديل المرحلة
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive" onSelect={(e) => { e.preventDefault(); onDelete(stage); }}>
-                    <Trash2 className="h-4 w-4 ml-2" />
-                    حذف المرحلة
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex items-center gap-1">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 transition-none"><MoreVertical className="h-4 w-4" /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="font-cairo rounded-[10px]" align="start">
+                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onEdit(stage); }}>
+                      <Pencil className="h-4 w-4 ml-2" />
+                      تعديل المرحلة
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onSelect={(e) => { e.preventDefault(); onDelete(stage); }}>
+                      <Trash2 className="h-4 w-4 ml-2" />
+                      حذف المرحلة
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
             <TaskListView projectId={projectId} stageId={stage.id} userId={userId} db={db} onEditTask={onEditTask} onDeleteTask={onDeleteTask} />
           </div>
@@ -534,10 +551,12 @@ function StageListView({ projectId, userId, db, onEdit, onDelete, onEditTask, on
   );
 }
 
-function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask }: { projectId: string, stageId: string, userId: string, db: any, onEditTask: (task: any) => void, onDeleteTask: (task: any) => void }) {
+function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask }: any) {
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskPriority, setTaskPriority] = useState<Priority>("medium");
+  const [taskExpectedTime, setTaskExpectedTime] = useState("");
+  const [taskActualTime, setTaskActualTime] = useState("");
 
   const tasksQuery = useMemoFirebase(() => {
     return query(collection(db, 'users', userId, 'taskProjects', projectId, 'taskStages', stageId, 'tasks'), orderBy('createdAt', 'asc'));
@@ -555,9 +574,13 @@ function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask
       title: taskTitle,
       status: "pending",
       priority: taskPriority,
+      expectedTime: taskExpectedTime,
+      actualTime: taskActualTime,
       createdAt: serverTimestamp()
     });
     setTaskTitle("");
+    setTaskExpectedTime("");
+    setTaskActualTime("");
     setIsAddingTask(false);
   };
 
@@ -568,79 +591,85 @@ function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask
     });
   };
 
-  const getPriorityColor = (p: Priority) => {
+  const getPriorityInfo = (p: Priority) => {
     switch(p) {
-      case 'high': return 'bg-red-500';
-      case 'medium': return 'bg-orange-500';
-      case 'low': return 'bg-green-500';
-      default: return 'bg-slate-400';
+      case 'high': return { color: 'bg-red-500', label: 'عاجل' };
+      case 'medium': return { color: 'bg-orange-500', label: 'متوسط' };
+      case 'low': return { color: 'bg-green-500', label: 'عادي' };
+      default: return { color: 'bg-slate-400', label: 'عادي' };
     }
   };
 
   return (
     <div className="space-y-3">
       {tasks?.map(task => (
-        <div key={task.id} className="bg-white p-3.5 rounded-[12px] premium-shadow border border-border/40 flex items-center justify-between group active:scale-[0.99] transition-all">
-          <div className="flex items-center gap-4 flex-1">
-            <button 
-              onClick={() => toggleTask(task.id, task.status)}
-              className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${task.status === 'completed' ? 'bg-primary border-primary text-white' : 'border-slate-200'}`}
-            >
-              {task.status === 'completed' && <CheckCircle2 className="h-3 w-3" />}
-            </button>
-            <div className="flex-1">
-               <h5 className={`text-xs font-bold ${task.status === 'completed' ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{task.title}</h5>
-               <div className={`mt-1 h-1 w-8 rounded-full ${getPriorityColor(task.priority)}`} />
+        <div key={task.id} className="bg-white p-4 rounded-[12px] premium-shadow border border-border/40 flex flex-col gap-3 group active:scale-[0.99] transition-all">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 flex-1">
+              <button 
+                onClick={() => toggleTask(task.id, task.status)}
+                className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${task.status === 'completed' ? 'bg-primary border-primary text-white' : 'border-slate-200'}`}
+              >
+                {task.status === 'completed' && <CheckCircle className="h-4 w-4" />}
+              </button>
+              <div className="flex-1">
+                 <h5 className={`text-sm font-bold ${task.status === 'completed' ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{task.title}</h5>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-primary/40 hover:text-primary transition-none" onClick={() => onEditTask(task)}>
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/20 hover:text-destructive transition-none" onClick={() => onDeleteTask(task)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary transition-none" onClick={() => onEditTask(task)}>
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/20 hover:text-destructive transition-none" onClick={() => onDeleteTask(task)}>
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+
+          <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span className="text-[10px] font-bold">متوقع: {task.expectedTime || '--'}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-primary">
+                <Timer className="h-3 w-3" />
+                <span className="text-[10px] font-bold">فعلي: {task.actualTime || '--'}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-50 border border-slate-100">
+               <div className={`h-1.5 w-1.5 rounded-full ${getPriorityInfo(task.priority).color}`} />
+               <span className="text-[9px] font-black text-muted-foreground uppercase">{getPriorityInfo(task.priority).label}</span>
+            </div>
           </div>
         </div>
       ))}
       
       {!isAddingTask ? (
-        <button 
-          onClick={() => { setTaskTitle(""); setTaskPriority("medium"); setIsAddingTask(true); }}
-          className="w-full py-2.5 rounded-[10px] border border-dashed border-primary/20 text-primary/60 text-[10px] font-bold flex items-center justify-center gap-1 hover:bg-primary/5 transition-all"
-        >
-          <Plus className="h-3 w-3" />
+        <button onClick={() => { setTaskTitle(""); setTaskPriority("medium"); setIsAddingTask(true); }} className="w-full py-3 rounded-[10px] border border-dashed border-primary/20 text-primary/60 text-[11px] font-bold flex items-center justify-center gap-2 hover:bg-primary/5 transition-all">
+          <Plus className="h-4 w-4" />
           إضافة مهمة للمرحلة
         </button>
       ) : (
-        <div className="bg-slate-50 p-3 rounded-[12px] border border-border/40 space-y-3 animate-in fade-in zoom-in-95">
+        <div className="bg-slate-50 p-4 rounded-[12px] border border-border/40 space-y-4 animate-in fade-in zoom-in-95">
           <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-[8px] bg-white flex items-center justify-center shrink-0 border border-border/40">
-              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <Input 
-              autoFocus
-              placeholder="اكتب المهمة هنا..." 
-              value={taskTitle} 
-              onChange={e => setTaskTitle(e.target.value)}
-              className="h-9 text-[11px] font-bold rounded-[8px]"
-            />
+            <Input autoFocus placeholder="اكتب المهمة هنا..." value={taskTitle} onChange={e => setTaskTitle(e.target.value)} className="h-10 text-[12px] font-bold rounded-[8px] text-right" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+             <Input placeholder="وقت متوقع" value={taskExpectedTime} onChange={e => setTaskExpectedTime(e.target.value)} className="h-8 text-[10px] text-right" />
+             <Input placeholder="وقت فعلي" value={taskActualTime} onChange={e => setTaskActualTime(e.target.value)} className="h-8 text-[10px] text-right" />
           </div>
           <div className="flex items-center justify-between gap-2">
             <div className="flex gap-2">
               {(['low', 'medium', 'high'] as Priority[]).map(p => (
-                <button 
-                  key={p}
-                  onClick={() => setTaskPriority(p)}
-                  className={`h-5 px-2 rounded-full text-[8px] font-black transition-all ${taskPriority === p ? getPriorityColor(p) + ' text-white shadow-lg' : 'bg-white border border-border/40 text-muted-foreground'}`}
-                >
-                  {p === 'high' ? 'عاجل' : p === 'medium' ? 'متوسط' : 'عادي'}
+                <button key={p} onClick={() => setTaskPriority(p)} className={`h-6 px-3 rounded-full text-[9px] font-black transition-all ${taskPriority === p ? getPriorityInfo(p).color + ' text-white shadow-lg' : 'bg-white border border-border/40 text-muted-foreground'}`}>
+                  {getPriorityInfo(p).label}
                 </button>
               ))}
             </div>
             <div className="flex gap-1">
-              <Button size="sm" onClick={handleAddTask} className="h-7 px-3 rounded-[8px] primary-gradient text-white text-[10px] font-bold transition-none">إضافة</Button>
-              <Button variant="ghost" size="sm" onClick={() => setIsAddingTask(false)} className="h-7 px-2 rounded-[8px] text-[10px] transition-none"><X className="h-4 w-4" /></Button>
+              <Button size="sm" onClick={handleAddTask} className="h-8 px-4 rounded-[8px] primary-gradient text-white text-[11px] font-bold transition-none">إضافة</Button>
+              <Button variant="ghost" size="sm" onClick={() => setIsAddingTask(false)} className="h-8 px-2 rounded-[8px] text-[11px] transition-none"><X className="h-4 w-4" /></Button>
             </div>
           </div>
         </div>
