@@ -159,14 +159,14 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
   const confirmDeleteProject = () => {
     if (!db || !user || !projectToDelete) return;
     const deletedId = projectToDelete.id;
-    // نقوم بتحديث الحالة المحلية أولاً لإغلاق النافذة وتجنب التعليق
     setProjectToDelete(null);
     
+    // استخدام setTimeout لضمان اكتمال إغلاق النافذة قبل مسح البيانات لتجنب التجمد
     setTimeout(() => {
       deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'taskProjects', deletedId));
       if (activeProjectId === deletedId) setActiveProjectId(null);
       toast({ title: "تم الحذف", description: "تم إزالة المشروع بنجاح." });
-    }, 100);
+    }, 150);
   };
 
   const handleAddStage = () => {
@@ -201,18 +201,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
     setTimeout(() => {
       deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'taskProjects', activeProjectId, 'taskStages', deletedId));
       toast({ title: "تم الحذف", description: "تم إزالة المرحلة بنجاح." });
-    }, 100);
-  };
-
-  const confirmDeleteTask = () => {
-    if (!db || !user || !taskToDelete) return;
-    const { id, projectId, stageId } = taskToDelete;
-    setTaskToDelete(null);
-    
-    setTimeout(() => {
-      deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'taskProjects', projectId, 'taskStages', stageId, 'tasks', id));
-      toast({ title: "تم الحذف", description: "تم إزالة المهمة بنجاح." });
-    }, 100);
+    }, 150);
   };
 
   const handleUpdateTask = () => {
@@ -226,6 +215,17 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
     setTaskTitle("");
     setEditingTask(null);
     toast({ title: "تم التحديث", description: "تم تعديل المهمة بنجاح." });
+  };
+
+  const confirmDeleteTask = () => {
+    if (!db || !user || !taskToDelete) return;
+    const { id, projectId, stageId } = taskToDelete;
+    setTaskToDelete(null);
+    
+    setTimeout(() => {
+      deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'taskProjects', projectId, 'taskStages', stageId, 'tasks', id));
+      toast({ title: "تم الحذف", description: "تم إزالة المهمة بنجاح." });
+    }, 150);
   };
 
   const getProjectIcon = (iconName: string) => {
@@ -333,24 +333,25 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         )}
       </div>
 
-      {/* Modals & Dialogs (Moved to root for stability) */}
-      
+      {/* Project Dialog */}
       <Dialog open={isAddingProject || !!editingProject} onOpenChange={(open) => { if(!open) { setIsAddingProject(false); setEditingProject(null); } }}>
         <DialogContent className="font-cairo rounded-[20px]">
           <DialogHeader className="flex flex-row-reverse items-center justify-between">
              <DialogTitle className="text-right flex-1">{editingProject ? "تعديل المشروع" : "مشروع جديد"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label className="block text-right">اسم المشروع الكبير</Label>
-              <div className="relative">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-[12px] bg-slate-50 flex items-center justify-center shrink-0 border border-border/40">
+                  <Type className="h-5 w-5 text-muted-foreground" />
+                </div>
                 <Input 
                   placeholder="مثلاً: تطوير تطبيق، تأليف كتاب..." 
                   value={projTitle} 
                   onChange={e => setProjTitle(e.target.value)} 
-                  className="h-12 rounded-[12px] text-right pr-10"
+                  className="h-12 rounded-[12px] text-right"
                 />
-                <Type className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               </div>
             </div>
             <div className="space-y-4">
@@ -360,7 +361,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
                   <button 
                     key={item.name}
                     onClick={() => setProjIcon(item.name)}
-                    className={`h-12 rounded-[12px] border flex flex-col items-center justify-center gap-1 transition-all ${projIcon === item.name ? 'border-primary bg-primary/5 text-primary' : 'border-border/40'}`}
+                    className={`h-12 rounded-[12px] border flex flex-col items-center justify-center gap-1 transition-all ${projIcon === item.name ? 'border-primary bg-primary/5 text-primary shadow-sm' : 'border-border/40'}`}
                   >
                     <item.icon className="h-5 w-5" />
                     <span className="text-[8px] font-bold">{item.label}</span>
@@ -377,22 +378,25 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         </DialogContent>
       </Dialog>
 
+      {/* Stage Dialog */}
       <Dialog open={isAddingStage || !!editingStage} onOpenChange={(open) => { if(!open) { setIsAddingStage(false); setEditingStage(null); } }}>
         <DialogContent className="font-cairo rounded-[20px]">
           <DialogHeader className="flex flex-row-reverse items-center justify-between">
             <DialogTitle className="text-right flex-1">{editingStage ? "تعديل المرحلة" : "إضافة مرحلة عمل"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label className="block text-right">عنوان المرحلة</Label>
-              <div className="relative">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-[12px] bg-slate-50 flex items-center justify-center shrink-0 border border-border/40">
+                  <Layers className="h-5 w-5 text-muted-foreground" />
+                </div>
                 <Input 
                   placeholder="مثلاً: التحليل، التصميم، Backend..." 
                   value={stageTitle} 
                   onChange={e => setStageTitle(e.target.value)} 
-                  className="h-12 rounded-[12px] text-right pr-10"
+                  className="h-12 rounded-[12px] text-right"
                 />
-                <Layers className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               </div>
             </div>
           </div>
@@ -404,15 +408,21 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         </DialogContent>
       </Dialog>
 
+      {/* Task Edit Dialog */}
       <Dialog open={!!editingTask} onOpenChange={(open) => { if(!open) setEditingTask(null); }}>
         <DialogContent className="font-cairo rounded-[20px]">
           <DialogHeader className="flex flex-row-reverse items-center justify-between">
             <DialogTitle className="text-right flex-1">تعديل المهمة</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
+          <div className="space-y-5 py-4">
+            <div className="space-y-3">
               <Label className="block text-right">عنوان المهمة</Label>
-              <Input value={taskTitle} onChange={e => setTaskTitle(e.target.value)} className="h-12 rounded-[12px] text-right" />
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-[12px] bg-slate-50 flex items-center justify-center shrink-0 border border-border/40">
+                  <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <Input value={taskTitle} onChange={e => setTaskTitle(e.target.value)} className="h-12 rounded-[12px] text-right" />
+              </div>
             </div>
             <div className="space-y-2">
               <Label className="block text-right">الأولوية</Label>
@@ -430,11 +440,12 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleUpdateTask} className="w-full h-12 primary-gradient text-white font-black rounded-[12px]">حفظ</Button>
+            <Button onClick={handleUpdateTask} className="w-full h-12 primary-gradient text-white font-black rounded-[12px]">حفظ التغييرات</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirmation Dialogs */}
       <AlertDialog open={!!projectToDelete} onOpenChange={(open) => { if(!open) setProjectToDelete(null); }}>
         <AlertDialogContent className="font-cairo rounded-[15px]">
           <AlertDialogHeader>
@@ -602,15 +613,17 @@ function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask
         </button>
       ) : (
         <div className="bg-slate-50 p-3 rounded-[12px] border border-border/40 space-y-3 animate-in fade-in zoom-in-95">
-          <div className="relative">
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-9 rounded-[8px] bg-white flex items-center justify-center shrink-0 border border-border/40">
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+            </div>
             <Input 
               autoFocus
               placeholder="اكتب المهمة هنا..." 
               value={taskTitle} 
               onChange={e => setTaskTitle(e.target.value)}
-              className="h-9 text-[11px] font-bold rounded-[8px] pr-8"
+              className="h-9 text-[11px] font-bold rounded-[8px]"
             />
-            <CheckCircle2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           </div>
           <div className="flex items-center justify-between gap-2">
             <div className="flex gap-2">
