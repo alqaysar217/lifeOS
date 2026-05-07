@@ -801,53 +801,65 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
             <DialogDescription className="text-center font-bold">بطاقة الإنجاز الشفافة لمشاركتها مع أصدقائك</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center gap-6 py-4">
-            <div ref={shareCardRef} className="bg-transparent aspect-[9/16] w-full max-w-[280px] rounded-[25px] p-8 text-white flex flex-col items-center relative overflow-hidden">
-               <div className="w-full text-center text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-bold text-xs mb-8 uppercase tracking-widest">
-                 {shareData?.date?.seconds ? new Date(shareData.date.seconds * 1000).toLocaleDateString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Today'}
+            <div ref={shareCardRef} className="bg-transparent aspect-[9/16] w-full max-w-[280px] rounded-[25px] p-6 text-white flex flex-col items-center relative overflow-hidden">
+               {/* Date */}
+               <div className="text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] font-bold text-xs mb-4 uppercase tracking-widest">
+                 {shareData?.date?.seconds ? new Date(shareData.date.seconds * 1000).toLocaleDateString('en-US', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'TODAY'}
                </div>
 
-               <div className="flex flex-col items-center gap-2 mb-10 relative z-10 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,1)] text-center">
-                 <Navigation className="h-8 w-8 text-white mb-1" />
-                 <p className="text-[10px] font-black opacity-90 uppercase tracking-widest">DISTANCE</p>
-                 <h3 className="text-5xl font-black tabular-nums">{shareData?.distance?.toFixed(2)}</h3>
-                 <p className="text-[10px] font-bold opacity-80">KILOMETERS</p>
-               </div>
-
-               <div className="flex flex-col items-center gap-1 mb-8 relative z-10 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,1)] text-center">
+               {/* Distance */}
+               <div className="flex flex-col items-center gap-1 mb-6 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,1)] text-center">
                  <div className="flex items-center gap-2">
-                   <Mountain className="h-5 w-5" />
-                   <span className="text-[10px] font-black uppercase tracking-widest">ELEVATION</span>
+                   <Navigation className="h-4 w-4" />
+                   <span className="text-[10px] font-black uppercase tracking-widest">DISTANCE</span>
                  </div>
-                 <h4 className="text-3xl font-black tabular-nums">{Math.round(shareData?.elevationGain || 0)}</h4>
-                 <p className="text-[10px] font-bold opacity-80">METERS</p>
+                 <div className="flex items-baseline gap-1">
+                   <span className="text-4xl font-black tabular-nums">{shareData?.distance?.toFixed(2)}</span>
+                   <span className="text-[10px] font-bold opacity-80 uppercase">KM</span>
+                 </div>
                </div>
 
-               <div className="flex flex-col items-center gap-1 mb-10 relative z-10 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,1)] text-center">
+               {/* Elevation */}
+               <div className="flex flex-col items-center gap-1 mb-6 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,1)] text-center">
                  <div className="flex items-center gap-2">
-                   <Clock className="h-5 w-5" />
+                   <Mountain className="h-4 w-4" />
+                   <span className="text-[10px] font-black uppercase tracking-widest">ELEV GAIN</span>
+                 </div>
+                 <div className="flex items-baseline gap-1">
+                   <span className="text-4xl font-black tabular-nums">{Math.round(shareData?.elevationGain || 0)}</span>
+                   <span className="text-[10px] font-bold opacity-80 uppercase">M</span>
+                 </div>
+               </div>
+
+               {/* Duration */}
+               <div className="flex flex-col items-center gap-1 mb-6 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,1)] text-center">
+                 <div className="flex items-center gap-2">
+                   <Clock className="h-4 w-4" />
                    <span className="text-[10px] font-black uppercase tracking-widest">DURATION</span>
                  </div>
-                 <h4 className="text-3xl font-black tabular-nums">{formatTime(shareData?.durationSeconds || 0)}</h4>
+                 <div className="text-4xl font-black tabular-nums">{formatTime(shareData?.durationSeconds || 0)}</div>
                </div>
 
-               <div className="flex-1 w-full flex items-center justify-center relative z-10 mb-8 drop-shadow-[0_4px_12px_rgba(0,0,0,1)]">
+               {/* Path SVG */}
+               <div className="flex-1 w-full flex items-center justify-center relative z-10 mb-6 drop-shadow-[0_4px_12px_rgba(0,0,0,1)]">
                   {shareData?.path && shareData.path.length > 1 ? (
-                    <svg width="180" height="180" viewBox="0 0 280 280">
+                    <svg width="160" height="160" viewBox="0 0 280 280">
                       <path 
                         d={generateSvgPath(shareData.path)} 
                         fill="none" 
                         stroke="white" 
-                        strokeWidth="8" 
+                        strokeWidth="10" 
                         strokeLinecap="round" 
                         strokeLinejoin="round" 
                       />
                     </svg>
                   ) : (
-                    <div className="text-[10px] text-white/40 font-bold">ROUTE DATA UNAVAILABLE</div>
+                    <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest">NO ROUTE DATA</div>
                   )}
                </div>
 
-               <div className="w-full flex items-center justify-between pt-6 relative z-10 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+               {/* Footer */}
+               <div className="w-full flex items-center justify-between pt-4 border-t border-white/20 relative z-10 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                   <span className="text-xs font-black tracking-tighter">LifeOS</span>
                   <span className="text-xs font-black font-cairo">حياتي</span>
                </div>
