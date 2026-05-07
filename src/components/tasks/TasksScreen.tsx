@@ -38,9 +38,9 @@ import {
   Type,
   Tag,
   Timer,
-  CheckCircle
+  CheckCircle,
+  ChevronUp
 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,13 +52,6 @@ import {
   DialogTrigger,
   DialogFooter
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -484,11 +477,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
 }
 
 function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectIcon, userId, db }: any) {
-  const stagesQuery = useMemoFirebase(() => {
-    return query(collection(db, 'users', userId, 'taskProjects', project.id, 'taskStages'), orderBy('createdAt', 'asc'));
-  }, [db, userId, project.id]);
-
-  // استماع مباشر لكافة مهام المستخدم وحذف الفلترة الزائدة لضمان التفاعل
+  // جلب إحصائيات سريعة (عدد المهام) للعرض النصي فقط
   const tasksQuery = useMemoFirebase(() => {
     return query(
       collectionGroup(db, 'tasks'), 
@@ -497,35 +486,18 @@ function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectI
     );
   }, [db, project.id, userId]);
 
-  const { data: stages } = useCollection(stagesQuery);
   const { data: tasks } = useCollection(tasksQuery);
 
   const stats = useMemo(() => {
-    if (!stages || stages.length === 0 || !tasks) return { total: 0, completed: 0, percent: 0 };
-    
-    // حساب الوزن النسبي لكل مرحلة (مثلاً مرحلتين = كل مرحلة تمثل 50%)
-    let totalProjectCompletion = 0;
-    
-    stages.forEach(stage => {
-      const stageTasks = tasks.filter(t => t.stageId === stage.id);
-      if (stageTasks.length > 0) {
-        const completedInStage = stageTasks.filter(t => t.status === 'completed').length;
-        const stageProgress = completedInStage / stageTasks.length;
-        // إضافة حصة المرحلة من التقدم الكلي
-        totalProjectCompletion += (stageProgress / stages.length);
-      }
-    });
-
-    const percent = Math.floor(totalProjectCompletion * 100);
+    if (!tasks) return { total: 0, completed: 0 };
     return {
       total: tasks.length,
-      completed: tasks.filter(t => t.status === 'completed').length,
-      percent
+      completed: tasks.filter(t => t.status === 'completed').length
     };
-  }, [tasks, stages]);
+  }, [tasks]);
   
   return (
-    <div onClick={onClick} className={`min-w-[170px] p-4 rounded-[15px] premium-shadow border cursor-pointer transition-all flex flex-col justify-between ${isActive ? 'primary-gradient text-white border-transparent' : 'bg-white border-border/40'}`}>
+    <div onClick={onClick} className={`min-w-[170px] p-4 rounded-[15px] premium-shadow border cursor-pointer transition-all flex flex-col justify-between h-32 ${isActive ? 'primary-gradient text-white border-transparent' : 'bg-white border-border/40'}`}>
       <div className="flex justify-between items-start mb-3">
         <div className={`h-10 w-10 rounded-[10px] flex items-center justify-center ${isActive ? 'bg-white/20' : 'bg-slate-50 text-slate-400'}`}>
           {getProjectIcon(project.icon)}
@@ -548,17 +520,9 @@ function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectI
       </div>
       <div>
         <h4 className="text-xs font-black truncate">{project.title}</h4>
-        <div className="mt-3 space-y-1.5">
-          <div className="flex justify-between text-[8px] font-bold opacity-60">
-            <span>إنجاز المشروع</span>
-            <span>{stats.percent}%</span>
-          </div>
-          <div className={`h-1.5 w-full rounded-full overflow-hidden ${isActive ? 'bg-white/20' : 'bg-slate-100'}`}>
-            <div 
-              className={`h-full transition-all duration-700 ${isActive ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)]' : 'primary-gradient'}`}
-              style={{ width: `${stats.percent}%` }}
-            />
-          </div>
+        <div className="mt-1 flex items-center justify-between">
+           <span className="text-[9px] font-bold opacity-60">إنجازك</span>
+           <span className="text-[10px] font-black">{stats.completed} / {stats.total}</span>
         </div>
       </div>
     </div>
@@ -566,23 +530,43 @@ function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectI
 }
 
 function StageListView({ projectId, userId, db, onEdit, onDelete, onEditTask, onDeleteTask }: any) {
+  const [expandedStages, setExpandedStages] = useState<Record<string, boolean>>({});
+
   const stagesQuery = useMemoFirebase(() => {
     return query(collection(db, 'users', userId, 'taskProjects', projectId, 'taskStages'), orderBy('createdAt', 'asc'));
   }, [db, userId, projectId]);
 
   const { data: stages, isLoading } = useCollection(stagesQuery);
 
+  const toggleStage = (id: string) => {
+    setExpandedStages(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  useEffect(() => {
+    // تفعيل أول مرحلة تلقائياً عند تحميل المشروع
+    if (stages && stages.length > 0 && Object.keys(expandedStages).length === 0) {
+      setExpandedStages({ [stages[0].id]: true });
+    }
+  }, [stages]);
+
   if (isLoading) return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary/20" /></div>;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {stages && stages.length > 0 ? (
         stages.map(stage => (
-          <div key={stage.id} className="space-y-4">
-            <div className="flex items-center justify-between border-b pb-2">
-              <div className="flex items-center gap-2">
-                 <div className="h-2 w-2 rounded-full bg-primary" />
-                 <h4 className="text-sm font-black text-foreground uppercase tracking-wider">{stage.title}</h4>
+          <div key={stage.id} className="space-y-3 bg-white/40 p-3 rounded-[15px] border border-border/10">
+            <div className="flex items-center justify-between">
+              <div 
+                onClick={() => toggleStage(stage.id)} 
+                className="flex items-center gap-3 flex-1 cursor-pointer group"
+              >
+                <div className={`h-8 w-8 rounded-[10px] flex items-center justify-center transition-all ${expandedStages[stage.id] ? 'primary-gradient text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}>
+                   {expandedStages[stage.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                </div>
+                <div>
+                   <h4 className="text-sm font-black text-foreground uppercase tracking-wider">{stage.title}</h4>
+                </div>
               </div>
               <div className="flex items-center gap-1">
                 <DropdownMenu>
@@ -602,7 +586,19 @@ function StageListView({ projectId, userId, db, onEdit, onDelete, onEditTask, on
                 </DropdownMenu>
               </div>
             </div>
-            <TaskListView projectId={projectId} stageId={stage.id} userId={userId} db={db} onEditTask={onEditTask} onDeleteTask={onDeleteTask} />
+            
+            {expandedStages[stage.id] && (
+              <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                <TaskListView 
+                  projectId={projectId} 
+                  stageId={stage.id} 
+                  userId={userId} 
+                  db={db} 
+                  onEditTask={onEditTask} 
+                  onDeleteTask={onDeleteTask} 
+                />
+              </div>
+            )}
           </div>
         ))
       ) : (
@@ -624,17 +620,6 @@ function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask
   }, [db, userId, projectId, stageId]);
 
   const { data: tasks } = useCollection(tasksQuery);
-
-  const stats = useMemo(() => {
-    if (!tasks) return { total: 0, completed: 0, percent: 0 };
-    const total = tasks.length;
-    const completed = tasks.filter(t => t.status === 'completed').length;
-    return {
-      total,
-      completed,
-      percent: total > 0 ? Math.floor((completed / total) * 100) : 0
-    };
-  }, [tasks]);
 
   const handleAddTask = () => {
     if (!taskTitle) return;
@@ -674,16 +659,6 @@ function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask
 
   return (
     <div className="space-y-3">
-      {tasks && tasks.length > 0 && (
-        <div className="px-1 space-y-1.5 mb-2">
-           <div className="flex justify-between text-[9px] font-black text-muted-foreground/60 uppercase">
-             <span>إنجاز المرحلة</span>
-             <span>{stats.percent}%</span>
-           </div>
-           <Progress value={stats.percent} className="h-1 bg-slate-100" />
-        </div>
-      )}
-
       {tasks?.map(task => (
         <div key={task.id} className="bg-white p-4 rounded-[12px] premium-shadow border border-border/40 flex flex-col gap-3 group active:scale-[0.99] transition-all">
           <div className="flex items-center justify-between">
