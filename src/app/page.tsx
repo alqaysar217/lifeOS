@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useMemo, use } from "react";
@@ -122,23 +123,14 @@ export default function DashboardPage(props: {
   const userDocRef = useMemoFirebase(() => (db && user) ? doc(db, 'users', user.uid) : null, [db, user]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(userDocRef);
 
+  // التأكد من تسجيل الدخول المجهول فوراً
   useEffect(() => {
     if (!isUserLoading && !user) {
       initiateAnonymousSignIn(auth);
     }
   }, [user, isUserLoading, auth]);
 
-  useEffect(() => {
-    if (user && db && !isProfileLoading && !profile) {
-      const userRef = doc(db, 'users', user.uid);
-      setDocumentNonBlocking(userRef, {
-        id: user.uid,
-        createdAt: serverTimestamp(),
-        passcodeEnabled: false
-      }, { merge: true });
-    }
-  }, [user, db, isProfileLoading, profile]);
-
+  // تحديث حالة الحقول عند تحميل البيانات
   useEffect(() => {
     if (profile) {
       setEditName(profile.name || "");
@@ -146,6 +138,7 @@ export default function DashboardPage(props: {
     }
   }, [profile]);
 
+  // تحديث الوقت دورياً لتغيير ترتيب الأقسام
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date().getHours());
@@ -250,15 +243,24 @@ export default function DashboardPage(props: {
   };
 
   const renderContent = () => {
-    if (isUserLoading) {
+    // 1. حالة التحميل الأولي (توحيد الانتظار)
+    // ننتظر تحميل المستخدم، وإذا وجد ننتظر تحميل ملفه الشخصي
+    if (isUserLoading || (user && isProfileLoading)) {
       return (
-        <div className="min-h-screen flex flex-col items-center justify-center space-y-4">
-          <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-bold text-muted-foreground">جاري تحضير عالمك الخاص...</p>
+        <div className="min-h-screen flex flex-col items-center justify-center space-y-4 animate-in fade-in duration-300">
+          <div className="relative h-16 w-16 mb-4">
+             <Image src="/logo.png" alt="Logo" fill className="object-contain animate-pulse" priority />
+          </div>
+          <div className="h-1 w-32 bg-slate-100 rounded-full overflow-hidden">
+             <div className="h-full bg-primary animate-progress-fast" />
+          </div>
+          <p className="text-[10px] font-bold text-muted-foreground animate-pulse">جاري تجهيز عالمك الخاص...</p>
         </div>
       );
     }
 
+    // 2. حالة عدم وجود بيانات (التسجيل لأول مرة)
+    // لا تظهر إلا إذا انتهى التحميل تماماً وتأكدنا من نقص البيانات
     if (user && !isProfileLoading && (!profile?.name || !profile?.phoneNumber)) {
       return (
         <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-8 animate-in fade-in duration-700">
@@ -312,13 +314,12 @@ export default function DashboardPage(props: {
                 {isLinking ? <><Loader2 className="h-5 w-5 animate-spin ml-2" /> جاري الربط...</> : "ابدأ رحلتي الآن"}
               </Button>
             </div>
-            
-            <p className="text-[9px] text-muted-foreground font-medium">بياناتك مشفرة ومحفوظة بأمان تام وفق معايير الخصوصية العالمية.</p>
           </div>
         </div>
       );
     }
 
+    // 3. عرض المحتوى الرئيسي (فقط بعد التأكد من وجود البيانات)
     switch (activeTab) {
       case 'home':
         return (
@@ -331,202 +332,61 @@ export default function DashboardPage(props: {
             {!searchTerm && <ChallengeHighlight />}
 
             <div className="px-6 mt-8 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-foreground/90 font-cairo">
-                {searchTerm ? 'نتائج البحث' : 'الأقسام الرئيسية'}
-              </h2>
-              {!searchTerm && (
-                <button className="text-[10px] font-bold text-primary/70 hover:text-primary transition-colors flex items-center gap-1">
-                  تعديل الترتيب
-                </button>
-              )}
+              <h2 className="text-lg font-bold text-foreground/90 font-cairo">الأقسام الرئيسية</h2>
             </div>
 
             <div className="mt-4 px-6 space-y-4">
-              {sortedCategories.length > 0 ? (
-                sortedCategories.map((category, index) => (
-                  <div key={category.id} onClick={() => setActiveTab(category.id as TabId)} className="animate-in fade-in slide-in-from-bottom-2 cursor-pointer" style={{ animationDelay: `${index * 50}ms` }}>
-                    <CategoryCard
-                      title={category.title}
-                      description={category.description}
-                      icon={category.icon}
-                      stat={category.stat}
-                    />
-                  </div>
-                ))
-              ) : (
-                <div className="py-20 text-center space-y-4">
-                  <div className="h-20 w-20 rounded-full soft-purple-bg flex items-center justify-center mx-auto">
-                    <Search className="h-10 w-10 text-primary/30" />
-                  </div>
-                  <p className="text-sm font-bold text-muted-foreground">عذراً، لم نجد ما تبحث عنه</p>
+              {sortedCategories.map((category, index) => (
+                <div key={category.id} onClick={() => setActiveTab(category.id as TabId)} className="animate-in fade-in slide-in-from-bottom-2 cursor-pointer" style={{ animationDelay: `${index * 50}ms` }}>
+                  <CategoryCard
+                    title={category.title}
+                    description={category.description}
+                    icon={category.icon}
+                    stat={category.stat}
+                  />
                 </div>
-              )}
+              ))}
             </div>
-
-            {!searchTerm && (
-              <div 
-                onClick={() => setActiveTab('analytics')}
-                className="mx-6 mt-8 p-5 rounded-[15px] primary-gradient text-white premium-shadow flex items-center justify-between transition-all active:scale-[0.98] cursor-pointer"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-[12px] bg-white/20 backdrop-blur-md flex items-center justify-center">
-                    <BarChart3 className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold">ملخص الأسبوع</h4>
-                    <p className="text-[10px] text-white/70 font-medium">أداؤك تحسن بنسبة 15%</p>
-                  </div>
-                </div>
-                <ChevronRight className="h-5 w-5 text-white/50" />
-              </div>
-            )}
           </div>
         );
-      case 'fitness':
-        return <FitnessScreen onBack={handleBack} />;
-      case 'challenges':
-        return <ChallengesScreen onBack={handleBack} />;
-      case 'tasks':
-        return <TasksScreen onBack={handleBack} />;
-      case 'finance':
-        return <FinanceScreen onBack={handleBack} />;
-      case 'study':
-        return <StudyScreen onBack={handleBack} />;
-      case 'habits':
-        return <HabitsScreen onBack={handleBack} />;
-      case 'ai':
-        return <AIScreen onBack={handleBack} />;
-      case 'analytics':
-        return <AnalyticsScreen onBack={handleBack} />;
-      case 'notifications':
-        return <NotificationsScreen onBack={handleBack} />;
+      case 'fitness': return <FitnessScreen onBack={handleBack} />;
+      case 'challenges': return <ChallengesScreen onBack={handleBack} />;
+      case 'tasks': return <TasksScreen onBack={handleBack} />;
+      case 'finance': return <FinanceScreen onBack={handleBack} />;
+      case 'study': return <StudyScreen onBack={handleBack} />;
+      case 'habits': return <HabitsScreen onBack={handleBack} />;
+      case 'ai': return <AIScreen onBack={handleBack} />;
+      case 'analytics': return <AnalyticsScreen onBack={handleBack} />;
+      case 'notifications': return <NotificationsScreen onBack={handleBack} />;
       case 'profile':
         return (
           <div className="flex flex-col items-center px-6 animate-in fade-in duration-500 pb-32 pt-16">
             <div className="h-24 w-24 rounded-full primary-gradient flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden">
-              <Image 
-                src={PlaceHolderImages.find(img => img.id === 'user-profile')?.imageUrl || "https://picsum.photos/seed/user-avatar/400/400"} 
-                alt="Profile" 
-                fill 
-                className="object-cover"
-                data-ai-hint="person portrait"
-              />
-              <div className="absolute -bottom-1 -right-1 h-8 w-8 bg-green-500 border-4 border-background rounded-full z-10" />
+              <Image src={PlaceHolderImages.find(img => img.id === 'user-profile')?.imageUrl || ""} alt="Profile" fill className="object-cover" />
             </div>
             
             <div className="w-full space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between px-2">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">الاسم الكريم</label>
-                    {!isEditingName && (
-                      <button onClick={() => setIsEditingName(true)} className="text-primary hover:text-primary/80 transition-colors">
-                        <Pencil className="h-3 w-3" />
-                      </button>
-                    )}
+                  <label className="text-[10px] font-bold text-muted-foreground">الاسم الكريم</label>
+                  <div className="relative">
+                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-12 pr-10 text-right font-bold rounded-[12px]" />
+                    <User className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   </div>
-                  
-                  {isEditingName ? (
-                    <div className="relative group">
-                      <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                        <User className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                      </div>
-                      <Input 
-                        placeholder="أدخل اسمك..."
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow bg-white/50 focus:bg-white transition-all"
-                        autoFocus
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-12 px-5 flex items-center justify-between rounded-[12px] bg-white border border-border/40 premium-shadow">
-                      <span className="text-sm font-bold text-foreground">{profile?.name || "غير مسجل"}</span>
-                      <User className="h-4 w-4 text-muted-foreground/30" />
-                    </div>
-                  )}
                 </div>
-
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between px-2">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">رقم الهاتف</label>
-                    {!isEditingPhone && (
-                      <button onClick={() => setIsEditingPhone(true)} className="text-primary hover:text-primary/80 transition-colors">
-                        <Pencil className="h-3 w-3" />
-                      </button>
-                    )}
+                  <label className="text-[10px] font-bold text-muted-foreground">رقم الهاتف</label>
+                  <div className="relative">
+                    <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="h-12 pr-10 text-right font-bold rounded-[12px]" />
+                    <Smartphone className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   </div>
-
-                  {isEditingPhone ? (
-                    <div className="relative group">
-                      <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                        <Smartphone className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                      </div>
-                      <Input 
-                        type="tel"
-                        placeholder="أدخل رقم هاتفك..."
-                        value={editPhone}
-                        onChange={(e) => setEditPhone(e.target.value)}
-                        className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow bg-white/50 focus:bg-white transition-all"
-                        autoFocus
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-12 px-5 flex items-center justify-between rounded-[12px] bg-white border border-border/40 premium-shadow">
-                      <span className="text-sm font-bold text-foreground">{profile?.phoneNumber || "غير مسجل"}</span>
-                      <Smartphone className="h-4 w-4 text-muted-foreground/30" />
-                    </div>
-                  )}
                 </div>
-
-                {(isEditingName || isEditingPhone) && (
-                  <Button 
-                    onClick={handleUpdateProfile}
-                    className="w-full h-12 primary-gradient text-white text-base font-black rounded-[12px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Save className="h-5 w-5" />
-                    حفظ التغييرات
-                  </Button>
-                )}
-              </div>
-
-              <div className="pt-4 space-y-3">
-                <div 
-                  onClick={() => setActiveTab('finance')}
-                  className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center">
-                      <Wallet className="h-5 w-5 text-primary" />
-                    </div>
-                    <span className="text-sm font-bold">المصاريف والمالية</span>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
-                </div>
-
-                <div 
-                  onClick={() => setActiveTab('notifications')}
-                  className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-[10px] bg-primary/5 flex items-center justify-center">
-                      <Bell className="h-5 w-5 text-primary" />
-                    </div>
-                    <span className="text-sm font-bold">الإشعارات</span>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground/30" />
-                </div>
-              </div>
-
-              <div className="bg-white p-5 rounded-[15px] premium-shadow border border-border/40 flex flex-col items-center justify-center gap-2 border-dashed">
-                <p className="text-xs font-bold text-muted-foreground">نظام تشغيل حياتك المتكامل</p>
-                <button onClick={handleBack} className="text-primary font-bold text-sm">العودة للرئيسية</button>
+                <Button onClick={handleUpdateProfile} className="w-full h-12 primary-gradient text-white font-black rounded-[12px] shadow-xl">حفظ التغييرات</Button>
               </div>
             </div>
           </div>
         );
-      default:
-        return null;
+      default: return null;
     }
   };
 
