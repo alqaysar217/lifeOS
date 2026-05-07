@@ -35,7 +35,8 @@ import {
   ChevronDown,
   ChevronLeft,
   X,
-  Type
+  Type,
+  Tag
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -161,7 +162,6 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
     const deletedId = projectToDelete.id;
     setProjectToDelete(null);
     
-    // استخدام setTimeout لضمان اكتمال إغلاق النافذة قبل مسح البيانات لتجنب التجمد
     setTimeout(() => {
       deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'taskProjects', deletedId));
       if (activeProjectId === deletedId) setActiveProjectId(null);
@@ -341,21 +341,22 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
           </DialogHeader>
           <div className="space-y-6 py-4">
             <div className="space-y-3">
-              <Label className="block text-right">اسم المشروع الكبير</Label>
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-[12px] bg-slate-50 flex items-center justify-center shrink-0 border border-border/40">
-                  <Type className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <Input 
-                  placeholder="مثلاً: تطوير تطبيق، تأليف كتاب..." 
-                  value={projTitle} 
-                  onChange={e => setProjTitle(e.target.value)} 
-                  className="h-12 rounded-[12px] text-right"
-                />
-              </div>
+              <Label className="flex items-center justify-end gap-2 text-right mb-2">
+                اسم المشروع الكبير
+                <Type className="h-4 w-4 text-primary" />
+              </Label>
+              <Input 
+                placeholder="مثلاً: تطوير تطبيق، تأليف كتاب..." 
+                value={projTitle} 
+                onChange={e => setProjTitle(e.target.value)} 
+                className="h-12 rounded-[12px] text-right"
+              />
             </div>
             <div className="space-y-4">
-              <Label className="block text-right">أيقونة المشروع</Label>
+              <Label className="flex items-center justify-end gap-2 text-right mb-2">
+                أيقونة المشروع
+                <Palette className="h-4 w-4 text-primary" />
+              </Label>
               <div className="grid grid-cols-4 gap-3 max-h-[200px] overflow-y-auto p-1">
                 {PROJECT_ICONS.map((item) => (
                   <button 
@@ -386,18 +387,16 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-3">
-              <Label className="block text-right">عنوان المرحلة</Label>
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-[12px] bg-slate-50 flex items-center justify-center shrink-0 border border-border/40">
-                  <Layers className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <Input 
-                  placeholder="مثلاً: التحليل، التصميم، Backend..." 
-                  value={stageTitle} 
-                  onChange={e => setStageTitle(e.target.value)} 
-                  className="h-12 rounded-[12px] text-right"
-                />
-              </div>
+              <Label className="flex items-center justify-end gap-2 text-right mb-2">
+                عنوان المرحلة
+                <Layers className="h-4 w-4 text-primary" />
+              </Label>
+              <Input 
+                placeholder="مثلاً: التحليل، التصميم، Backend..." 
+                value={stageTitle} 
+                onChange={e => setStageTitle(e.target.value)} 
+                className="h-12 rounded-[12px] text-right"
+              />
             </div>
           </div>
           <DialogFooter>
@@ -416,16 +415,17 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
           </DialogHeader>
           <div className="space-y-5 py-4">
             <div className="space-y-3">
-              <Label className="block text-right">عنوان المهمة</Label>
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-[12px] bg-slate-50 flex items-center justify-center shrink-0 border border-border/40">
-                  <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <Input value={taskTitle} onChange={e => setTaskTitle(e.target.value)} className="h-12 rounded-[12px] text-right" />
-              </div>
+              <Label className="flex items-center justify-end gap-2 text-right mb-2">
+                عنوان المهمة
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+              </Label>
+              <Input value={taskTitle} onChange={e => setTaskTitle(e.target.value)} className="h-12 rounded-[12px] text-right" />
             </div>
             <div className="space-y-2">
-              <Label className="block text-right">الأولوية</Label>
+              <Label className="flex items-center justify-end gap-2 text-right mb-2">
+                الأولوية
+                <Flag className="h-4 w-4 text-primary" />
+              </Label>
               <div className="flex gap-2">
                 {(['low', 'medium', 'high'] as Priority[]).map(p => (
                   <button 
