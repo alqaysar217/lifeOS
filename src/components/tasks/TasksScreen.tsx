@@ -34,7 +34,8 @@ import {
   Cpu,
   ChevronDown,
   ChevronLeft,
-  X
+  X,
+  Type
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, query, where, serverTimestamp, orderBy } from "firebase/firestore";
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
@@ -95,12 +107,16 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [isAddingStage, setIsAddingStage] = useState(false);
   
+  // Edit States
+  const [editingProject, setEditingProject] = useState<any>(null);
+  const [editingStage, setEditingStage] = useState<any>(null);
+
   // Project Form State
-  const [newProjTitle, setNewProjTitle] = useState("");
-  const [newProjIcon, setNewProjIcon] = useState("Briefcase");
+  const [projTitle, setProjTitle] = useState("");
+  const [projIcon, setProjIcon] = useState("Briefcase");
 
   // Stage Form State
-  const [newStageTitle, setNewStageTitle] = useState("");
+  const [stageTitle, setStageTitle] = useState("");
 
   const projectsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -110,30 +126,53 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
   const { data: projects, isLoading: isProjectsLoading } = useCollection(projectsQuery);
 
   const handleAddProject = () => {
-    if (!db || !user || !newProjTitle) return;
+    if (!db || !user || !projTitle) return;
     const projRef = collection(db, 'users', user.uid, 'taskProjects');
     addDocumentNonBlocking(projRef, {
-      title: newProjTitle,
-      icon: newProjIcon,
+      title: projTitle,
+      icon: projIcon,
       createdAt: serverTimestamp(),
       userId: user.uid
     });
-    setNewProjTitle("");
+    setProjTitle("");
     setIsAddingProject(false);
     toast({ title: "تم إنشاء المشروع", description: "يمكنك الآن إضافة مراحل العمل." });
   };
 
+  const handleUpdateProject = () => {
+    if (!db || !user || !editingProject || !projTitle) return;
+    const projRef = doc(db, 'users', user.uid, 'taskProjects', editingProject.id);
+    updateDocumentNonBlocking(projRef, {
+      title: projTitle,
+      icon: projIcon
+    });
+    setProjTitle("");
+    setEditingProject(null);
+    toast({ title: "تم التحديث", description: "تم تعديل بيانات المشروع بنجاح." });
+  };
+
   const handleAddStage = () => {
-    if (!db || !user || !activeProjectId || !newStageTitle) return;
+    if (!db || !user || !activeProjectId || !stageTitle) return;
     const stagesRef = collection(db, 'users', user.uid, 'taskProjects', activeProjectId, 'taskStages');
     addDocumentNonBlocking(stagesRef, {
       projectId: activeProjectId,
-      title: newStageTitle,
+      title: stageTitle,
       createdAt: serverTimestamp()
     });
-    setNewStageTitle("");
+    setStageTitle("");
     setIsAddingStage(false);
     toast({ title: "تم إضافة المرحلة", description: "ابدأ بإضافة المهام بداخلها." });
+  };
+
+  const handleUpdateStage = () => {
+    if (!db || !user || !activeProjectId || !editingStage || !stageTitle) return;
+    const stageRef = doc(db, 'users', user.uid, 'taskProjects', activeProjectId, 'taskStages', editingStage.id);
+    updateDocumentNonBlocking(stageRef, {
+      title: stageTitle
+    });
+    setStageTitle("");
+    setEditingStage(null);
+    toast({ title: "تم التحديث", description: "تم تعديل عنوان المرحلة بنجاح." });
   };
 
   const getProjectIcon = (iconName: string) => {
@@ -164,7 +203,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
       <div className="px-6 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold text-foreground font-cairo">المشاريع الكبرى</h3>
-          <Button variant="ghost" size="sm" onClick={() => setIsAddingProject(true)} className="text-primary text-xs font-bold gap-1">
+          <Button variant="ghost" size="sm" onClick={() => { setProjTitle(""); setProjIcon("Briefcase"); setIsAddingProject(true); }} className="text-primary text-xs font-bold gap-1">
             <Plus className="h-3 w-3" />
             مشروع جديد
           </Button>
@@ -184,11 +223,32 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
                   {getProjectIcon(proj.icon)}
                 </div>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" className={`h-6 w-6 ${activeProjectId === proj.id ? 'text-white/40' : 'text-slate-300'}`}><MoreVertical className="h-4 w-4" /></Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="font-cairo">
-                    <DropdownMenuItem className="text-destructive" onClick={() => deleteDocumentNonBlocking(doc(db!, 'users', user!.uid, 'taskProjects', proj.id))}>حذف المشروع</DropdownMenuItem>
+                  <DropdownMenuContent className="font-cairo rounded-[10px]">
+                    <DropdownMenuItem onClick={() => { setEditingProject(proj); setProjTitle(proj.title); setProjIcon(proj.icon); }}>
+                      <Pencil className="h-4 w-4 ml-2" />
+                      تعديل المشروع
+                    </DropdownMenuItem>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                          <Trash2 className="h-4 w-4 ml-2" />
+                          حذف المشروع
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="font-cairo rounded-[15px]">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>حذف المشروع؟</AlertDialogTitle>
+                          <AlertDialogDescription>سيتم حذف المشروع وكافة المراحل والمهام المرتبطة به. لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="flex-row gap-2">
+                          <AlertDialogCancel className="flex-1 rounded-[10px]">إلغاء</AlertDialogCancel>
+                          <AlertDialogAction className="flex-1 bg-destructive rounded-[10px]" onClick={() => { deleteDocumentNonBlocking(doc(db!, 'users', user!.uid, 'taskProjects', proj.id)); if(activeProjectId === proj.id) setActiveProjectId(null); }}>تأكيد الحذف</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -205,13 +265,18 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
           <div className="space-y-6 animate-in slide-in-from-bottom-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-black text-foreground font-cairo">مراحل التنفيذ</h3>
-              <Button onClick={() => setIsAddingStage(true)} size="sm" className="rounded-[10px] bg-primary/5 text-primary hover:bg-primary/10 border-none font-bold">
+              <Button onClick={() => { setStageTitle(""); setIsAddingStage(true); }} size="sm" className="rounded-[10px] bg-primary/5 text-primary hover:bg-primary/10 border-none font-bold">
                 <Plus className="h-4 w-4 ml-1" />
                 إضافة مرحلة
               </Button>
             </div>
             
-            <StageListView projectId={activeProjectId} userId={user!.uid} db={db!} />
+            <StageListView 
+              projectId={activeProjectId} 
+              userId={user!.uid} 
+              db={db!} 
+              onEdit={(stage: any) => { setEditingStage(stage); setStageTitle(stage.title); }}
+            />
           </div>
         ) : (
           <div className="py-20 text-center space-y-4 opacity-30">
@@ -226,21 +291,24 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         )}
       </div>
 
-      {/* Add Project Modal */}
-      <Dialog open={isAddingProject} onOpenChange={setIsAddingProject}>
+      {/* Project Modal (Add/Edit) */}
+      <Dialog open={isAddingProject || !!editingProject} onOpenChange={(open) => { if(!open) { setIsAddingProject(false); setEditingProject(null); } }}>
         <DialogContent className="font-cairo rounded-[20px]">
           <DialogHeader className="flex flex-row-reverse items-center justify-between">
-             <DialogTitle className="text-right flex-1">مشروع جديد</DialogTitle>
+             <DialogTitle className="text-right flex-1">{editingProject ? "تعديل المشروع" : "مشروع جديد"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
             <div className="space-y-2">
               <Label className="block text-right">اسم المشروع الكبير</Label>
-              <Input 
-                placeholder="مثلاً: تطوير تطبيق، تأليف كتاب..." 
-                value={newProjTitle} 
-                onChange={e => setNewProjTitle(e.target.value)} 
-                className="h-12 rounded-[12px] text-right"
-              />
+              <div className="relative">
+                <Input 
+                  placeholder="مثلاً: تطوير تطبيق، تأليف كتاب..." 
+                  value={projTitle} 
+                  onChange={e => setProjTitle(e.target.value)} 
+                  className="h-12 rounded-[12px] text-right pr-10"
+                />
+                <Type className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              </div>
             </div>
             <div className="space-y-4">
               <Label className="block text-right">أيقونة المشروع</Label>
@@ -248,8 +316,8 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
                 {PROJECT_ICONS.map((item) => (
                   <button 
                     key={item.name}
-                    onClick={() => setNewProjIcon(item.name)}
-                    className={`h-12 rounded-[12px] border flex flex-col items-center justify-center gap-1 transition-all ${newProjIcon === item.name ? 'border-primary bg-primary/5 text-primary' : 'border-border/40'}`}
+                    onClick={() => setProjIcon(item.name)}
+                    className={`h-12 rounded-[12px] border flex flex-col items-center justify-center gap-1 transition-all ${projIcon === item.name ? 'border-primary bg-primary/5 text-primary' : 'border-border/40'}`}
                   >
                     <item.icon className="h-5 w-5" />
                     <span className="text-[8px] font-bold">{item.label}</span>
@@ -259,30 +327,37 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleAddProject} disabled={!newProjTitle} className="w-full h-12 primary-gradient text-white font-black rounded-[12px] shadow-lg">إنشاء المشروع</Button>
+            <Button onClick={editingProject ? handleUpdateProject : handleAddProject} disabled={!projTitle} className="w-full h-12 primary-gradient text-white font-black rounded-[12px] shadow-lg">
+              {editingProject ? "حفظ التعديلات" : "إنشاء المشروع"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Add Stage Modal */}
-      <Dialog open={isAddingStage} onOpenChange={setIsAddingStage}>
+      {/* Stage Modal (Add/Edit) */}
+      <Dialog open={isAddingStage || !!editingStage} onOpenChange={(open) => { if(!open) { setIsAddingStage(false); setEditingStage(null); } }}>
         <DialogContent className="font-cairo rounded-[20px]">
           <DialogHeader className="flex flex-row-reverse items-center justify-between">
-            <DialogTitle className="text-right flex-1">إضافة مرحلة عمل</DialogTitle>
+            <DialogTitle className="text-right flex-1">{editingStage ? "تعديل المرحلة" : "إضافة مرحلة عمل"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label className="block text-right">عنوان المرحلة</Label>
-              <Input 
-                placeholder="مثلاً: التحليل، التصميم، Backend..." 
-                value={newStageTitle} 
-                onChange={e => setNewStageTitle(e.target.value)} 
-                className="h-12 rounded-[12px] text-right"
-              />
+              <div className="relative">
+                <Input 
+                  placeholder="مثلاً: التحليل، التصميم، Backend..." 
+                  value={stageTitle} 
+                  onChange={e => setStageTitle(e.target.value)} 
+                  className="h-12 rounded-[12px] text-right pr-10"
+                />
+                <Layers className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              </div>
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleAddStage} disabled={!newStageTitle} className="w-full h-12 primary-gradient text-white font-black rounded-[12px] shadow-lg">تأكيد الإضافة</Button>
+            <Button onClick={editingStage ? handleUpdateStage : handleAddStage} disabled={!stageTitle} className="w-full h-12 primary-gradient text-white font-black rounded-[12px] shadow-lg">
+              {editingStage ? "حفظ التعديلات" : "تأكيد الإضافة"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -290,7 +365,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
   );
 }
 
-function StageListView({ projectId, userId, db }: { projectId: string, userId: string, db: any }) {
+function StageListView({ projectId, userId, db, onEdit }: { projectId: string, userId: string, db: any, onEdit: (stage: any) => void }) {
   const stagesQuery = useMemoFirebase(() => {
     return query(collection(db, 'users', userId, 'taskProjects', projectId, 'taskStages'), orderBy('createdAt', 'asc'));
   }, [db, userId, projectId]);
@@ -313,8 +388,29 @@ function StageListView({ projectId, userId, db }: { projectId: string, userId: s
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300"><MoreVertical className="h-4 w-4" /></Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="font-cairo">
-                  <DropdownMenuItem className="text-destructive" onClick={() => deleteDocumentNonBlocking(doc(db, 'users', userId, 'taskProjects', projectId, 'taskStages', stage.id))}>حذف المرحلة</DropdownMenuItem>
+                <DropdownMenuContent className="font-cairo rounded-[10px]">
+                  <DropdownMenuItem onClick={() => onEdit(stage)}>
+                    <Pencil className="h-4 w-4 ml-2" />
+                    تعديل المرحلة
+                  </DropdownMenuItem>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                        <Trash2 className="h-4 w-4 ml-2" />
+                        حذف المرحلة
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="font-cairo rounded-[15px]">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>حذف المرحلة؟</AlertDialogTitle>
+                        <AlertDialogDescription>سيتم حذف المرحلة وكافة المهام بداخلها بشكل نهائي.</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="flex-row gap-2">
+                        <AlertDialogCancel className="flex-1 rounded-[10px]">إلغاء</AlertDialogCancel>
+                        <AlertDialogAction className="flex-1 bg-destructive rounded-[10px]" onClick={() => deleteDocumentNonBlocking(doc(db, 'users', userId, 'taskProjects', projectId, 'taskStages', stage.id))}>تأكيد الحذف</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -331,6 +427,7 @@ function StageListView({ projectId, userId, db }: { projectId: string, userId: s
 
 function TaskListView({ projectId, stageId, userId, db }: { projectId: string, stageId: string, userId: string, db: any }) {
   const [isAddingTask, setIsAddingTask] = useState(false);
+  const [editingTask, setEditingTask] = useState<any>(null);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskPriority, setTaskPriority] = useState<Priority>("medium");
   const { toast } = useToast();
@@ -355,6 +452,17 @@ function TaskListView({ projectId, stageId, userId, db }: { projectId: string, s
     });
     setTaskTitle("");
     setIsAddingTask(false);
+  };
+
+  const handleUpdateTask = () => {
+    if (!editingTask || !taskTitle) return;
+    const taskRef = doc(db, 'users', userId, 'taskProjects', projectId, 'taskStages', stageId, 'tasks', editingTask.id);
+    updateDocumentNonBlocking(taskRef, {
+      title: taskTitle,
+      priority: taskPriority
+    });
+    setTaskTitle("");
+    setEditingTask(null);
   };
 
   const toggleTask = (taskId: string, currentStatus: string) => {
@@ -389,15 +497,34 @@ function TaskListView({ projectId, stageId, userId, db }: { projectId: string, s
                <div className={`mt-1 h-1 w-8 rounded-full ${getPriorityColor(task.priority)}`} />
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/20 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => deleteDocumentNonBlocking(doc(db, 'users', userId, 'taskProjects', projectId, 'taskStages', stageId, 'tasks', task.id))}>
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary" onClick={() => { setEditingTask(task); setTaskTitle(task.title); setTaskPriority(task.priority); }}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/20 hover:text-destructive">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="font-cairo rounded-[15px]">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>حذف المهمة؟</AlertDialogTitle>
+                  <AlertDialogDescription>هل أنت متأكد من حذف هذه المهمة؟</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-row gap-2">
+                  <AlertDialogCancel className="flex-1 rounded-[10px]">إلغاء</AlertDialogCancel>
+                  <AlertDialogAction className="flex-1 bg-destructive rounded-[10px]" onClick={() => deleteDocumentNonBlocking(doc(db, 'users', userId, 'taskProjects', projectId, 'taskStages', stageId, 'tasks', task.id))}>تأكيد الحذف</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       ))}
       
-      {!isAddingTask ? (
+      {(!isAddingTask && !editingTask) ? (
         <button 
-          onClick={() => setIsAddingTask(true)}
+          onClick={() => { setTaskTitle(""); setTaskPriority("medium"); setIsAddingTask(true); }}
           className="w-full py-2.5 rounded-[10px] border border-dashed border-primary/20 text-primary/60 text-[10px] font-bold flex items-center justify-center gap-1 hover:bg-primary/5"
         >
           <Plus className="h-3 w-3" />
@@ -405,13 +532,16 @@ function TaskListView({ projectId, stageId, userId, db }: { projectId: string, s
         </button>
       ) : (
         <div className="bg-slate-50 p-3 rounded-[12px] border border-border/40 space-y-3 animate-in fade-in zoom-in-95">
-          <Input 
-            autoFocus
-            placeholder="اكتب المهمة هنا..." 
-            value={taskTitle} 
-            onChange={e => setTaskTitle(e.target.value)}
-            className="h-9 text-[11px] font-bold rounded-[8px]"
-          />
+          <div className="relative">
+            <Input 
+              autoFocus
+              placeholder="اكتب المهمة هنا..." 
+              value={taskTitle} 
+              onChange={e => setTaskTitle(e.target.value)}
+              className="h-9 text-[11px] font-bold rounded-[8px] pr-8"
+            />
+            <CheckCircle2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          </div>
           <div className="flex items-center justify-between gap-2">
             <div className="flex gap-2">
               {(['low', 'medium', 'high'] as Priority[]).map(p => (
@@ -425,8 +555,10 @@ function TaskListView({ projectId, stageId, userId, db }: { projectId: string, s
               ))}
             </div>
             <div className="flex gap-1">
-              <Button size="sm" onClick={handleAddTask} className="h-7 px-3 rounded-[8px] primary-gradient text-white text-[10px] font-bold transition-none">حفظ</Button>
-              <Button variant="ghost" size="sm" onClick={() => setIsAddingTask(false)} className="h-7 px-2 rounded-[8px] text-[10px] transition-none"><X className="h-4 w-4" /></Button>
+              <Button size="sm" onClick={editingTask ? handleUpdateTask : handleAddTask} className="h-7 px-3 rounded-[8px] primary-gradient text-white text-[10px] font-bold transition-none">
+                {editingTask ? "حفظ" : "إضافة"}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => { setIsAddingTask(false); setEditingTask(null); }} className="h-7 px-2 rounded-[8px] text-[10px] transition-none"><X className="h-4 w-4" /></Button>
             </div>
           </div>
         </div>
