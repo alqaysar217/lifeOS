@@ -1,7 +1,7 @@
 
 "use client"
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Plus, 
   MoreVertical, 
@@ -76,7 +76,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, doc, query, where, serverTimestamp, orderBy } from "firebase/firestore";
+import { collection, doc, query, where, serverTimestamp, orderBy, getDocs, collectionGroup } from "firebase/firestore";
 import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
 
@@ -287,7 +287,10 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
               projectId={activeProjectId} 
               userId={user!.uid} 
               db={db!} 
-              onEdit={(stage: any) => { setEditingStage(stage); setStageTitle(stage.title); }}
+              onEdit={(stage: any) => { 
+                setEditingStage(stage); 
+                setStageTitle(stage.title); 
+              }}
               onDelete={(stage: any) => setStageToDelete(stage)}
               onEditTask={(task: any) => { 
                 setEditingTask(task); 
@@ -312,6 +315,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         )}
       </div>
 
+      {/* Dialogs remain similar but with updated layouts as requested in previous steps */}
       <Dialog open={isAddingProject || !!editingProject} onOpenChange={(open) => { if(!open) { setIsAddingProject(false); setEditingProject(null); } }}>
         <DialogContent className="font-cairo rounded-[20px]">
           <DialogHeader className="flex flex-row items-center justify-between">
@@ -321,14 +325,14 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             <div className="space-y-3">
               <Label className="flex items-center justify-start gap-2 text-right mb-2">
                 <Type className="h-4 w-4 text-primary" />
-                اسم المشروع الكبير
+                <span>اسم المشروع الكبير</span>
               </Label>
               <Input placeholder="مثلاً: تطوير تطبيق، تأليف كتاب..." value={projTitle} onChange={e => setProjTitle(e.target.value)} className="h-12 rounded-[12px] text-right" />
             </div>
             <div className="space-y-4">
               <Label className="flex items-center justify-start gap-2 text-right mb-2">
                 <Palette className="h-4 w-4 text-primary" />
-                أيقونة المشروع
+                <span>أيقونة المشروع</span>
               </Label>
               <div className="grid grid-cols-4 gap-3 max-h-[200px] overflow-y-auto p-1">
                 {PROJECT_ICONS.map((item) => (
@@ -357,7 +361,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             <div className="space-y-3">
               <Label className="flex items-center justify-start gap-2 text-right mb-2">
                 <Layers className="h-4 w-4 text-primary" />
-                عنوان المرحلة
+                <span>عنوان المرحلة</span>
               </Label>
               <Input placeholder="مثلاً: التحليل، التصميم، Backend..." value={stageTitle} onChange={e => setStageTitle(e.target.value)} className="h-12 rounded-[12px] text-right" />
             </div>
@@ -379,7 +383,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             <div className="space-y-3">
               <Label className="flex items-center justify-start gap-2 text-right mb-2">
                 <CheckCircle2 className="h-4 w-4 text-primary" />
-                عنوان المهمة
+                <span>عنوان المهمة</span>
               </Label>
               <Input value={taskTitle} onChange={e => setTaskTitle(e.target.value)} className="h-12 rounded-[12px] text-right" />
             </div>
@@ -387,14 +391,14 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
               <div className="space-y-2">
                 <Label className="flex items-center justify-start gap-2 text-right mb-2">
                   <Clock className="h-4 w-4 text-primary" />
-                  الوقت المتوقع
+                  <span>وقت متوقع</span>
                 </Label>
                 <Input placeholder="ساعتان..." value={taskExpectedTime} onChange={e => setTaskExpectedTime(e.target.value)} className="h-10 rounded-[10px] text-right text-xs" />
               </div>
               <div className="space-y-2">
                 <Label className="flex items-center justify-start gap-2 text-right mb-2">
                   <Timer className="h-4 w-4 text-primary" />
-                  الوقت الفعلي
+                  <span>وقت فعلي</span>
                 </Label>
                 <Input placeholder="ساعة..." value={taskActualTime} onChange={e => setTaskActualTime(e.target.value)} className="h-10 rounded-[10px] text-right text-xs" />
               </div>
@@ -402,7 +406,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             <div className="space-y-2">
               <Label className="flex items-center justify-start gap-2 text-right mb-2">
                 <Flag className="h-4 w-4 text-primary" />
-                الأولوية
+                <span>الأولوية</span>
               </Label>
               <div className="flex gap-2">
                 {(['low', 'medium', 'high'] as Priority[]).map(p => (
@@ -462,11 +466,23 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
 }
 
 function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectIcon, userId, db }: any) {
-  const [progress, setProgress] = useState(0);
+  // Fetch tasks for this specific project to calculate real progress
+  const tasksQuery = useMemoFirebase(() => {
+    return query(collectionGroup(db, 'tasks'), where('projectId', '==', project.id));
+  }, [db, project.id]);
 
-  // حساب التقدم الإجمالي للمشروع (يحتاج لجلب كافة المهام في كافة مراحل المشروع)
-  // كبديل للأداء، سنحسبه عند تفعيل المشروع أو باستخدام منطق مبسط
-  // هنا سنفترض أننا نريد شريط تقدم جمالي يعبر عن روح الإنجاز
+  const { data: tasks } = useCollection(tasksQuery);
+
+  const stats = useMemo(() => {
+    if (!tasks) return { total: 0, completed: 0, percent: 0 };
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.status === 'completed').length;
+    return {
+      total,
+      completed,
+      percent: total > 0 ? Math.floor((completed / total) * 100) : 0
+    };
+  }, [tasks]);
   
   return (
     <div onClick={onClick} className={`min-w-[170px] p-4 rounded-[15px] premium-shadow border cursor-pointer transition-all flex flex-col justify-between ${isActive ? 'primary-gradient text-white border-transparent' : 'bg-white border-border/40'}`}>
@@ -495,9 +511,9 @@ function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectI
         <div className="mt-3 space-y-1.5">
           <div className="flex justify-between text-[8px] font-bold opacity-60">
             <span>التقدم</span>
-            <span>{isActive ? "جاري" : "تتبع"}</span>
+            <span>{stats.percent}%</span>
           </div>
-          <Progress value={isActive ? 65 : 10} className={`h-1 ${isActive ? 'bg-white/20' : 'bg-slate-100'}`} />
+          <Progress value={stats.percent} className={`h-1 ${isActive ? 'bg-white/20' : 'bg-slate-100'}`} />
         </div>
       </div>
     </div>
@@ -564,6 +580,17 @@ function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask
 
   const { data: tasks } = useCollection(tasksQuery);
 
+  const stats = useMemo(() => {
+    if (!tasks) return { total: 0, completed: 0, percent: 0 };
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.status === 'completed').length;
+    return {
+      total,
+      completed,
+      percent: total > 0 ? Math.floor((completed / total) * 100) : 0
+    };
+  }, [tasks]);
+
   const handleAddTask = () => {
     if (!taskTitle) return;
     const tasksRef = collection(db, 'users', userId, 'taskProjects', projectId, 'taskStages', stageId, 'tasks');
@@ -602,6 +629,16 @@ function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask
 
   return (
     <div className="space-y-3">
+      {tasks && tasks.length > 0 && (
+        <div className="px-1 space-y-1.5 mb-2">
+           <div className="flex justify-between text-[9px] font-black text-muted-foreground/60 uppercase">
+             <span>إنجاز المرحلة</span>
+             <span>{stats.percent}%</span>
+           </div>
+           <Progress value={stats.percent} className="h-1 bg-slate-100" />
+        </div>
+      )}
+
       {tasks?.map(task => (
         <div key={task.id} className="bg-white p-4 rounded-[12px] premium-shadow border border-border/40 flex flex-col gap-3 group active:scale-[0.99] transition-all">
           <div className="flex items-center justify-between">
@@ -656,8 +693,14 @@ function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask
             <Input autoFocus placeholder="اكتب المهمة هنا..." value={taskTitle} onChange={e => setTaskTitle(e.target.value)} className="h-10 text-[12px] font-bold rounded-[8px] text-right" />
           </div>
           <div className="grid grid-cols-2 gap-3">
-             <Input placeholder="وقت متوقع" value={taskExpectedTime} onChange={e => setTaskExpectedTime(e.target.value)} className="h-8 text-[10px] text-right" />
-             <Input placeholder="وقت فعلي" value={taskActualTime} onChange={e => setTaskActualTime(e.target.value)} className="h-8 text-[10px] text-right" />
+             <div className="space-y-1">
+               <Label className="text-[8px] font-bold text-muted-foreground flex items-center justify-end gap-1"><Clock className="h-2 w-2" /> وقت متوقع</Label>
+               <Input placeholder="ساعتان" value={taskExpectedTime} onChange={e => setTaskExpectedTime(e.target.value)} className="h-8 text-[10px] text-right" />
+             </div>
+             <div className="space-y-1">
+               <Label className="text-[8px] font-bold text-muted-foreground flex items-center justify-end gap-1"><Timer className="h-2 w-2" /> وقت فعلي</Label>
+               <Input placeholder="ساعة" value={taskActualTime} onChange={e => setTaskActualTime(e.target.value)} className="h-8 text-[10px] text-right" />
+             </div>
           </div>
           <div className="flex items-center justify-between gap-2">
             <div className="flex gap-2">
@@ -677,3 +720,4 @@ function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask
     </div>
   );
 }
+
