@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -223,19 +224,19 @@ export default function DashboardPage() {
     }
   };
 
-  // حالة التحميل الأولي المستقرة
+  // حالة التحميل الأولي المستقرة والموحدة
   const effectivelyLoading = isUserLoading || (user && isProfileLoading && !profile);
 
   if (effectivelyLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center space-y-4 bg-background">
-        <div className="relative h-16 w-16 mb-4">
-           <Image src="/logo.png" alt="Logo" fill className="object-contain animate-pulse" priority />
+      <div className="min-h-screen flex flex-col items-center justify-center space-y-6 bg-background">
+        <div className="relative h-20 w-20 animate-pulse">
+           <Image src="/logo.png" alt="Logo" fill className="object-contain" priority />
         </div>
-        <div className="h-1 w-32 bg-slate-100 rounded-full overflow-hidden">
-           <div className="h-full bg-primary animate-progress-fast" />
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 text-primary animate-spin" />
+          <p className="text-[11px] font-bold text-muted-foreground animate-in fade-in duration-1000">جاري تجهيز مساحتك الخاصة...</p>
         </div>
-        <p className="text-[10px] font-bold text-muted-foreground">جاري تجهيز عالمك الخاص...</p>
       </div>
     );
   }
@@ -243,7 +244,7 @@ export default function DashboardPage() {
   // شاشة Onboarding
   if (user && !profile?.name) {
     return (
-      <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-8">
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-8 animate-in fade-in duration-500">
         <div className="w-full max-w-sm space-y-8 text-center">
           <div className="relative h-20 w-20 mx-auto">
             <Image src="/logo.png" alt="Logo" fill className="object-contain" priority />
