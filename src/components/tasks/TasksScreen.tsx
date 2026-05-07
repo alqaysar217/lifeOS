@@ -162,6 +162,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
     const deletedId = projectToDelete.id;
     setProjectToDelete(null);
     
+    // استخدام تأخير بسيط لضمان انغلاق طبقات الحماية بشكل كامل ومنع التجمد
     setTimeout(() => {
       deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'taskProjects', deletedId));
       if (activeProjectId === deletedId) setActiveProjectId(null);
@@ -241,7 +242,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         <div className="h-[env(safe-area-inset-top,0px)]" />
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow">
+            <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow transition-none">
               <ChevronRight className="h-5 w-5 text-foreground" />
             </Button>
             <h2 className="text-2xl font-extrabold text-foreground font-cairo">إدارة المشاريع</h2>
@@ -256,7 +257,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
       <div className="px-6 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold text-foreground font-cairo">المشاريع الكبرى</h3>
-          <Button variant="ghost" size="sm" onClick={() => { setProjTitle(""); setProjIcon("Briefcase"); setIsAddingProject(true); }} className="text-primary text-xs font-bold gap-1">
+          <Button variant="ghost" size="sm" onClick={() => { setProjTitle(""); setProjIcon("Briefcase"); setIsAddingProject(true); }} className="text-primary text-xs font-bold gap-1 transition-none">
             <Plus className="h-3 w-3" />
             مشروع جديد
           </Button>
@@ -277,9 +278,9 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" className={`h-6 w-6 ${activeProjectId === proj.id ? 'text-white/40' : 'text-slate-300'}`}><MoreVertical className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className={`h-6 w-6 transition-none ${activeProjectId === proj.id ? 'text-white/40' : 'text-slate-300'}`}><MoreVertical className="h-4 w-4" /></Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="font-cairo rounded-[10px]">
+                  <DropdownMenuContent className="font-cairo rounded-[10px]" align="start">
                     <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setEditingProject(proj); setProjTitle(proj.title); setProjIcon(proj.icon); }}>
                       <Pencil className="h-4 w-4 ml-2" />
                       تعديل المشروع
@@ -304,7 +305,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
           <div className="space-y-6 animate-in slide-in-from-bottom-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-black text-foreground font-cairo">مراحل التنفيذ</h3>
-              <Button onClick={() => { setStageTitle(""); setIsAddingStage(true); }} size="sm" className="rounded-[10px] bg-primary/5 text-primary hover:bg-primary/10 border-none font-bold">
+              <Button onClick={() => { setStageTitle(""); setIsAddingStage(true); }} size="sm" className="rounded-[10px] bg-primary/5 text-primary hover:bg-primary/10 border-none font-bold transition-none">
                 <Plus className="h-4 w-4 ml-1" />
                 إضافة مرحلة
               </Button>
@@ -336,14 +337,14 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
       {/* Project Dialog */}
       <Dialog open={isAddingProject || !!editingProject} onOpenChange={(open) => { if(!open) { setIsAddingProject(false); setEditingProject(null); } }}>
         <DialogContent className="font-cairo rounded-[20px]">
-          <DialogHeader className="flex flex-row-reverse items-center justify-between">
+          <DialogHeader className="flex flex-row items-center justify-between">
              <DialogTitle className="text-right flex-1">{editingProject ? "تعديل المشروع" : "مشروع جديد"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
             <div className="space-y-3">
-              <Label className="flex items-center justify-end gap-2 text-right mb-2">
-                اسم المشروع الكبير
+              <Label className="flex items-center justify-start gap-2 text-right mb-2">
                 <Type className="h-4 w-4 text-primary" />
+                اسم المشروع الكبير
               </Label>
               <Input 
                 placeholder="مثلاً: تطوير تطبيق، تأليف كتاب..." 
@@ -353,9 +354,9 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
               />
             </div>
             <div className="space-y-4">
-              <Label className="flex items-center justify-end gap-2 text-right mb-2">
-                أيقونة المشروع
+              <Label className="flex items-center justify-start gap-2 text-right mb-2">
                 <Palette className="h-4 w-4 text-primary" />
+                أيقونة المشروع
               </Label>
               <div className="grid grid-cols-4 gap-3 max-h-[200px] overflow-y-auto p-1">
                 {PROJECT_ICONS.map((item) => (
@@ -372,7 +373,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={editingProject ? handleUpdateProject : handleAddProject} disabled={!projTitle} className="w-full h-12 primary-gradient text-white font-black rounded-[12px] shadow-lg">
+            <Button onClick={editingProject ? handleUpdateProject : handleAddProject} disabled={!projTitle} className="w-full h-12 primary-gradient text-white font-black rounded-[12px] shadow-lg transition-none">
               {editingProject ? "حفظ التعديلات" : "إنشاء المشروع"}
             </Button>
           </DialogFooter>
@@ -382,14 +383,14 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
       {/* Stage Dialog */}
       <Dialog open={isAddingStage || !!editingStage} onOpenChange={(open) => { if(!open) { setIsAddingStage(false); setEditingStage(null); } }}>
         <DialogContent className="font-cairo rounded-[20px]">
-          <DialogHeader className="flex flex-row-reverse items-center justify-between">
+          <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle className="text-right flex-1">{editingStage ? "تعديل المرحلة" : "إضافة مرحلة عمل"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-3">
-              <Label className="flex items-center justify-end gap-2 text-right mb-2">
-                عنوان المرحلة
+              <Label className="flex items-center justify-start gap-2 text-right mb-2">
                 <Layers className="h-4 w-4 text-primary" />
+                عنوان المرحلة
               </Label>
               <Input 
                 placeholder="مثلاً: التحليل، التصميم، Backend..." 
@@ -400,7 +401,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={editingStage ? handleUpdateStage : handleAddStage} disabled={!stageTitle} className="w-full h-12 primary-gradient text-white font-black rounded-[12px] shadow-lg">
+            <Button onClick={editingStage ? handleUpdateStage : handleAddStage} disabled={!stageTitle} className="w-full h-12 primary-gradient text-white font-black rounded-[12px] shadow-lg transition-none">
               {editingStage ? "حفظ التعديلات" : "تأكيد الإضافة"}
             </Button>
           </DialogFooter>
@@ -410,21 +411,21 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
       {/* Task Edit Dialog */}
       <Dialog open={!!editingTask} onOpenChange={(open) => { if(!open) setEditingTask(null); }}>
         <DialogContent className="font-cairo rounded-[20px]">
-          <DialogHeader className="flex flex-row-reverse items-center justify-between">
+          <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle className="text-right flex-1">تعديل المهمة</DialogTitle>
           </DialogHeader>
           <div className="space-y-5 py-4">
             <div className="space-y-3">
-              <Label className="flex items-center justify-end gap-2 text-right mb-2">
-                عنوان المهمة
+              <Label className="flex items-center justify-start gap-2 text-right mb-2">
                 <CheckCircle2 className="h-4 w-4 text-primary" />
+                عنوان المهمة
               </Label>
               <Input value={taskTitle} onChange={e => setTaskTitle(e.target.value)} className="h-12 rounded-[12px] text-right" />
             </div>
             <div className="space-y-2">
-              <Label className="flex items-center justify-end gap-2 text-right mb-2">
-                الأولوية
+              <Label className="flex items-center justify-start gap-2 text-right mb-2">
                 <Flag className="h-4 w-4 text-primary" />
+                الأولوية
               </Label>
               <div className="flex gap-2">
                 {(['low', 'medium', 'high'] as Priority[]).map(p => (
@@ -440,7 +441,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleUpdateTask} className="w-full h-12 primary-gradient text-white font-black rounded-[12px]">حفظ التغييرات</Button>
+            <Button onClick={handleUpdateTask} className="w-full h-12 primary-gradient text-white font-black rounded-[12px] transition-none">حفظ التغييرات</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -453,8 +454,8 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             <AlertDialogDescription className="text-right">سيتم حذف المشروع وكافة المراحل والمهام المرتبطة به. لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row gap-2 mt-4">
-            <AlertDialogCancel className="flex-1 rounded-[10px]">إلغاء</AlertDialogCancel>
-            <AlertDialogAction className="flex-1 bg-destructive rounded-[10px]" onClick={confirmDeleteProject}>تأكيد الحذف</AlertDialogAction>
+            <AlertDialogCancel className="flex-1 rounded-[10px] transition-none">إلغاء</AlertDialogCancel>
+            <AlertDialogAction className="flex-1 bg-destructive rounded-[10px] transition-none" onClick={confirmDeleteProject}>تأكيد الحذف</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -466,8 +467,8 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             <AlertDialogDescription className="text-right">سيتم حذف المرحلة وكافة المهام بداخلها بشكل نهائي.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row gap-2 mt-4">
-            <AlertDialogCancel className="flex-1 rounded-[10px]">إلغاء</AlertDialogCancel>
-            <AlertDialogAction className="flex-1 bg-destructive rounded-[10px]" onClick={confirmDeleteStage}>تأكيد الحذف</AlertDialogAction>
+            <AlertDialogCancel className="flex-1 rounded-[10px] transition-none">إلغاء</AlertDialogCancel>
+            <AlertDialogAction className="flex-1 bg-destructive rounded-[10px] transition-none" onClick={confirmDeleteStage}>تأكيد الحذف</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -479,8 +480,8 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             <AlertDialogDescription className="text-right">هل أنت متأكد من حذف هذه المهمة نهائياً؟</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row gap-2 mt-4">
-            <AlertDialogCancel className="flex-1 rounded-[10px]">إلغاء</AlertDialogCancel>
-            <AlertDialogAction className="flex-1 bg-destructive rounded-[10px]" onClick={confirmDeleteTask}>تأكيد الحذف</AlertDialogAction>
+            <AlertDialogCancel className="flex-1 rounded-[10px] transition-none">إلغاء</AlertDialogCancel>
+            <AlertDialogAction className="flex-1 bg-destructive rounded-[10px] transition-none" onClick={confirmDeleteTask}>تأكيد الحذف</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -509,9 +510,9 @@ function StageListView({ projectId, userId, db, onEdit, onDelete, onEditTask, on
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300"><MoreVertical className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-300 transition-none"><MoreVertical className="h-4 w-4" /></Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="font-cairo rounded-[10px]">
+                <DropdownMenuContent className="font-cairo rounded-[10px]" align="start">
                   <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onEdit(stage); }}>
                     <Pencil className="h-4 w-4 ml-2" />
                     تعديل المرحلة
@@ -593,10 +594,10 @@ function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask
             </div>
           </div>
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary" onClick={() => onEditTask(task)}>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary transition-none" onClick={() => onEditTask(task)}>
               <Pencil className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/20 hover:text-destructive" onClick={() => onDeleteTask(task)}>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/20 hover:text-destructive transition-none" onClick={() => onDeleteTask(task)}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -606,7 +607,7 @@ function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask
       {!isAddingTask ? (
         <button 
           onClick={() => { setTaskTitle(""); setTaskPriority("medium"); setIsAddingTask(true); }}
-          className="w-full py-2.5 rounded-[10px] border border-dashed border-primary/20 text-primary/60 text-[10px] font-bold flex items-center justify-center gap-1 hover:bg-primary/5"
+          className="w-full py-2.5 rounded-[10px] border border-dashed border-primary/20 text-primary/60 text-[10px] font-bold flex items-center justify-center gap-1 hover:bg-primary/5 transition-all"
         >
           <Plus className="h-3 w-3" />
           إضافة مهمة للمرحلة
