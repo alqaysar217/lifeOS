@@ -49,8 +49,9 @@ export function AnalyticsScreen({ onBack }: AnalyticsScreenProps) {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32">
-      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
-        <div className="flex items-center justify-between">
+      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/5 shadow-sm">
+        <div className="h-[env(safe-area-inset-top,0px)]" />
+        <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow">
               <ChevronRight className="h-5 w-5 text-foreground" />

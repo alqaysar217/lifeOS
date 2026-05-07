@@ -42,12 +42,14 @@ export function DashboardHeader({ onSearch, onNotifications, userName }: Dashboa
 
   return (
     <>
-      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 shadow-sm">
-        <div className="px-6 pt-10 pb-4 flex items-center justify-between gap-4">
+      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/5 shadow-sm">
+        {/* دعم مساحة الأمان العلوية */}
+        <div className="h-[env(safe-area-inset-top,0px)]" />
+        <div className="px-6 py-4 flex items-center justify-between gap-4">
           {!isSearchVisible ? (
             <>
               <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="h-14 w-14 flex items-center justify-center relative transition-transform active:scale-95">
+                <div className="h-12 w-12 flex items-center justify-center relative transition-transform active:scale-95">
                   <Image 
                     src="/logo.png" 
                     alt="لوجو حياتي" 

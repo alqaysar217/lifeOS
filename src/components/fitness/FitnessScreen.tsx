@@ -442,8 +442,10 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/5 px-6 pt-10 pb-4 shadow-sm">
-        <div className="flex items-center justify-between">
+      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/5 shadow-sm">
+        {/* دعم مساحة الأمان العلوية */}
+        <div className="h-[env(safe-area-inset-top,0px)]" />
+        <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={view === 'hub' ? onBack : () => { setView('hub'); setHistoryPath(null); setSelectedRecord(null); }} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow hover:bg-white transition-none">
               <ChevronRight className="h-5 w-5 text-foreground" />
