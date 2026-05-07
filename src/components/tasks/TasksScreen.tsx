@@ -488,6 +488,7 @@ function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectI
     return query(collection(db, 'users', userId, 'taskProjects', project.id, 'taskStages'), orderBy('createdAt', 'asc'));
   }, [db, userId, project.id]);
 
+  // استماع مباشر لكافة مهام المستخدم وحذف الفلترة الزائدة لضمان التفاعل
   const tasksQuery = useMemoFirebase(() => {
     return query(
       collectionGroup(db, 'tasks'), 
@@ -500,21 +501,25 @@ function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectI
   const { data: tasks } = useCollection(tasksQuery);
 
   const stats = useMemo(() => {
-    if (!stages || stages.length === 0) return { total: 0, completed: 0, percent: 0 };
+    if (!stages || stages.length === 0 || !tasks) return { total: 0, completed: 0, percent: 0 };
     
-    let totalStageCompletionSum = 0;
+    // حساب الوزن النسبي لكل مرحلة (مثلاً مرحلتين = كل مرحلة تمثل 50%)
+    let totalProjectCompletion = 0;
+    
     stages.forEach(stage => {
-      const stageTasks = tasks?.filter(t => t.stageId === stage.id) || [];
+      const stageTasks = tasks.filter(t => t.stageId === stage.id);
       if (stageTasks.length > 0) {
-        const completedCount = stageTasks.filter(t => t.status === 'completed').length;
-        totalStageCompletionSum += (completedCount / stageTasks.length);
+        const completedInStage = stageTasks.filter(t => t.status === 'completed').length;
+        const stageProgress = completedInStage / stageTasks.length;
+        // إضافة حصة المرحلة من التقدم الكلي
+        totalProjectCompletion += (stageProgress / stages.length);
       }
     });
 
-    const percent = Math.floor((totalStageCompletionSum / stages.length) * 100);
+    const percent = Math.floor(totalProjectCompletion * 100);
     return {
-      total: tasks?.length || 0,
-      completed: tasks?.filter(t => t.status === 'completed').length || 0,
+      total: tasks.length,
+      completed: tasks.filter(t => t.status === 'completed').length,
       percent
     };
   }, [tasks, stages]);
@@ -545,12 +550,12 @@ function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectI
         <h4 className="text-xs font-black truncate">{project.title}</h4>
         <div className="mt-3 space-y-1.5">
           <div className="flex justify-between text-[8px] font-bold opacity-60">
-            <span>التقدم الكلي</span>
+            <span>إنجاز المشروع</span>
             <span>{stats.percent}%</span>
           </div>
-          <div className={`h-1 w-full rounded-full overflow-hidden ${isActive ? 'bg-white/20' : 'bg-slate-100'}`}>
+          <div className={`h-1.5 w-full rounded-full overflow-hidden ${isActive ? 'bg-white/20' : 'bg-slate-100'}`}>
             <div 
-              className={`h-full transition-all duration-700 ${isActive ? 'bg-white' : 'primary-gradient'}`}
+              className={`h-full transition-all duration-700 ${isActive ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)]' : 'primary-gradient'}`}
               style={{ width: `${stats.percent}%` }}
             />
           </div>
@@ -734,11 +739,17 @@ function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask
           </div>
           <div className="grid grid-cols-2 gap-3">
              <div className="space-y-1">
-               <Label className="text-[8px] font-bold text-muted-foreground flex items-center justify-end gap-1"><Clock className="h-2 w-2" /> وقت متوقع</Label>
+               <Label className="flex items-center justify-start gap-2 text-right mb-1">
+                 <Clock className="h-3 w-3 text-primary" />
+                 <span className="text-[10px]">وقت متوقع</span>
+               </Label>
                <Input placeholder="ساعتان" value={taskExpectedTime} onChange={e => setTaskExpectedTime(e.target.value)} className="h-8 text-[10px] text-right" />
              </div>
              <div className="space-y-1">
-               <Label className="text-[8px] font-bold text-muted-foreground flex items-center justify-end gap-1"><Timer className="h-2 w-2" /> وقت فعلي</Label>
+               <Label className="flex items-center justify-start gap-2 text-right mb-1">
+                 <Timer className="h-3 w-3 text-primary" />
+                 <span className="text-[10px]">وقت فعلي</span>
+               </Label>
                <Input placeholder="ساعة" value={taskActualTime} onChange={e => setTaskActualTime(e.target.value)} className="h-8 text-[10px] text-right" />
              </div>
           </div>
@@ -760,4 +771,3 @@ function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask
     </div>
   );
 }
-
