@@ -16,20 +16,6 @@
       },
       "required": ["id", "createdAt", "passcodeEnabled"]
     },
-    "Task": {
-      "title": "Task",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "title": { "type": "string" },
-        "status": { "type": "string", "enum": ["pending", "completed"] },
-        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
-        "projectId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["userId", "title", "status", "priority"]
-    },
     "TaskProject": {
       "title": "TaskProject",
       "type": "object",
@@ -42,6 +28,32 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "title"]
+    },
+    "TaskStage": {
+      "title": "TaskStage",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "title": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["projectId", "title"]
+    },
+    "Task": {
+      "title": "Task",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "stageId": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "completed"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "projectId", "stageId", "title", "status", "priority"]
     },
     "Challenge": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -88,22 +100,30 @@
           "entityName": "user",
           "schema": { "$ref": "#/backend/entities/User" },
           "description": "Stores core user data."
-        }
-      },
-      {
-        "path": "/users/{userId}/tasks/{taskId}",
-        "definition": {
-          "entityName": "task",
-          "schema": { "$ref": "#/backend/entities/Task" },
-          "description": "User daily tasks."
-        }
+"        }
       },
       {
         "path": "/users/{userId}/taskProjects/{projectId}",
         "definition": {
           "entityName": "taskProject",
           "schema": { "$ref": "#/backend/entities/TaskProject" },
-          "description": "User project containers for tasks."
+          "description": "User project containers."
+        }
+      },
+      {
+        "path": "/users/{userId}/taskProjects/{projectId}/taskStages/{stageId}",
+        "definition": {
+          "entityName": "taskStage",
+          "schema": { "$ref": "#/backend/entities/TaskStage" },
+          "description": "Stages within a project."
+        }
+      },
+      {
+        "path": "/users/{userId}/taskProjects/{projectId}/taskStages/{stageId}/tasks/{taskId}",
+        "definition": {
+          "entityName": "task",
+          "schema": { "$ref": "#/backend/entities/Task" },
+          "description": "Tasks within a stage."
         }
       },
       {

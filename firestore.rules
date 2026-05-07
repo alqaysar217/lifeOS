@@ -32,12 +32,16 @@ service cloud.firestore {
         allow get, list, create, update, delete: if isOwner(userId);
       }
 
-      match /tasks/{taskId} {
-        allow get, list, create, update, delete: if isOwner(userId);
-      }
-      
       match /taskProjects/{projectId} {
         allow get, list, create, update, delete: if isOwner(userId);
+        
+        match /taskStages/{stageId} {
+          allow get, list, create, update, delete: if isOwner(userId);
+          
+          match /tasks/{taskId} {
+            allow get, list, create, update, delete: if isOwner(userId);
+          }
+        }
       }
 
       match /financeTransactions/{transId} {
