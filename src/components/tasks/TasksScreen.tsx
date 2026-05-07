@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from "react";
@@ -71,7 +70,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useFirestore, useUser, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, query, where, serverTimestamp, orderBy } from "firebase/firestore";
@@ -110,6 +108,11 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
   // Edit States
   const [editingProject, setEditingProject] = useState<any>(null);
   const [editingStage, setEditingStage] = useState<any>(null);
+  
+  // Delete States
+  const [projectToDelete, setProjectToDelete] = useState<any>(null);
+  const [stageToDelete, setStageToDelete] = useState<any>(null);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
 
   // Project Form State
   const [projTitle, setProjTitle] = useState("");
@@ -151,6 +154,14 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
     toast({ title: "تم التحديث", description: "تم تعديل بيانات المشروع بنجاح." });
   };
 
+  const confirmDeleteProject = () => {
+    if (!db || !user || !projectToDelete) return;
+    deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'taskProjects', projectToDelete.id));
+    if (activeProjectId === projectToDelete.id) setActiveProjectId(null);
+    setProjectToDelete(null);
+    toast({ title: "تم الحذف", description: "تم إزالة المشروع بنجاح." });
+  };
+
   const handleAddStage = () => {
     if (!db || !user || !activeProjectId || !stageTitle) return;
     const stagesRef = collection(db, 'users', user.uid, 'taskProjects', activeProjectId, 'taskStages');
@@ -173,6 +184,13 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
     setStageTitle("");
     setEditingStage(null);
     toast({ title: "تم التحديث", description: "تم تعديل عنوان المرحلة بنجاح." });
+  };
+
+  const confirmDeleteStage = () => {
+    if (!db || !user || !activeProjectId || !stageToDelete) return;
+    deleteDocumentNonBlocking(doc(db, 'users', user.uid, 'taskProjects', activeProjectId, 'taskStages', stageToDelete.id));
+    setStageToDelete(null);
+    toast({ title: "تم الحذف", description: "تم إزالة المرحلة بنجاح." });
   };
 
   const getProjectIcon = (iconName: string) => {
@@ -199,7 +217,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         </div>
       </div>
 
-      {/* Projects List (Top Section) */}
+      {/* Projects List */}
       <div className="px-6 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold text-foreground font-cairo">المشاريع الكبرى</h3>
@@ -231,24 +249,10 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
                       <Pencil className="h-4 w-4 ml-2" />
                       تعديل المشروع
                     </DropdownMenuItem>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                          <Trash2 className="h-4 w-4 ml-2" />
-                          حذف المشروع
-                        </DropdownMenuItem>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="font-cairo rounded-[15px]">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>حذف المشروع؟</AlertDialogTitle>
-                          <AlertDialogDescription>سيتم حذف المشروع وكافة المراحل والمهام المرتبطة به. لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter className="flex-row gap-2">
-                          <AlertDialogCancel className="flex-1 rounded-[10px]">إلغاء</AlertDialogCancel>
-                          <AlertDialogAction className="flex-1 bg-destructive rounded-[10px]" onClick={() => { deleteDocumentNonBlocking(doc(db!, 'users', user!.uid, 'taskProjects', proj.id)); if(activeProjectId === proj.id) setActiveProjectId(null); }}>تأكيد الحذف</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <DropdownMenuItem className="text-destructive" onClick={() => setProjectToDelete(proj)}>
+                      <Trash2 className="h-4 w-4 ml-2" />
+                      حذف المشروع
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -259,7 +263,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         </div>
       </div>
 
-      {/* Project Detail View (Stages & Tasks) */}
+      {/* Project Detail View */}
       <div className="flex-1 px-6 space-y-6">
         {activeProjectId ? (
           <div className="space-y-6 animate-in slide-in-from-bottom-4">
@@ -276,6 +280,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
               userId={user!.uid} 
               db={db!} 
               onEdit={(stage: any) => { setEditingStage(stage); setStageTitle(stage.title); }}
+              onDelete={(stage: any) => setStageToDelete(stage)}
             />
           </div>
         ) : (
@@ -291,6 +296,8 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         )}
       </div>
 
+      {/* Modals & Dialogs */}
+      
       {/* Project Modal (Add/Edit) */}
       <Dialog open={isAddingProject || !!editingProject} onOpenChange={(open) => { if(!open) { setIsAddingProject(false); setEditingProject(null); } }}>
         <DialogContent className="font-cairo rounded-[20px]">
@@ -361,11 +368,39 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialogs */}
+      <AlertDialog open={!!projectToDelete} onOpenChange={() => setProjectToDelete(null)}>
+        <AlertDialogContent className="font-cairo rounded-[15px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف المشروع؟</AlertDialogTitle>
+            <AlertDialogDescription>سيتم حذف المشروع وكافة المراحل والمهام المرتبطة به. لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row gap-2">
+            <AlertDialogCancel className="flex-1 rounded-[10px]">إلغاء</AlertDialogCancel>
+            <AlertDialogAction className="flex-1 bg-destructive rounded-[10px]" onClick={confirmDeleteProject}>تأكيد الحذف</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!stageToDelete} onOpenChange={() => setStageToDelete(null)}>
+        <AlertDialogContent className="font-cairo rounded-[15px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف المرحلة؟</AlertDialogTitle>
+            <AlertDialogDescription>سيتم حذف المرحلة وكافة المهام بداخلها بشكل نهائي.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row gap-2">
+            <AlertDialogCancel className="flex-1 rounded-[10px]">إلغاء</AlertDialogCancel>
+            <AlertDialogAction className="flex-1 bg-destructive rounded-[10px]" onClick={confirmDeleteStage}>تأكيد الحذف</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }
 
-function StageListView({ projectId, userId, db, onEdit }: { projectId: string, userId: string, db: any, onEdit: (stage: any) => void }) {
+function StageListView({ projectId, userId, db, onEdit, onDelete }: { projectId: string, userId: string, db: any, onEdit: (stage: any) => void, onDelete: (stage: any) => void }) {
   const stagesQuery = useMemoFirebase(() => {
     return query(collection(db, 'users', userId, 'taskProjects', projectId, 'taskStages'), orderBy('createdAt', 'asc'));
   }, [db, userId, projectId]);
@@ -393,28 +428,13 @@ function StageListView({ projectId, userId, db, onEdit }: { projectId: string, u
                     <Pencil className="h-4 w-4 ml-2" />
                     تعديل المرحلة
                   </DropdownMenuItem>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                        <Trash2 className="h-4 w-4 ml-2" />
-                        حذف المرحلة
-                      </DropdownMenuItem>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="font-cairo rounded-[15px]">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>حذف المرحلة؟</AlertDialogTitle>
-                        <AlertDialogDescription>سيتم حذف المرحلة وكافة المهام بداخلها بشكل نهائي.</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter className="flex-row gap-2">
-                        <AlertDialogCancel className="flex-1 rounded-[10px]">إلغاء</AlertDialogCancel>
-                        <AlertDialogAction className="flex-1 bg-destructive rounded-[10px]" onClick={() => deleteDocumentNonBlocking(doc(db, 'users', userId, 'taskProjects', projectId, 'taskStages', stage.id))}>تأكيد الحذف</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <DropdownMenuItem className="text-destructive" onClick={() => onDelete(stage)}>
+                    <Trash2 className="h-4 w-4 ml-2" />
+                    حذف المرحلة
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            
             <TaskListView projectId={projectId} stageId={stage.id} userId={userId} db={db} />
           </div>
         ))
@@ -428,6 +448,7 @@ function StageListView({ projectId, userId, db, onEdit }: { projectId: string, u
 function TaskListView({ projectId, stageId, userId, db }: { projectId: string, stageId: string, userId: string, db: any }) {
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskPriority, setTaskPriority] = useState<Priority>("medium");
   const { toast } = useToast();
@@ -501,23 +522,9 @@ function TaskListView({ projectId, stageId, userId, db }: { projectId: string, s
             <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/40 hover:text-primary" onClick={() => { setEditingTask(task); setTaskTitle(task.title); setTaskPriority(task.priority); }}>
               <Pencil className="h-3.5 w-3.5" />
             </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/20 hover:text-destructive">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="font-cairo rounded-[15px]">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>حذف المهمة؟</AlertDialogTitle>
-                  <AlertDialogDescription>هل أنت متأكد من حذف هذه المهمة؟</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter className="flex-row gap-2">
-                  <AlertDialogCancel className="flex-1 rounded-[10px]">إلغاء</AlertDialogCancel>
-                  <AlertDialogAction className="flex-1 bg-destructive rounded-[10px]" onClick={() => deleteDocumentNonBlocking(doc(db, 'users', userId, 'taskProjects', projectId, 'taskStages', stageId, 'tasks', task.id))}>تأكيد الحذف</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/20 hover:text-destructive" onClick={() => setTaskToDelete(task)}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
           </div>
         </div>
       ))}
@@ -563,6 +570,20 @@ function TaskListView({ projectId, stageId, userId, db }: { projectId: string, s
           </div>
         </div>
       )}
+
+      {/* Task Delete Dialog */}
+      <AlertDialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
+        <AlertDialogContent className="font-cairo rounded-[15px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف المهمة؟</AlertDialogTitle>
+            <AlertDialogDescription>هل أنت متأكد من حذف هذه المهمة نهائياً؟</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row gap-2">
+            <AlertDialogCancel className="flex-1 rounded-[10px]">إلغاء</AlertDialogCancel>
+            <AlertDialogAction className="flex-1 bg-destructive rounded-[10px]" onClick={() => { deleteDocumentNonBlocking(doc(db, 'users', userId, 'taskProjects', projectId, 'taskStages', stageId, 'tasks', taskToDelete.id)); setTaskToDelete(null); }}>تأكيد الحذف</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
