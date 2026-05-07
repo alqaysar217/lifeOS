@@ -1,7 +1,6 @@
-
 "use client"
 
-import React, { useState, useEffect, useMemo, use } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { ChallengeHighlight } from "@/components/dashboard/ChallengeHighlight";
 import { CategoryCard } from "@/components/dashboard/CategoryCard";
@@ -15,7 +14,7 @@ import { HabitsScreen } from "@/components/habits/HabitsScreen";
 import { AIScreen } from "@/components/ai/AIScreen";
 import { AnalyticsScreen } from "@/components/analytics/AnalyticsScreen";
 import { NotificationsScreen } from "@/components/notifications/NotificationsScreen";
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, errorEmitter, FirestorePermissionError } from "@/firebase";
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { initiateAnonymousSignIn } from "@/firebase/non-blocking-login";
 import { doc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
@@ -96,10 +95,7 @@ const baseCategories = [
   }
 ];
 
-export default function DashboardPage(props: {
-  params: Promise<any>;
-  searchParams: Promise<any>;
-}) {
+export default function DashboardPage() {
   const [activeTab, setActiveTab] = React.useState<TabId>('home');
   const [searchTerm, setSearchTerm] = useState("");
   const [currentTime, setCurrentTime] = useState<number | null>(null);
@@ -118,16 +114,12 @@ export default function DashboardPage(props: {
   const userDocRef = useMemoFirebase(() => (db && user) ? doc(db, 'users', user.uid) : null, [db, user]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(userDocRef);
 
-  // تهيئة الوقت وتجنب Hydration mismatch
+  // تهيئة الوقت مرة واحدة فقط عند التركيب
   useEffect(() => {
     setCurrentTime(new Date().getHours());
-    const timer = setInterval(() => {
-      setCurrentTime(new Date().getHours());
-    }, 60000);
-    return () => clearInterval(timer);
   }, []);
 
-  // التأكد من تسجيل الدخول المجهول فوراً وبشكل غير متكرر
+  // تسجيل الدخول المجهول إذا لزم الأمر
   useEffect(() => {
     if (!isUserLoading && !user) {
       initiateAnonymousSignIn(auth);
@@ -144,7 +136,7 @@ export default function DashboardPage(props: {
 
   const sortedCategories = useMemo(() => {
     let sorted = [...baseCategories];
-    const hour = currentTime ?? 12; // الافتراضي ظهراً إذا لم يحمل الوقت بعد
+    const hour = currentTime ?? 12;
     
     if (hour >= 5 && hour < 12) {
       const itemsToMove = ['ai', 'fitness'];
@@ -194,8 +186,6 @@ export default function DashboardPage(props: {
         phoneNumber: editPhone.trim()
       });
       toast({ title: "تم التحديث", description: "تم حفظ بياناتك الشخصية بنجاح." });
-    } else {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى التأكد من إدخال الاسم ورقم الهاتف." });
     }
   };
 
@@ -212,95 +202,90 @@ export default function DashboardPage(props: {
           const userRef = doc(db, 'users', user.uid);
           setDocumentNonBlocking(userRef, { 
             name: existingData.name, 
-            phoneNumber: onboardingPhone.trim() 
+            phoneNumber: onboardingPhone.trim(),
+            createdAt: serverTimestamp(),
+            passcodeEnabled: false
           }, { merge: true });
-          toast({ title: "مرحباً بعودتك!", description: `سعيد برؤيتك مجدداً يا ${existingData.name}` });
         } else {
           const userRef = doc(db, 'users', user.uid);
           setDocumentNonBlocking(userRef, { 
             name: onboardingName, 
-            phoneNumber: onboardingPhone.trim() 
+            phoneNumber: onboardingPhone.trim(),
+            createdAt: serverTimestamp(),
+            passcodeEnabled: false
           }, { merge: true });
-          toast({ title: "بداية موفقة", description: "تم حفظ بياناتك بنجاح." });
         }
       } catch (error) {
-        toast({ variant: "destructive", title: "خطأ", description: "حدث خطأ أثناء الربط." });
+        toast({ variant: "destructive", title: "خطأ", description: "حدث خطأ أثناء التسجيل." });
       } finally {
         setIsLinking(false);
       }
     }
   };
 
-  const renderContent = () => {
-    // 1. حالة التحميل الأولي الشاملة
-    if (isUserLoading || (user && isProfileLoading)) {
-      return (
-        <div className="min-h-screen flex flex-col items-center justify-center space-y-4 animate-in fade-in duration-300">
-          <div className="relative h-16 w-16 mb-4">
-             <Image src="/logo.png" alt="Logo" fill className="object-contain animate-pulse" priority />
-          </div>
-          <div className="h-1 w-32 bg-slate-100 rounded-full overflow-hidden">
-             <div className="h-full bg-primary animate-progress-fast" />
-          </div>
-          <p className="text-[10px] font-bold text-muted-foreground">جاري تجهيز عالمك الخاص...</p>
+  // حالة التحميل الأولي المستقرة
+  const effectivelyLoading = isUserLoading || (user && isProfileLoading && !profile);
+
+  if (effectivelyLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center space-y-4 bg-background">
+        <div className="relative h-16 w-16 mb-4">
+           <Image src="/logo.png" alt="Logo" fill className="object-contain animate-pulse" priority />
         </div>
-      );
-    }
+        <div className="h-1 w-32 bg-slate-100 rounded-full overflow-hidden">
+           <div className="h-full bg-primary animate-progress-fast" />
+        </div>
+        <p className="text-[10px] font-bold text-muted-foreground">جاري تجهيز عالمك الخاص...</p>
+      </div>
+    );
+  }
 
-    // 2. شاشة إكمال البيانات (Onboarding)
-    if (user && !isProfileLoading && (!profile?.name || !profile?.phoneNumber)) {
-      return (
-        <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-8 animate-in fade-in duration-700">
-          <div className="w-full max-w-sm space-y-8 text-center">
-            <div className="relative h-20 w-20 mx-auto transition-transform hover:scale-110">
-              <Image src="/logo.png" alt="Logo" fill className="object-contain drop-shadow-2xl" priority />
+  // شاشة Onboarding
+  if (user && !profile?.name) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-8">
+        <div className="w-full max-w-sm space-y-8 text-center">
+          <div className="relative h-20 w-20 mx-auto">
+            <Image src="/logo.png" alt="Logo" fill className="object-contain" priority />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black text-foreground font-cairo">أهلاً بك في حياتي</h1>
+            <p className="text-xs text-muted-foreground font-bold">أدخل بياناتك لربط حسابك وضمان استمرارية إنجازاتك</p>
+          </div>
+          <div className="space-y-4">
+            <div className="relative">
+              <Input 
+                placeholder="الاسم الكريم..."
+                value={onboardingName}
+                onChange={(e) => setOnboardingName(e.target.value)}
+                className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10"
+              />
+              <User className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
-            
-            <div className="space-y-2">
-              <h1 className="text-2xl font-black text-foreground font-cairo">أهلاً بك في حياتي</h1>
-              <p className="text-xs text-muted-foreground font-bold px-4">أدخل بياناتك لربط حسابك وضمان استمرارية إنجازاتك</p>
+            <div className="relative">
+              <Input 
+                type="tel"
+                placeholder="رقم الهاتف"
+                value={onboardingPhone}
+                onChange={(e) => setOnboardingPhone(e.target.value)}
+                className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10"
+              />
+              <Smartphone className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
-
-            <div className="space-y-4">
-              <div className="relative group">
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <Input 
-                  placeholder="الاسم الكريم..."
-                  value={onboardingName}
-                  onChange={(e) => setOnboardingName(e.target.value)}
-                  className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow"
-                />
-              </div>
-
-              <div className="relative group">
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                  <Smartphone className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <Input 
-                  type="tel"
-                  placeholder="رقم الهاتف"
-                  value={onboardingPhone}
-                  onChange={(e) => setOnboardingPhone(e.target.value)}
-                  className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow"
-                />
-              </div>
-
-              <Button 
-                onClick={handleStartOnboarding}
-                disabled={!onboardingName.trim() || !onboardingPhone.trim() || isLinking}
-                className="w-full h-12 primary-gradient text-white text-base font-black rounded-[12px] shadow-xl disabled:opacity-50"
-              >
-                {isLinking ? <><Loader2 className="h-5 w-5 animate-spin ml-2" /> جاري الربط...</> : "ابدأ رحلتي الآن"}
-              </Button>
-            </div>
+            <Button 
+              onClick={handleStartOnboarding}
+              disabled={!onboardingName.trim() || !onboardingPhone.trim() || isLinking}
+              className="w-full h-12 primary-gradient text-white text-base font-black rounded-[12px] shadow-xl"
+            >
+              {isLinking ? <Loader2 className="h-5 w-5 animate-spin" /> : "ابدأ رحلتي الآن"}
+            </Button>
           </div>
         </div>
-      );
-    }
+      </div>
+    );
+  }
 
-    // 3. عرض المحتوى الرئيسي
+  const renderTabContent = () => {
     switch (activeTab) {
       case 'home':
         return (
@@ -311,11 +296,9 @@ export default function DashboardPage(props: {
               userName={profile?.name}
             />
             {!searchTerm && <ChallengeHighlight />}
-
-            <div className="px-6 mt-8 flex items-center justify-between">
+            <div className="px-6 mt-8">
               <h2 className="text-lg font-bold text-foreground/90 font-cairo">الأقسام الرئيسية</h2>
             </div>
-
             <div className="mt-4 px-6 space-y-4">
               {sortedCategories.map((category, index) => (
                 <div key={category.id} onClick={() => setActiveTab(category.id as TabId)} className="animate-in fade-in slide-in-from-bottom-2 cursor-pointer" style={{ animationDelay: `${index * 50}ms` }}>
@@ -345,22 +328,15 @@ export default function DashboardPage(props: {
             <div className="h-24 w-24 rounded-full primary-gradient flex items-center justify-center mb-6 shadow-2xl relative overflow-hidden">
               <Image src={PlaceHolderImages.find(img => img.id === 'user-profile')?.imageUrl || ""} alt="Profile" fill className="object-cover" />
             </div>
-            
             <div className="w-full space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-muted-foreground">الاسم الكريم</label>
-                  <div className="relative">
-                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-12 pr-10 text-right font-bold rounded-[12px]" />
-                    <User className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  </div>
+                  <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-12 text-right font-bold rounded-[12px]" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-muted-foreground">رقم الهاتف</label>
-                  <div className="relative">
-                    <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="h-12 pr-10 text-right font-bold rounded-[12px]" />
-                    <Smartphone className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  </div>
+                  <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="h-12 text-right font-bold rounded-[12px]" />
                 </div>
                 <Button onClick={handleUpdateProfile} className="w-full h-12 primary-gradient text-white font-black rounded-[12px] shadow-xl">حفظ التغييرات</Button>
               </div>
@@ -373,8 +349,8 @@ export default function DashboardPage(props: {
 
   return (
     <main className="min-h-screen bg-background">
-      {renderContent()}
-      {(profile?.name && currentTime !== null) && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />}
+      {renderTabContent()}
+      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </main>
   );
 }
