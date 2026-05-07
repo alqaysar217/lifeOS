@@ -443,7 +443,6 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/5 shadow-sm">
-        {/* دعم مساحة الأمان العلوية */}
         <div className="h-[env(safe-area-inset-top,0px)]" />
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -637,6 +636,23 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                  <div className="absolute top-6 right-6 z-[70]">
                    <Button onClick={() => setIsMapExpanded(false)} size="icon" className="rounded-full h-10 w-10 bg-white/90 backdrop-blur-sm shadow-xl text-foreground transition-none"><X className="h-5 w-5" /></Button>
                  </div>
+                 
+                 {/* Floating Dashboard Stats for Expanded Map */}
+                 <div className="absolute top-6 left-6 right-16 z-[70] flex gap-2">
+                    <div className="flex-1 bg-white/90 backdrop-blur-sm p-3 rounded-[15px] shadow-xl border border-white/20 text-center">
+                      <p className="text-[8px] font-bold text-muted-foreground uppercase">DISTANCE</p>
+                      <p className="text-sm font-black text-primary">{(selectedRecord?.distance || distance).toFixed(2)}</p>
+                    </div>
+                    <div className="flex-1 bg-white/90 backdrop-blur-sm p-3 rounded-[15px] shadow-xl border border-white/20 text-center">
+                      <p className="text-[8px] font-bold text-muted-foreground uppercase">ELEV M</p>
+                      <p className="text-sm font-black text-primary">{Math.round(selectedRecord?.elevationGain || elevationGain)}</p>
+                    </div>
+                    <div className="flex-1 bg-white/90 backdrop-blur-sm p-3 rounded-[15px] shadow-xl border border-white/20 text-center">
+                      <p className="text-[8px] font-bold text-muted-foreground uppercase">TIME</p>
+                      <p className="text-sm font-black text-primary">{formatTime(selectedRecord?.durationSeconds || elapsedTime)}</p>
+                    </div>
+                 </div>
+
                  <div className="flex-1 w-full"><MapComponent path={historyPath || path.map(p => [p.lat, p.lng])} isStatic={!!historyPath} /></div>
               </div>
             ) : (
@@ -750,7 +766,7 @@ export function FitnessScreen({ onBack }: FitnessScreenProps) {
                     onClick={() => { if(!isTracking) { setIsTracking(true); setReps(0); setElapsedTime(0); } else { setIsTracking(false); setShowRepDialog(true); } }} 
                     className="w-full h-14 bg-white text-primary rounded-[12px] font-black shadow-lg active:scale-95 transition-none hover:bg-white hover:opacity-100"
                   >
-                    {isTracking ? 'إكمال الجلسة' : 'ابدأ التكرار'}
+                    {isTracking ? 'إيقاف وحفظ' : 'ابدأ التكرار'}
                   </Button>
                 </div>
                 <div className="absolute -top-10 -left-10 h-32 w-32 bg-white/10 rounded-full blur-2xl" />
