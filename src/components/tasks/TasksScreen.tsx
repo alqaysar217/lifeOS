@@ -257,7 +257,11 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
       <div className="px-6 py-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold text-foreground font-cairo">المشاريع الكبرى</h3>
-          <Button variant="ghost" size="sm" onClick={() => { setProjTitle(""); setProjIcon("Briefcase"); setIsAddingProject(true); }} className="text-primary text-xs font-bold gap-1 transition-none">
+          <Button variant="ghost" size="sm" onClick={() => { 
+            setProjTitle(""); 
+            setProjIcon("Briefcase"); 
+            setIsAddingProject(true); 
+          }} className="text-primary text-xs font-bold gap-1 transition-none">
             <Plus className="h-3 w-3" />
             مشروع جديد
           </Button>
@@ -267,7 +271,21 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
           {isProjectsLoading ? (
              <div className="flex items-center justify-center min-w-[140px]"><Loader2 className="h-4 w-4 animate-spin text-primary/30" /></div>
           ) : projects?.map((proj) => (
-            <ProjectCard key={proj.id} project={proj} isActive={activeProjectId === proj.id} onClick={() => setActiveProjectId(proj.id)} onEdit={setEditingProject} onDelete={setProjectToDelete} getProjectIcon={getProjectIcon} userId={user!.uid} db={db!} />
+            <ProjectCard 
+              key={proj.id} 
+              project={proj} 
+              isActive={activeProjectId === proj.id} 
+              onClick={() => setActiveProjectId(proj.id)} 
+              onEdit={(p: any) => {
+                setEditingProject(p);
+                setProjTitle(p.title);
+                setProjIcon(p.icon);
+              }} 
+              onDelete={setProjectToDelete} 
+              getProjectIcon={getProjectIcon} 
+              userId={user!.uid} 
+              db={db!} 
+            />
           ))}
         </div>
       </div>
@@ -466,12 +484,10 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
 }
 
 function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectIcon, userId, db }: any) {
-  // استعلام جلب المراحل
   const stagesQuery = useMemoFirebase(() => {
     return query(collection(db, 'users', userId, 'taskProjects', project.id, 'taskStages'), orderBy('createdAt', 'asc'));
   }, [db, userId, project.id]);
 
-  // استعلام جلب المهام لكامل المشروع عبر Collection Group
   const tasksQuery = useMemoFirebase(() => {
     return query(
       collectionGroup(db, 'tasks'), 
@@ -484,22 +500,21 @@ function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectI
   const { data: tasks } = useCollection(tasksQuery);
 
   const stats = useMemo(() => {
-    if (!tasks || !stages || stages.length === 0) return { total: 0, completed: 0, percent: 0 };
+    if (!stages || stages.length === 0) return { total: 0, completed: 0, percent: 0 };
     
-    // حساب التقدم بناءً على وزن كل مرحلة
     let totalStageCompletionSum = 0;
     stages.forEach(stage => {
-      const stageTasks = tasks.filter(t => t.stageId === stage.id);
+      const stageTasks = tasks?.filter(t => t.stageId === stage.id) || [];
       if (stageTasks.length > 0) {
-        const completed = stageTasks.filter(t => t.status === 'completed').length;
-        totalStageCompletionSum += (completed / stageTasks.length);
+        const completedCount = stageTasks.filter(t => t.status === 'completed').length;
+        totalStageCompletionSum += (completedCount / stageTasks.length);
       }
     });
 
     const percent = Math.floor((totalStageCompletionSum / stages.length) * 100);
     return {
-      total: tasks.length,
-      completed: tasks.filter(t => t.status === 'completed').length,
+      total: tasks?.length || 0,
+      completed: tasks?.filter(t => t.status === 'completed').length || 0,
       percent
     };
   }, [tasks, stages]);
@@ -530,10 +545,15 @@ function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectI
         <h4 className="text-xs font-black truncate">{project.title}</h4>
         <div className="mt-3 space-y-1.5">
           <div className="flex justify-between text-[8px] font-bold opacity-60">
-            <span>التقدم</span>
+            <span>التقدم الكلي</span>
             <span>{stats.percent}%</span>
           </div>
-          <Progress value={stats.percent} className={`h-1 ${isActive ? 'bg-white/20' : 'bg-slate-100'}`} />
+          <div className={`h-1 w-full rounded-full overflow-hidden ${isActive ? 'bg-white/20' : 'bg-slate-100'}`}>
+            <div 
+              className={`h-full transition-all duration-700 ${isActive ? 'bg-white' : 'primary-gradient'}`}
+              style={{ width: `${stats.percent}%` }}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -740,3 +760,4 @@ function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask
     </div>
   );
 }
+
