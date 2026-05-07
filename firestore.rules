@@ -11,6 +11,11 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    // السماح باستعلامات المجموعة للمهام بشرط ملكية البيانات
+    match /{path=**}/tasks/{taskId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if isSignedIn(); 

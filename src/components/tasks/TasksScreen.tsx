@@ -315,7 +315,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
         )}
       </div>
 
-      {/* Dialogs remain similar but with updated layouts as requested in previous steps */}
+      {/* Dialogs */}
       <Dialog open={isAddingProject || !!editingProject} onOpenChange={(open) => { if(!open) { setIsAddingProject(false); setEditingProject(null); } }}>
         <DialogContent className="font-cairo rounded-[20px]">
           <DialogHeader className="flex flex-row items-center justify-between">
@@ -466,10 +466,14 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
 }
 
 function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectIcon, userId, db }: any) {
-  // Fetch tasks for this specific project to calculate real progress
+  // استخدام مرشح userId لضمان الأمان وتجاوز أخطاء الصلاحيات في استعلامات المجموعة
   const tasksQuery = useMemoFirebase(() => {
-    return query(collectionGroup(db, 'tasks'), where('projectId', '==', project.id));
-  }, [db, project.id]);
+    return query(
+      collectionGroup(db, 'tasks'), 
+      where('userId', '==', userId),
+      where('projectId', '==', project.id)
+    );
+  }, [db, project.id, userId]);
 
   const { data: tasks } = useCollection(tasksQuery);
 
@@ -720,4 +724,3 @@ function TaskListView({ projectId, stageId, userId, db, onEditTask, onDeleteTask
     </div>
   );
 }
-
