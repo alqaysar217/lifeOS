@@ -16,6 +16,33 @@
       },
       "required": ["id", "createdAt", "passcodeEnabled"]
     },
+    "Task": {
+      "title": "Task",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "completed"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "projectId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "status", "priority"]
+    },
+    "TaskProject": {
+      "title": "TaskProject",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "color": { "type": "string" },
+        "icon": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title"]
+    },
     "Challenge": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Challenge",
@@ -61,6 +88,22 @@
           "entityName": "user",
           "schema": { "$ref": "#/backend/entities/User" },
           "description": "Stores core user data."
+        }
+      },
+      {
+        "path": "/users/{userId}/tasks/{taskId}",
+        "definition": {
+          "entityName": "task",
+          "schema": { "$ref": "#/backend/entities/Task" },
+          "description": "User daily tasks."
+        }
+      },
+      {
+        "path": "/users/{userId}/taskProjects/{projectId}",
+        "definition": {
+          "entityName": "taskProject",
+          "schema": { "$ref": "#/backend/entities/TaskProject" },
+          "description": "User project containers for tasks."
         }
       },
       {
