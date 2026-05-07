@@ -466,7 +466,12 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
 }
 
 function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectIcon, userId, db }: any) {
-  // استخدام مرشح userId لضمان الأمان وتجاوز أخطاء الصلاحيات في استعلامات المجموعة
+  // استعلام جلب المراحل
+  const stagesQuery = useMemoFirebase(() => {
+    return query(collection(db, 'users', userId, 'taskProjects', project.id, 'taskStages'), orderBy('createdAt', 'asc'));
+  }, [db, userId, project.id]);
+
+  // استعلام جلب المهام لكامل المشروع عبر Collection Group
   const tasksQuery = useMemoFirebase(() => {
     return query(
       collectionGroup(db, 'tasks'), 
@@ -475,18 +480,29 @@ function ProjectCard({ project, isActive, onClick, onEdit, onDelete, getProjectI
     );
   }, [db, project.id, userId]);
 
+  const { data: stages } = useCollection(stagesQuery);
   const { data: tasks } = useCollection(tasksQuery);
 
   const stats = useMemo(() => {
-    if (!tasks) return { total: 0, completed: 0, percent: 0 };
-    const total = tasks.length;
-    const completed = tasks.filter(t => t.status === 'completed').length;
+    if (!tasks || !stages || stages.length === 0) return { total: 0, completed: 0, percent: 0 };
+    
+    // حساب التقدم بناءً على وزن كل مرحلة
+    let totalStageCompletionSum = 0;
+    stages.forEach(stage => {
+      const stageTasks = tasks.filter(t => t.stageId === stage.id);
+      if (stageTasks.length > 0) {
+        const completed = stageTasks.filter(t => t.status === 'completed').length;
+        totalStageCompletionSum += (completed / stageTasks.length);
+      }
+    });
+
+    const percent = Math.floor((totalStageCompletionSum / stages.length) * 100);
     return {
-      total,
-      completed,
-      percent: total > 0 ? Math.floor((completed / total) * 100) : 0
+      total: tasks.length,
+      completed: tasks.filter(t => t.status === 'completed').length,
+      percent
     };
-  }, [tasks]);
+  }, [tasks, stages]);
   
   return (
     <div onClick={onClick} className={`min-w-[170px] p-4 rounded-[15px] premium-shadow border cursor-pointer transition-all flex flex-col justify-between ${isActive ? 'primary-gradient text-white border-transparent' : 'bg-white border-border/40'}`}>
