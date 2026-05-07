@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo } from "react";
@@ -24,7 +23,14 @@ import {
   Trophy,
   Loader2,
   Trash2,
-  Pencil
+  Pencil,
+  GraduationCap,
+  Dumbbell,
+  Music,
+  Heart,
+  Globe,
+  Smartphone,
+  Cpu
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -63,6 +69,20 @@ interface TasksScreenProps {
 
 type Priority = 'low' | 'medium' | 'high';
 type TaskStatus = 'pending' | 'in-progress' | 'completed';
+
+const PROJECT_ICONS = [
+  { icon: Code, name: "Code", label: "برمجة" },
+  { icon: BookOpen, name: "Book", label: "تأليف" },
+  { icon: Palette, name: "Art", label: "تصميم" },
+  { icon: Briefcase, name: "Work", label: "عمل" },
+  { icon: GraduationCap, name: "Study", label: "دراسة" },
+  { icon: Dumbbell, name: "Sport", label: "رياضة" },
+  { icon: Music, name: "Music", label: "فن" },
+  { icon: Heart, name: "Health", label: "شخصي" },
+  { icon: Globe, name: "Travel", label: "سفر" },
+  { icon: Smartphone, name: "Tech", label: "تقنية" },
+  { icon: Cpu, name: "Dev", label: "تطوير" }
+];
 
 export function TasksScreen({ onBack }: TasksScreenProps) {
   const db = useFirestore();
@@ -178,6 +198,12 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
     }
   };
 
+  const getProjectIcon = (iconName: string) => {
+    const iconObj = PROJECT_ICONS.find(i => i.name === iconName);
+    const Icon = iconObj ? iconObj.icon : Briefcase;
+    return <Icon className="h-5 w-5" />;
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background animate-in fade-in duration-500">
       {/* Header */}
@@ -188,7 +214,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
             <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow">
               <ChevronRight className="h-5 w-5 text-foreground" />
             </Button>
-            <h2 className="text-2xl font-extrabold text-foreground font-cairo">إدارة المهام</h2>
+            <h2 className="text-2xl font-extrabold text-foreground font-cairo text-right">إدارة المهام</h2>
           </div>
           <div className="h-10 w-10 rounded-[10px] bg-white border border-border/40 premium-shadow flex items-center justify-center text-primary">
             <Layers className="h-5 w-5" />
@@ -232,7 +258,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className={`h-10 w-10 rounded-[10px] flex items-center justify-center ${isActive ? 'bg-white/10' : 'bg-slate-50 text-slate-400'}`}>
-                      <Briefcase className="h-5 w-5" />
+                      {getProjectIcon(proj.icon)}
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -345,14 +371,14 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
                 placeholder="مثلاً: مراجعة الكود، كتابة فصل جديد..." 
                 value={newTaskTitle} 
                 onChange={e => setNewTaskTitle(e.target.value)} 
-                className="h-12 rounded-[12px]"
+                className="h-12 rounded-[12px] text-right"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>الأولوية</Label>
                 <Select value={newTaskPriority} onValueChange={(v: any) => setNewTaskPriority(v)}>
-                  <SelectTrigger className="h-12 rounded-[12px]">
+                  <SelectTrigger className="h-12 rounded-[12px] text-right">
                     <SelectValue placeholder="اختر الأولوية" />
                   </SelectTrigger>
                   <SelectContent className="font-cairo">
@@ -365,7 +391,7 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
               <div className="space-y-2">
                 <Label>مساحة العمل</Label>
                 <Select value={newTaskProject} onValueChange={setNewTaskProject}>
-                  <SelectTrigger className="h-12 rounded-[12px]">
+                  <SelectTrigger className="h-12 rounded-[12px] text-right">
                     <SelectValue placeholder="اختر المساحة" />
                   </SelectTrigger>
                   <SelectContent className="font-cairo">
@@ -388,31 +414,27 @@ export function TasksScreen({ onBack }: TasksScreenProps) {
       <Dialog open={isAddingProject} onOpenChange={setIsAddingProject}>
         <DialogContent className="font-cairo rounded-[20px]">
           <DialogHeader><DialogTitle>إنشاء مساحة عمل جديدة</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-6 py-4">
             <div className="space-y-2">
               <Label>اسم المساحة أو المشروع</Label>
               <Input 
                 placeholder="مثلاً: تطوير التطبيق، تعلم اللغة..." 
                 value={newProjTitle} 
                 onChange={e => setNewProjTitle(e.target.value)} 
-                className="h-12 rounded-[12px]"
+                className="h-12 rounded-[12px] text-right"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-4">
               <Label>أيقونة تمييزية</Label>
-              <div className="grid grid-cols-4 gap-3">
-                {[
-                  { icon: Code, name: "Code" },
-                  { icon: BookOpen, name: "Book" },
-                  { icon: Palette, name: "Art" },
-                  { icon: Briefcase, name: "Work" }
-                ].map((item) => (
+              <div className="grid grid-cols-4 gap-3 max-h-[200px] overflow-y-auto p-1">
+                {PROJECT_ICONS.map((item) => (
                   <button 
                     key={item.name}
                     onClick={() => setNewProjIcon(item.name)}
-                    className={`h-12 rounded-[12px] border flex items-center justify-center transition-all ${newProjIcon === item.name ? 'border-primary bg-primary/5 text-primary' : 'border-border/40'}`}
+                    className={`h-12 rounded-[12px] border flex flex-col items-center justify-center gap-1 transition-all ${newProjIcon === item.name ? 'border-primary bg-primary/5 text-primary' : 'border-border/40'}`}
                   >
                     <item.icon className="h-5 w-5" />
+                    <span className="text-[8px] font-bold">{item.label}</span>
                   </button>
                 ))}
               </div>
