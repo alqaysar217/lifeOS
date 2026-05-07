@@ -100,20 +100,15 @@ export default function DashboardPage(props: {
   params: Promise<any>;
   searchParams: Promise<any>;
 }) {
-  const params = use(props.params);
-  const searchParams = use(props.searchParams);
-
   const [activeTab, setActiveTab] = React.useState<TabId>('home');
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentTime, setCurrentTime] = useState<number>(new Date().getHours());
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
   const [onboardingName, setOnboardingName] = useState("");
   const [onboardingPhone, setOnboardingPhone] = useState("");
   const [isLinking, setIsLinking] = useState(false);
   
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [isEditingPhone, setIsEditingPhone] = useState(false);
   
   const auth = useAuth();
   const db = useFirestore();
@@ -123,7 +118,16 @@ export default function DashboardPage(props: {
   const userDocRef = useMemoFirebase(() => (db && user) ? doc(db, 'users', user.uid) : null, [db, user]);
   const { data: profile, isLoading: isProfileLoading } = useDoc(userDocRef);
 
-  // التأكد من تسجيل الدخول المجهول فوراً
+  // تهيئة الوقت وتجنب Hydration mismatch
+  useEffect(() => {
+    setCurrentTime(new Date().getHours());
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().getHours());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // التأكد من تسجيل الدخول المجهول فوراً وبشكل غير متكرر
   useEffect(() => {
     if (!isUserLoading && !user) {
       initiateAnonymousSignIn(auth);
@@ -138,18 +142,11 @@ export default function DashboardPage(props: {
     }
   }, [profile]);
 
-  // تحديث الوقت دورياً لتغيير ترتيب الأقسام
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date().getHours());
-    }, 60000);
-    return () => clearInterval(timer);
-  }, []);
-
   const sortedCategories = useMemo(() => {
     let sorted = [...baseCategories];
+    const hour = currentTime ?? 12; // الافتراضي ظهراً إذا لم يحمل الوقت بعد
     
-    if (currentTime >= 5 && currentTime < 12) {
+    if (hour >= 5 && hour < 12) {
       const itemsToMove = ['ai', 'fitness'];
       itemsToMove.reverse().forEach(id => {
         const idx = sorted.findIndex(c => c.id === id);
@@ -159,7 +156,7 @@ export default function DashboardPage(props: {
         }
       });
     } 
-    else if (currentTime >= 12 && currentTime < 18) {
+    else if (hour >= 12 && hour < 18) {
       const tasksIdx = sorted.findIndex(c => c.id === 'tasks');
       if (tasksIdx > -1) {
         const item = sorted.splice(tasksIdx, 1)[0];
@@ -197,8 +194,6 @@ export default function DashboardPage(props: {
         phoneNumber: editPhone.trim()
       });
       toast({ title: "تم التحديث", description: "تم حفظ بياناتك الشخصية بنجاح." });
-      setIsEditingName(false);
-      setIsEditingPhone(false);
     } else {
       toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى التأكد من إدخال الاسم ورقم الهاتف." });
     }
@@ -210,41 +205,34 @@ export default function DashboardPage(props: {
       const usersRef = collection(db, 'users');
       const q = query(usersRef, where('phoneNumber', '==', onboardingPhone.trim()));
       
-      getDocs(q)
-        .then(async (querySnapshot) => {
-          if (!querySnapshot.empty) {
-            const existingData = querySnapshot.docs[0].data();
-            const userRef = doc(db, 'users', user.uid);
-            setDocumentNonBlocking(userRef, { 
-              name: existingData.name, 
-              phoneNumber: onboardingPhone.trim() 
-            }, { merge: true });
-            toast({ title: "مرحباً بعودتك!", description: `سعيد برؤيتك مجدداً يا ${existingData.name}` });
-          } else {
-            const userRef = doc(db, 'users', user.uid);
-            setDocumentNonBlocking(userRef, { 
-              name: onboardingName, 
-              phoneNumber: onboardingPhone.trim() 
-            }, { merge: true });
-            toast({ title: "بداية موفقة", description: "تم حفظ بياناتك بنجاح." });
-          }
-          setIsLinking(false)
-        })
-        .catch(async (error) => {
-          const permissionError = new FirestorePermissionError({
-            path: usersRef.path,
-            operation: 'list',
-          });
-          errorEmitter.emit('permission-error', permissionError);
-          setIsLinking(false);
-          toast({ variant: "destructive", title: "خطأ", description: "حدث خطأ أثناء البحث عن البيانات." });
-        });
+      try {
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const existingData = querySnapshot.docs[0].data();
+          const userRef = doc(db, 'users', user.uid);
+          setDocumentNonBlocking(userRef, { 
+            name: existingData.name, 
+            phoneNumber: onboardingPhone.trim() 
+          }, { merge: true });
+          toast({ title: "مرحباً بعودتك!", description: `سعيد برؤيتك مجدداً يا ${existingData.name}` });
+        } else {
+          const userRef = doc(db, 'users', user.uid);
+          setDocumentNonBlocking(userRef, { 
+            name: onboardingName, 
+            phoneNumber: onboardingPhone.trim() 
+          }, { merge: true });
+          toast({ title: "بداية موفقة", description: "تم حفظ بياناتك بنجاح." });
+        }
+      } catch (error) {
+        toast({ variant: "destructive", title: "خطأ", description: "حدث خطأ أثناء الربط." });
+      } finally {
+        setIsLinking(false);
+      }
     }
   };
 
   const renderContent = () => {
-    // 1. حالة التحميل الأولي (توحيد الانتظار)
-    // ننتظر تحميل المستخدم، وإذا وجد ننتظر تحميل ملفه الشخصي
+    // 1. حالة التحميل الأولي الشاملة
     if (isUserLoading || (user && isProfileLoading)) {
       return (
         <div className="min-h-screen flex flex-col items-center justify-center space-y-4 animate-in fade-in duration-300">
@@ -254,25 +242,18 @@ export default function DashboardPage(props: {
           <div className="h-1 w-32 bg-slate-100 rounded-full overflow-hidden">
              <div className="h-full bg-primary animate-progress-fast" />
           </div>
-          <p className="text-[10px] font-bold text-muted-foreground animate-pulse">جاري تجهيز عالمك الخاص...</p>
+          <p className="text-[10px] font-bold text-muted-foreground">جاري تجهيز عالمك الخاص...</p>
         </div>
       );
     }
 
-    // 2. حالة عدم وجود بيانات (التسجيل لأول مرة)
-    // لا تظهر إلا إذا انتهى التحميل تماماً وتأكدنا من نقص البيانات
+    // 2. شاشة إكمال البيانات (Onboarding)
     if (user && !isProfileLoading && (!profile?.name || !profile?.phoneNumber)) {
       return (
         <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-8 animate-in fade-in duration-700">
           <div className="w-full max-w-sm space-y-8 text-center">
             <div className="relative h-20 w-20 mx-auto transition-transform hover:scale-110">
-              <Image 
-                src="/logo.png" 
-                alt="Logo" 
-                fill 
-                className="object-contain drop-shadow-2xl" 
-                priority
-              />
+              <Image src="/logo.png" alt="Logo" fill className="object-contain drop-shadow-2xl" priority />
             </div>
             
             <div className="space-y-2">
@@ -283,33 +264,33 @@ export default function DashboardPage(props: {
             <div className="space-y-4">
               <div className="relative group">
                 <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                  <User className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <User className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <Input 
                   placeholder="الاسم الكريم..."
                   value={onboardingName}
                   onChange={(e) => setOnboardingName(e.target.value)}
-                  className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow bg-white/50 focus:bg-white transition-all"
+                  className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow"
                 />
               </div>
 
               <div className="relative group">
                 <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                  <Smartphone className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <Smartphone className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <Input 
                   type="tel"
                   placeholder="رقم الهاتف"
                   value={onboardingPhone}
                   onChange={(e) => setOnboardingPhone(e.target.value)}
-                  className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow bg-white/50 focus:bg-white transition-all"
+                  className="h-12 pr-10 text-right text-sm font-bold rounded-[12px] border-primary/10 premium-shadow"
                 />
               </div>
 
               <Button 
                 onClick={handleStartOnboarding}
                 disabled={!onboardingName.trim() || !onboardingPhone.trim() || isLinking}
-                className="w-full h-12 primary-gradient text-white text-base font-black rounded-[12px] shadow-xl active:scale-95 transition-all disabled:opacity-50"
+                className="w-full h-12 primary-gradient text-white text-base font-black rounded-[12px] shadow-xl disabled:opacity-50"
               >
                 {isLinking ? <><Loader2 className="h-5 w-5 animate-spin ml-2" /> جاري الربط...</> : "ابدأ رحلتي الآن"}
               </Button>
@@ -319,7 +300,7 @@ export default function DashboardPage(props: {
       );
     }
 
-    // 3. عرض المحتوى الرئيسي (فقط بعد التأكد من وجود البيانات)
+    // 3. عرض المحتوى الرئيسي
     switch (activeTab) {
       case 'home':
         return (
@@ -393,7 +374,7 @@ export default function DashboardPage(props: {
   return (
     <main className="min-h-screen bg-background">
       {renderContent()}
-      {profile?.name && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />}
+      {(profile?.name && currentTime !== null) && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />}
     </main>
   );
 }
